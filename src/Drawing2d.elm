@@ -7,16 +7,16 @@ module Drawing2d
           --, cubicSpline
           --, ellipse
           --, ellipticalArc
+        , dot
+          --, polygon
+          --, polyline
+          --, quadraticSpline
         , empty
           --, arc
         , group
         , lineSegment
         , mirrorAcross
         , placeIn
-        , point
-          --, polygon
-          --, polyline
-          --, quadraticSpline
         , relativeTo
           --, scaleAbout
           --, text
@@ -133,13 +133,13 @@ toSvgElement parentContext element =
         Internal.Triangle attributes triangle ->
             Svg.triangle2d (svgAttributes attributes) triangle
 
-        Internal.Point attributes point ->
+        Internal.Dot attributes point ->
             let
                 localContext =
                     parentContext |> applyAttributes attributes
             in
             Svg.circle2d (svgAttributes attributes)
-                (Circle2d.withRadius localContext.pointRadius point)
+                (Circle2d.withRadius localContext.dotRadius point)
 
 
 toHtml : BoundingBox2d -> List (Attribute msg) -> List (Element msg) -> Html msg
@@ -218,9 +218,9 @@ relativeTo frame element =
     placeIn (Frame2d.relativeTo frame Frame2d.xy) element
 
 
-point : List (Attribute msg) -> Point2d -> Element msg
-point attributes point_ =
-    Internal.Point attributes point_
+dot : List (Attribute msg) -> Point2d -> Element msg
+dot attributes point =
+    Internal.Dot attributes point
 
 
 mirrorAcross : Axis2d -> Element msg -> Element msg

@@ -28,7 +28,7 @@ type Attribute msg
     = FillStyle FillStyle
     | StrokeStyle StrokeStyle
     | ArrowTipStyle ArrowTipStyle
-    | PointRadius Float
+    | DotRadius Float
 
 
 type Element msg
@@ -38,18 +38,18 @@ type Element msg
     | Arrow (List (Attribute msg)) Point2d Float Direction2d
     | LineSegment (List (Attribute msg)) LineSegment2d
     | Triangle (List (Attribute msg)) Triangle2d
-    | Point (List (Attribute msg)) Point2d
+    | Dot (List (Attribute msg)) Point2d
 
 
 type alias Context =
-    { pointRadius : Float
+    { dotRadius : Float
     , arrowTipStyle : ArrowTipStyle
     }
 
 
 defaultContext : Context
 defaultContext =
-    { pointRadius = 3
+    { dotRadius = 3
     , arrowTipStyle = TriangularTip { length = 10, width = 8 }
     }
 
@@ -66,8 +66,8 @@ applyAttribute attribute context =
         ArrowTipStyle arrowTipStyle ->
             { context | arrowTipStyle = arrowTipStyle }
 
-        PointRadius pointRadius ->
-            { context | pointRadius = pointRadius }
+        DotRadius dotRadius ->
+            { context | dotRadius = dotRadius }
 
 
 applyAttributes : List (Attribute msg) -> Context -> Context
@@ -105,7 +105,7 @@ toSvgAttributes attribute =
         ArrowTipStyle _ ->
             []
 
-        PointRadius _ ->
+        DotRadius _ ->
             []
 
 
