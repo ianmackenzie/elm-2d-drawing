@@ -28,7 +28,6 @@ module Drawing2d
 import Axis2d exposing (Axis2d)
 import BoundingBox2d exposing (BoundingBox2d)
 import Circle2d exposing (Circle2d)
-import Direction2d exposing (Direction2d)
 import Drawing2d.Internal as Internal exposing (applyAttributes, defaultContext, svgAttributes)
 import Frame2d exposing (Frame2d)
 import Geometry.Svg as Svg
@@ -65,24 +64,7 @@ toSvgElement parentContext element =
                 (List.map (toSvgElement localContext) children)
 
         Internal.PlaceIn frame element ->
-            let
-                ( px, py ) =
-                    Point2d.coordinates (Frame2d.originPoint frame)
-
-                ( x1, y1 ) =
-                    Direction2d.components (Frame2d.xDirection frame)
-
-                ( x2, y2 ) =
-                    Direction2d.components (Frame2d.yDirection frame)
-
-                components =
-                    List.map toString [ x1, y1, x2, y2, px, py ]
-
-                transform =
-                    "matrix(" ++ String.join " " components ++ ")"
-            in
-            Svg.g [ Svg.Attributes.transform transform ]
-                [ toSvgElement parentContext element ]
+            Svg.placeIn frame (toSvgElement parentContext element)
 
         Internal.Arrow attributes basePoint length direction ->
             let
