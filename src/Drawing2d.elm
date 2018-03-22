@@ -3,18 +3,22 @@ module Drawing2d
         ( Attribute
         , Element
         , arrow
+        , arrowWith
           --, circle
           --, cubicSpline
           --, ellipse
           --, ellipticalArc
         , dot
+        , dotWith
           --, polygon
           --, polyline
           --, quadraticSpline
         , empty
           --, arc
         , group
+        , groupWith
         , lineSegment
+        , lineSegmentWith
         , mirrorAcross
         , placeIn
         , relativeTo
@@ -23,6 +27,7 @@ module Drawing2d
         , toHtml
           --, translateBy
         , triangle
+        , triangleWith
         )
 
 import Axis2d exposing (Axis2d)
@@ -153,7 +158,7 @@ toHtml boundingBox attributes elements =
             , Svg.Attributes.height (toString height)
             , Html.Attributes.style [ ( "display", "block" ) ]
             ]
-            [ group attributes elements
+            [ groupWith attributes elements
                 |> relativeTo topLeftFrame
                 |> toSvgElement context
             ]
@@ -165,8 +170,13 @@ empty =
     Internal.Empty
 
 
-arrow : List (Attribute msg) -> Point2d -> Vector2d -> Element msg
-arrow attributes basePoint vector =
+arrow : Point2d -> Vector2d -> Element msg
+arrow =
+    arrowWith []
+
+
+arrowWith : List (Attribute msg) -> Point2d -> Vector2d -> Element msg
+arrowWith attributes basePoint vector =
     case Vector2d.lengthAndDirection vector of
         Just ( length, direction ) ->
             Internal.Arrow attributes basePoint length direction
@@ -175,18 +185,33 @@ arrow attributes basePoint vector =
             empty
 
 
-lineSegment : List (Attribute msg) -> LineSegment2d -> Element msg
-lineSegment attributes lineSegment =
+lineSegment : LineSegment2d -> Element msg
+lineSegment =
+    lineSegmentWith []
+
+
+lineSegmentWith : List (Attribute msg) -> LineSegment2d -> Element msg
+lineSegmentWith attributes lineSegment =
     Internal.LineSegment attributes lineSegment
 
 
-triangle : List (Attribute msg) -> Triangle2d -> Element msg
-triangle attributes triangle =
+triangle : Triangle2d -> Element msg
+triangle =
+    triangleWith []
+
+
+triangleWith : List (Attribute msg) -> Triangle2d -> Element msg
+triangleWith attributes triangle =
     Internal.Triangle attributes triangle
 
 
-group : List (Attribute msg) -> List (Element msg) -> Element msg
-group attributes elements =
+group : List (Element msg) -> Element msg
+group =
+    groupWith []
+
+
+groupWith : List (Attribute msg) -> List (Element msg) -> Element msg
+groupWith attributes elements =
     Internal.Group attributes elements
 
 
@@ -200,8 +225,13 @@ relativeTo frame element =
     placeIn (Frame2d.relativeTo frame Frame2d.xy) element
 
 
-dot : List (Attribute msg) -> Point2d -> Element msg
-dot attributes point =
+dot : Point2d -> Element msg
+dot =
+    dotWith []
+
+
+dotWith : List (Attribute msg) -> Point2d -> Element msg
+dotWith attributes point =
     Internal.Dot attributes point
 
 

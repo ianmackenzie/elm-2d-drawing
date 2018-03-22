@@ -1,5 +1,6 @@
 module Example exposing (..)
 
+import Arc2d
 import Axis2d
 import BoundingBox2d
 import Color
@@ -9,6 +10,7 @@ import Drawing2d.Arrow as Arrow
 import Drawing2d.Dot as Dot
 import Drawing2d.Fill as Fill
 import Drawing2d.Stroke as Stroke
+import Geometry.Parameter as Parameter
 import Html exposing (Html)
 import LineSegment2d
 import Point2d
@@ -27,18 +29,26 @@ main =
                 }
 
         lineSegment =
-            Drawing2d.lineSegment [] <|
-                LineSegment2d.fromEndpoints
-                    ( Point2d.fromCoordinates ( 100, 600 )
-                    , Point2d.fromCoordinates ( 400, 700 )
-                    )
+            LineSegment2d.fromEndpoints
+                ( Point2d.fromCoordinates ( 100, 600 )
+                , Point2d.fromCoordinates ( 400, 700 )
+                )
+
+        mirrorAxis =
+            Axis2d.through (Point2d.fromCoordinates ( 100, 550 )) Direction2d.x
 
         mirroredSegment =
-            lineSegment
-                |> Drawing2d.mirrorAcross
-                    (Axis2d.withDirection Direction2d.x
-                        (Point2d.fromCoordinates ( 100, 550 ))
-                    )
+            lineSegment |> LineSegment2d.mirrorAcross mirrorAxis
+
+        arc =
+            Arc2d.from
+                (LineSegment2d.endPoint mirroredSegment)
+                (LineSegment2d.endPoint lineSegment)
+                (degrees 90)
+
+        arcPoints =
+            List.map (Arc2d.pointOn arc)
+                (Parameter.values (Parameter.numSteps 16))
     in
     Drawing2d.toHtml renderBounds
         [ Dot.radius 5
@@ -46,12 +56,15 @@ main =
         , Stroke.color Color.blue
         , Arrow.triangularTip { length = 9, width = 9 }
         ]
-        [ Drawing2d.dot [] (Point2d.fromCoordinates ( 100, 100 ))
-        , Drawing2d.arrow []
+        [ Drawing2d.dot (Point2d.fromCoordinates ( 100, 100 ))
+        , Drawing2d.arrow
             (Point2d.fromCoordinates ( 200, 200 ))
             (Vector2d.fromComponents ( 200, 50 ))
-        , Drawing2d.dot [ Dot.radius 8, Fill.color Color.green ]
+        , Drawing2d.dotWith [ Dot.radius 8, Fill.color Color.green ]
             (Point2d.fromCoordinates ( 700, 500 ))
-        , lineSegment
-        , mirroredSegment
+        , Drawing2d.lineSegment lineSegment
+        , Drawing2d.lineSegment mirroredSegment
+        , Drawing2d.groupWith [ Fill.white, Stroke.black ]
+            (List.map Drawing2d.dot arcPoints)
+        , Drawing2d.dotWith [ Fill.black, Dot.radius 3 ] (Arc2d.centerPoint arc)
         ]
