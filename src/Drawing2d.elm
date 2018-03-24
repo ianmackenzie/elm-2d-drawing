@@ -2,8 +2,8 @@ module Drawing2d
     exposing
         ( Attribute
         , Element
-        , arrow
-        , arrowWith
+          --, arrow
+          --, arrowWith
           --, circle
           --, cubicSpline
           --, ellipse

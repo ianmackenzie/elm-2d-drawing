@@ -6,7 +6,6 @@ import BoundingBox2d
 import Color
 import Direction2d
 import Drawing2d
-import Drawing2d.Arrow as Arrow
 import Drawing2d.Dot as Dot
 import Drawing2d.Fill as Fill
 import Drawing2d.Stroke as Stroke
@@ -54,12 +53,8 @@ main =
         [ Dot.radius 5
         , Fill.color Color.orange
         , Stroke.color Color.blue
-        , Arrow.triangularTip { length = 9, width = 9 }
         ]
         [ Drawing2d.dot (Point2d.fromCoordinates ( 100, 100 ))
-        , Drawing2d.arrow
-            (Point2d.fromCoordinates ( 200, 200 ))
-            (Vector2d.fromComponents ( 200, 50 ))
         , Drawing2d.dotWith [ Dot.radius 8, Fill.color Color.green ]
             (Point2d.fromCoordinates ( 700, 500 ))
         , Drawing2d.lineSegment lineSegment
