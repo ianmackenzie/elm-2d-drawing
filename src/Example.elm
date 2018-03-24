@@ -44,8 +44,7 @@ main =
                 (degrees 90)
 
         arcPoints =
-            List.map (Arc2d.pointOn arc)
-                (Parameter.values (Parameter.numSteps 16))
+            List.map (Arc2d.pointOn arc) (Parameter.numSteps 16)
     in
     Drawing2d.toHtml renderBounds
         [ Attributes.dotRadius 5
