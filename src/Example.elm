@@ -56,8 +56,9 @@ main =
         , Drawing2d.dotWith
             [ Attributes.dotRadius 8, Attributes.fillColor Color.green ]
             (Point2d.fromCoordinates ( 700, 500 ))
-        , Drawing2d.lineSegment lineSegment
-        , Drawing2d.lineSegment mirroredSegment
+        , Drawing2d.groupWith
+            [ Attributes.strokeWidth 2 ]
+            (List.map Drawing2d.lineSegment [ lineSegment, mirroredSegment ])
         , Drawing2d.groupWith
             [ Attributes.whiteFill, Attributes.blackStroke ]
             (List.map Drawing2d.dot arcPoints)
