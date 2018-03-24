@@ -77,10 +77,7 @@ toSvgElement parentContext element =
                     parentContext |> applyAttributes attributes
 
                 localFrame =
-                    Frame2d.with
-                        { originPoint = basePoint
-                        , xDirection = direction
-                        }
+                    Frame2d.withXDirection direction basePoint
 
                 (Internal.TriangularTip tipOptions) =
                     localContext.arrowTipStyle
