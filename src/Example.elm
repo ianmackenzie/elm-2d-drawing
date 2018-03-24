@@ -6,9 +6,7 @@ import BoundingBox2d
 import Color
 import Direction2d
 import Drawing2d
-import Drawing2d.Dot as Dot
-import Drawing2d.Fill as Fill
-import Drawing2d.Stroke as Stroke
+import Drawing2d.Attributes as Attributes
 import Geometry.Parameter as Parameter
 import Html exposing (Html)
 import LineSegment2d
@@ -50,16 +48,20 @@ main =
                 (Parameter.values (Parameter.numSteps 16))
     in
     Drawing2d.toHtml renderBounds
-        [ Dot.radius 5
-        , Fill.color Color.orange
-        , Stroke.color Color.blue
+        [ Attributes.dotRadius 5
+        , Attributes.fillColor Color.orange
+        , Attributes.strokeColor Color.blue
         ]
         [ Drawing2d.dot (Point2d.fromCoordinates ( 100, 100 ))
-        , Drawing2d.dotWith [ Dot.radius 8, Fill.color Color.green ]
+        , Drawing2d.dotWith
+            [ Attributes.dotRadius 8, Attributes.fillColor Color.green ]
             (Point2d.fromCoordinates ( 700, 500 ))
         , Drawing2d.lineSegment lineSegment
         , Drawing2d.lineSegment mirroredSegment
-        , Drawing2d.groupWith [ Fill.white, Stroke.black ]
+        , Drawing2d.groupWith
+            [ Attributes.whiteFill, Attributes.blackStroke ]
             (List.map Drawing2d.dot arcPoints)
-        , Drawing2d.dotWith [ Fill.black, Dot.radius 3 ] (Arc2d.centerPoint arc)
+        , Drawing2d.dotWith
+            [ Attributes.blackFill, Attributes.dotRadius 3 ]
+            (Arc2d.centerPoint arc)
         ]
