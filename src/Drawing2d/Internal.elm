@@ -27,6 +27,7 @@ type ArrowTipStyle
 type Attribute msg
     = FillStyle FillStyle
     | StrokeStyle StrokeStyle
+    | StrokeWidth Float
     | ArrowTipStyle ArrowTipStyle
     | DotRadius Float
 
@@ -69,6 +70,9 @@ applyAttribute attribute context =
         DotRadius dotRadius ->
             { context | dotRadius = dotRadius }
 
+        StrokeWidth _ ->
+            context
+
 
 applyAttributes : List (Attribute msg) -> Context -> Context
 applyAttributes attributes context =
@@ -101,6 +105,9 @@ toSvgAttributes attribute =
 
         StrokeStyle NoStroke ->
             [ Svg.Attributes.stroke "none" ]
+
+        StrokeWidth width ->
+            [ Svg.Attributes.strokeWidth (toString width ++ "px") ]
 
         ArrowTipStyle _ ->
             []

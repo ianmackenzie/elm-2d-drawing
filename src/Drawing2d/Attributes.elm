@@ -7,6 +7,7 @@ module Drawing2d.Attributes
         , noFill
         , noStroke
         , strokeColor
+        , strokeWidth
         , whiteFill
         , whiteStroke
         )
@@ -58,3 +59,8 @@ blackStroke =
 whiteStroke : Attribute msg
 whiteStroke =
     Internal.StrokeStyle (Internal.StrokeColor Color.white)
+
+
+strokeWidth : Float -> Attribute msg
+strokeWidth width =
+    Internal.StrokeWidth width
