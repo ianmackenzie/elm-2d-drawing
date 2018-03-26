@@ -8,6 +8,8 @@ import Direction2d as Direction2d exposing (Direction2d)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d as Frame2d exposing (Frame2d)
+import Html.Events
+import Json.Decode as Decode
 import LineSegment2d exposing (LineSegment2d)
 import Point2d as Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
@@ -15,6 +17,7 @@ import Polyline2d exposing (Polyline2d)
 import QuadraticSpline2d exposing (QuadraticSpline2d)
 import Svg
 import Svg.Attributes
+import Svg.Events
 import Triangle2d exposing (Triangle2d)
 
 
@@ -38,6 +41,8 @@ type Attribute msg
     | StrokeWidth Float
     | ArrowTipStyle ArrowTipStyle
     | DotRadius Float
+    | OnClick msg
+    | OnMouseDown msg
 
 
 type Element msg
@@ -90,6 +95,12 @@ applyAttribute attribute context =
         StrokeWidth _ ->
             context
 
+        OnClick _ ->
+            context
+
+        OnMouseDown _ ->
+            context
+
 
 applyAttributes : List (Attribute msg) -> Context -> Context
 applyAttributes attributes context =
@@ -131,6 +142,18 @@ toSvgAttributes attribute =
 
         DotRadius _ ->
             []
+
+        OnClick message ->
+            [ Html.Events.onWithOptions "click"
+                { preventDefault = True, stopPropagation = True }
+                (Decode.succeed message)
+            ]
+
+        OnMouseDown message ->
+            [ Html.Events.onWithOptions "mousedown"
+                { preventDefault = True, stopPropagation = True }
+                (Decode.succeed message)
+            ]
 
 
 svgAttributes : List (Attribute msg) -> List (Svg.Attribute msg)

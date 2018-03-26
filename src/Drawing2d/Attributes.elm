@@ -6,6 +6,8 @@ module Drawing2d.Attributes
         , fillColor
         , noFill
         , noStroke
+        , onClick
+        , onMouseDown
         , strokeColor
         , strokeWidth
         , whiteFill
@@ -64,3 +66,13 @@ whiteStroke =
 strokeWidth : Float -> Attribute msg
 strokeWidth width =
     Internal.StrokeWidth width
+
+
+onClick : msg -> Attribute msg
+onClick message =
+    Internal.OnClick message
+
+
+onMouseDown : msg -> Attribute msg
+onMouseDown message =
+    Internal.OnMouseDown message
