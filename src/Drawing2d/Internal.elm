@@ -11,13 +11,13 @@ import Frame2d as Frame2d exposing (Frame2d)
 import Html.Events
 import Json.Decode as Decode
 import LineSegment2d exposing (LineSegment2d)
+import Mouse
 import Point2d as Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Polyline2d exposing (Polyline2d)
 import QuadraticSpline2d exposing (QuadraticSpline2d)
 import Svg
 import Svg.Attributes
-import Svg.Events
 import Triangle2d exposing (Triangle2d)
 
 
@@ -42,7 +42,7 @@ type Attribute msg
     | ArrowTipStyle ArrowTipStyle
     | DotRadius Float
     | OnClick msg
-    | OnMouseDown msg
+    | OnMouseDown (Mouse.Position -> msg)
 
 
 type Element msg
@@ -149,10 +149,10 @@ toSvgAttributes attribute =
                 (Decode.succeed message)
             ]
 
-        OnMouseDown message ->
+        OnMouseDown handler ->
             [ Html.Events.onWithOptions "mousedown"
                 { preventDefault = True, stopPropagation = True }
-                (Decode.succeed message)
+                (Mouse.position |> Decode.map handler)
             ]
 
 

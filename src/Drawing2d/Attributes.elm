@@ -16,6 +16,7 @@ module Drawing2d.Attributes
 
 import Color exposing (Color)
 import Drawing2d.Internal as Internal exposing (Attribute)
+import Mouse
 
 
 dotRadius : Float -> Attribute msg
@@ -73,6 +74,6 @@ onClick message =
     Internal.OnClick message
 
 
-onMouseDown : msg -> Attribute msg
-onMouseDown message =
-    Internal.OnMouseDown message
+onMouseDown : (Mouse.Position -> msg) -> Attribute msg
+onMouseDown handler =
+    Internal.OnMouseDown handler
