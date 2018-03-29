@@ -34,6 +34,7 @@ module Drawing2d
           --, text
         , toHtml
         , translateBy
+        , translateIn
         , triangle
         , triangleWith
         )
@@ -43,6 +44,7 @@ import Axis2d exposing (Axis2d)
 import BoundingBox2d exposing (BoundingBox2d)
 import Circle2d exposing (Circle2d)
 import CubicSpline2d exposing (CubicSpline2d)
+import Direction2d exposing (Direction2d)
 import Drawing2d.Internal as Internal exposing (applyAttributes, defaultContext, svgAttributes)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
@@ -277,6 +279,11 @@ dotWith attributes point =
 translateBy : Vector2d -> Element msg -> Element msg
 translateBy displacement element =
     placeIn (Frame2d.translateBy displacement Frame2d.xy) element
+
+
+translateIn : Direction2d -> Float -> Element msg -> Element msg
+translateIn direction distance element =
+    translateBy (Vector2d.withLength distance direction) element
 
 
 scaleAbout : Point2d -> Float -> Element msg -> Element msg
