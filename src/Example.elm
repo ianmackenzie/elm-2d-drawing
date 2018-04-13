@@ -11,7 +11,6 @@ import Geometry.Parameter as Parameter
 import Html exposing (Html)
 import LineSegment2d
 import Point2d
-import Vector2d
 
 
 main : Html Never
