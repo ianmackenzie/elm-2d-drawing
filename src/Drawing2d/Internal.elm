@@ -35,12 +35,25 @@ type ArrowTipStyle
     = TriangularTip { length : Float, width : Float }
 
 
+type Anchor
+    = TopLeft
+    | TopCenter
+    | TopRight
+    | CenterLeft
+    | Center
+    | CenterRight
+    | BottomLeft
+    | BottomCenter
+    | BottomRight
+
+
 type Attribute msg
     = FillStyle FillStyle
     | StrokeStyle StrokeStyle
     | StrokeWidth Float
     | ArrowTipStyle ArrowTipStyle
     | DotRadius Float
+    | TextAnchor Anchor
     | OnClick msg
     | OnMouseDown (Mouse.Position -> msg)
 
@@ -62,6 +75,7 @@ type Element msg
     | Circle (List (Attribute msg)) Circle2d
     | Ellipse (List (Attribute msg)) Ellipse2d
     | EllipticalArc (List (Attribute msg)) EllipticalArc2d
+    | Text (List (Attribute msg)) Point2d String
 
 
 type alias Context =
@@ -93,6 +107,9 @@ applyAttribute attribute context =
             { context | dotRadius = dotRadius }
 
         StrokeWidth _ ->
+            context
+
+        TextAnchor _ ->
             context
 
         OnClick _ ->
@@ -142,6 +159,53 @@ toSvgAttributes attribute =
 
         DotRadius _ ->
             []
+
+        TextAnchor anchor ->
+            case anchor of
+                TopLeft ->
+                    [ Svg.Attributes.textAnchor "start"
+                    , Svg.Attributes.dominantBaseline "hanging"
+                    ]
+
+                TopCenter ->
+                    [ Svg.Attributes.textAnchor "middle"
+                    , Svg.Attributes.dominantBaseline "hanging"
+                    ]
+
+                TopRight ->
+                    [ Svg.Attributes.textAnchor "end"
+                    , Svg.Attributes.dominantBaseline "hanging"
+                    ]
+
+                CenterLeft ->
+                    [ Svg.Attributes.textAnchor "start"
+                    , Svg.Attributes.dominantBaseline "middle"
+                    ]
+
+                Center ->
+                    [ Svg.Attributes.textAnchor "middle"
+                    , Svg.Attributes.dominantBaseline "middle"
+                    ]
+
+                CenterRight ->
+                    [ Svg.Attributes.textAnchor "end"
+                    , Svg.Attributes.dominantBaseline "middle"
+                    ]
+
+                BottomLeft ->
+                    [ Svg.Attributes.textAnchor "start"
+                    , Svg.Attributes.dominantBaseline "baseline"
+                    ]
+
+                BottomCenter ->
+                    [ Svg.Attributes.textAnchor "middle"
+                    , Svg.Attributes.alignmentBaseline "baseline"
+                    ]
+
+                BottomRight ->
+                    [ Svg.Attributes.textAnchor "end"
+                    , Svg.Attributes.alignmentBaseline "baseline"
+                    ]
 
         OnClick message ->
             [ Html.Events.onWithOptions "click"

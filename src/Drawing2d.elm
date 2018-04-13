@@ -31,7 +31,8 @@ module Drawing2d
         , quadraticSplineWith
         , relativeTo
         , scaleAbout
-          --, text
+        , text
+        , textWith
         , toHtml
         , translateBy
         , translateIn
@@ -168,6 +169,24 @@ toSvgElement parentContext element =
 
         Internal.Polygon attributes polygon ->
             Svg.polygon2d (svgAttributes attributes) polygon
+
+        Internal.Text attributes point string ->
+            let
+                ( x, y ) =
+                    Point2d.coordinates point
+
+                mirrorAxis =
+                    Axis2d.through point Direction2d.x
+
+                xAttribute =
+                    Svg.Attributes.x (toString x)
+
+                yAttribute =
+                    Svg.Attributes.y (toString y)
+            in
+            Svg.text_ (xAttribute :: yAttribute :: svgAttributes attributes)
+                [ Svg.text string ]
+                |> Svg.mirrorAcross mirrorAxis
 
 
 toHtml : BoundingBox2d -> List (Attribute msg) -> List (Element msg) -> Html msg
@@ -374,3 +393,13 @@ ellipse =
 ellipseWith : List (Attribute msg) -> Ellipse2d -> Element msg
 ellipseWith attributes ellipse =
     Internal.Ellipse attributes ellipse
+
+
+text : Point2d -> String -> Element msg
+text =
+    textWith []
+
+
+textWith : List (Attribute msg) -> Point2d -> String -> Element msg
+textWith attributes point string =
+    Internal.Text attributes point string

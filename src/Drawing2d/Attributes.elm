@@ -10,12 +10,14 @@ module Drawing2d.Attributes
         , onMouseDown
         , strokeColor
         , strokeWidth
+        , textAnchor
         , whiteFill
         , whiteStroke
         )
 
 import Color exposing (Color)
 import Drawing2d.Internal as Internal exposing (Attribute)
+import Drawing2d.Text as Text
 import Mouse
 
 
@@ -77,3 +79,8 @@ onClick message =
 onMouseDown : (Mouse.Position -> msg) -> Attribute msg
 onMouseDown handler =
     Internal.OnMouseDown handler
+
+
+textAnchor : Text.Anchor -> Attribute msg
+textAnchor anchor =
+    Internal.TextAnchor anchor
