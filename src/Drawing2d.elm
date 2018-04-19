@@ -30,6 +30,8 @@ module Drawing2d
         , polylineWith
         , quadraticSpline
         , quadraticSplineWith
+        , rectangle
+        , rectangleWith
         , relativeTo
         , scaleAbout
         , text
@@ -59,6 +61,7 @@ import Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Polyline2d exposing (Polyline2d)
 import QuadraticSpline2d exposing (QuadraticSpline2d)
+import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg)
 import Svg.Attributes
 import Triangle2d exposing (Triangle2d)
@@ -394,6 +397,16 @@ ellipse =
 ellipseWith : List (Attribute msg) -> Ellipse2d -> Element msg
 ellipseWith attributes ellipse =
     Internal.Ellipse attributes ellipse
+
+
+rectangle : Rectangle2d -> Element msg
+rectangle =
+    rectangleWith []
+
+
+rectangleWith : List (Attribute msg) -> Rectangle2d -> Element msg
+rectangleWith attributes rectangle =
+    polygonWith attributes (Rectangle2d.toPolygon rectangle)
 
 
 text : Point2d -> String -> Element msg
