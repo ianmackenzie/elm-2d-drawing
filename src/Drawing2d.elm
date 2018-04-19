@@ -21,6 +21,7 @@ module Drawing2d
         , groupWith
         , lineSegment
         , lineSegmentWith
+        , map
         , mirrorAcross
         , placeIn
         , polygon
@@ -403,3 +404,94 @@ text =
 textWith : List (Attribute msg) -> Point2d -> String -> Element msg
 textWith attributes point string =
     Internal.Text attributes point string
+
+
+mapAttribute : (a -> b) -> Attribute a -> Attribute b
+mapAttribute function attribute =
+    case attribute of
+        Internal.FillStyle style ->
+            Internal.FillStyle style
+
+        Internal.StrokeStyle style ->
+            Internal.StrokeStyle style
+
+        Internal.StrokeWidth width ->
+            Internal.StrokeWidth width
+
+        Internal.ArrowTipStyle style ->
+            Internal.ArrowTipStyle style
+
+        Internal.DotRadius radius ->
+            Internal.DotRadius radius
+
+        Internal.TextAnchor anchor ->
+            Internal.TextAnchor anchor
+
+        Internal.OnClick message ->
+            Internal.OnClick (function message)
+
+        Internal.OnMouseDown handler ->
+            Internal.OnMouseDown (handler >> function)
+
+
+map : (a -> b) -> Element a -> Element b
+map function element =
+    let
+        mapAttributes =
+            List.map (mapAttribute function)
+
+        mapElement =
+            map function
+    in
+    case element of
+        Internal.Empty ->
+            Internal.Empty
+
+        Internal.Group attributes elements ->
+            Internal.Group (mapAttributes attributes)
+                (List.map mapElement elements)
+
+        Internal.PlaceIn frame element ->
+            Internal.PlaceIn frame (mapElement element)
+
+        Internal.ScaleAbout point scale element ->
+            Internal.ScaleAbout point scale (mapElement element)
+
+        Internal.Arrow attributes point length direction ->
+            Internal.Arrow (mapAttributes attributes) point length direction
+
+        Internal.LineSegment attributes lineSegment ->
+            Internal.LineSegment (mapAttributes attributes) lineSegment
+
+        Internal.Triangle attributes triangle ->
+            Internal.Triangle (mapAttributes attributes) triangle
+
+        Internal.Dot attributes point ->
+            Internal.Dot (mapAttributes attributes) point
+
+        Internal.Arc attributes arc ->
+            Internal.Arc (mapAttributes attributes) arc
+
+        Internal.CubicSpline attributes spline ->
+            Internal.CubicSpline (mapAttributes attributes) spline
+
+        Internal.QuadraticSpline attributes spline ->
+            Internal.QuadraticSpline (mapAttributes attributes) spline
+
+        Internal.Polyline attributes polyline ->
+            Internal.Polyline (mapAttributes attributes) polyline
+
+        Internal.Polygon attributes polygon ->
+            Internal.Polygon (mapAttributes attributes) polygon
+
+        Internal.Circle attributes circle ->
+            Internal.Circle (mapAttributes attributes) circle
+
+        Internal.Ellipse attributes ellipse ->
+            Internal.Ellipse (mapAttributes attributes) ellipse
+
+        Internal.EllipticalArc attributes arc ->
+            Internal.EllipticalArc (mapAttributes attributes) arc
+
+        Internal.Text attributes point string ->
+            Internal.Text (mapAttributes attributes) point string
