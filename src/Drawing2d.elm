@@ -49,6 +49,7 @@ import Arc2d exposing (Arc2d)
 import Axis2d exposing (Axis2d)
 import BoundingBox2d exposing (BoundingBox2d)
 import Circle2d exposing (Circle2d)
+import Color
 import CubicSpline2d exposing (CubicSpline2d)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attributes as Attributes
@@ -242,6 +243,13 @@ toHtml boundingBox attributes elements =
 
         context =
             defaultContext |> applyAttributes attributes
+
+        defaultAttributes =
+            [ Attributes.textColor Color.black
+            , Attributes.whiteFill
+            , Attributes.blackStroke
+            , Attributes.textAnchor Text.bottomLeft
+            ]
     in
     Html.div
         [ Html.Attributes.style
@@ -256,7 +264,7 @@ toHtml boundingBox attributes elements =
             , Svg.Attributes.height (toString height)
             , Html.Attributes.style [ ( "display", "block" ) ]
             ]
-            [ groupWith attributes elements
+            [ groupWith defaultAttributes [ groupWith attributes elements ]
                 |> relativeTo topLeftFrame
                 |> toSvgElement context
             ]
