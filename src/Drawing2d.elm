@@ -35,6 +35,8 @@ module Drawing2d
         , relativeTo
         , scaleAbout
         , text
+        , textShape
+        , textShapeWith
         , textWith
         , toHtml
         , translateBy
@@ -49,7 +51,9 @@ import BoundingBox2d exposing (BoundingBox2d)
 import Circle2d exposing (Circle2d)
 import CubicSpline2d exposing (CubicSpline2d)
 import Direction2d exposing (Direction2d)
+import Drawing2d.Attributes as Attributes
 import Drawing2d.Internal as Internal exposing (applyAttributes, defaultContext, svgAttributes)
+import Drawing2d.Text as Text
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -175,6 +179,36 @@ toSvgElement parentContext element =
             Svg.polygon2d (svgAttributes attributes) polygon
 
         Internal.Text attributes point string ->
+            let
+                ( x, y ) =
+                    Point2d.coordinates point
+
+                mirrorAxis =
+                    Axis2d.through point Direction2d.x
+
+                xAttribute =
+                    Svg.Attributes.x (toString x)
+
+                yAttribute =
+                    Svg.Attributes.y (toString y)
+
+                fillAttribute =
+                    Svg.Attributes.fill "currentColor"
+
+                strokeAttribute =
+                    Svg.Attributes.stroke "none"
+            in
+            Svg.text_
+                (xAttribute
+                    :: yAttribute
+                    :: fillAttribute
+                    :: strokeAttribute
+                    :: svgAttributes attributes
+                )
+                [ Svg.text string ]
+                |> Svg.mirrorAcross mirrorAxis
+
+        Internal.TextShape attributes point string ->
             let
                 ( x, y ) =
                     Point2d.coordinates point
@@ -419,6 +453,16 @@ textWith attributes point string =
     Internal.Text attributes point string
 
 
+textShape : Point2d -> String -> Element msg
+textShape =
+    textShapeWith []
+
+
+textShapeWith : List (Attribute msg) -> Point2d -> String -> Element msg
+textShapeWith attributes point string =
+    Internal.TextShape attributes point string
+
+
 mapAttribute : (a -> b) -> Attribute a -> Attribute b
 mapAttribute function attribute =
     case attribute of
@@ -439,6 +483,15 @@ mapAttribute function attribute =
 
         Internal.TextAnchor anchor ->
             Internal.TextAnchor anchor
+
+        Internal.TextColor color ->
+            Internal.TextColor color
+
+        Internal.FontSize px ->
+            Internal.FontSize px
+
+        Internal.FontFamily fonts ->
+            Internal.FontFamily fonts
 
         Internal.OnClick message ->
             Internal.OnClick (function message)
@@ -508,3 +561,6 @@ map function element =
 
         Internal.Text attributes point string ->
             Internal.Text (mapAttributes attributes) point string
+
+        Internal.TextShape attributes point string ->
+            Internal.TextShape (mapAttributes attributes) point string

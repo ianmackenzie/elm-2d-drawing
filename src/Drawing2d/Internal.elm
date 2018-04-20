@@ -5,6 +5,7 @@ import Circle2d exposing (Circle2d)
 import Color exposing (Color)
 import CubicSpline2d exposing (CubicSpline2d)
 import Direction2d as Direction2d exposing (Direction2d)
+import Drawing2d.Font as Font
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d as Frame2d exposing (Frame2d)
@@ -54,6 +55,9 @@ type Attribute msg
     | ArrowTipStyle ArrowTipStyle
     | DotRadius Float
     | TextAnchor Anchor
+    | TextColor Color
+    | FontSize Int
+    | FontFamily (List String)
     | OnClick msg
     | OnMouseDown (Mouse.Position -> msg)
 
@@ -76,6 +80,7 @@ type Element msg
     | Ellipse (List (Attribute msg)) Ellipse2d
     | EllipticalArc (List (Attribute msg)) EllipticalArc2d
     | Text (List (Attribute msg)) Point2d String
+    | TextShape (List (Attribute msg)) Point2d String
 
 
 type alias Context =
@@ -112,6 +117,15 @@ applyAttribute attribute context =
         TextAnchor _ ->
             context
 
+        TextColor _ ->
+            context
+
+        FontSize _ ->
+            context
+
+        FontFamily _ ->
+            context
+
         OnClick _ ->
             context
 
@@ -122,6 +136,18 @@ applyAttribute attribute context =
 applyAttributes : List (Attribute msg) -> Context -> Context
 applyAttributes attributes context =
     List.foldl applyAttribute context attributes
+
+
+normalizeFont : String -> String
+normalizeFont font =
+    if font == Font.serif then
+        font
+    else if font == Font.sansSerif then
+        font
+    else if font == Font.monospace then
+        font
+    else
+        "\"" ++ font ++ "\""
 
 
 toSvgAttributes : Attribute msg -> List (Svg.Attribute msg)
@@ -206,6 +232,17 @@ toSvgAttributes attribute =
                     [ Svg.Attributes.textAnchor "end"
                     , Svg.Attributes.alignmentBaseline "alphabetic"
                     ]
+
+        TextColor color ->
+            [ Svg.Attributes.color (Tuple.first (colorStrings color)) ]
+
+        FontSize px ->
+            [ Svg.Attributes.fontSize (toString px ++ "px") ]
+
+        FontFamily fonts ->
+            [ Svg.Attributes.fontFamily
+                (fonts |> List.map normalizeFont |> String.join ",")
+            ]
 
         OnClick message ->
             [ Html.Events.onWithOptions "click"

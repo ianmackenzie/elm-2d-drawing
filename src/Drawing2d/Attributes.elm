@@ -4,6 +4,8 @@ module Drawing2d.Attributes
         , blackStroke
         , dotRadius
         , fillColor
+        , fontFamily
+        , fontSize
         , noFill
         , noStroke
         , onClick
@@ -11,6 +13,7 @@ module Drawing2d.Attributes
         , strokeColor
         , strokeWidth
         , textAnchor
+        , textColor
         , whiteFill
         , whiteStroke
         )
@@ -84,3 +87,18 @@ onMouseDown handler =
 textAnchor : Text.Anchor -> Attribute msg
 textAnchor anchor =
     Internal.TextAnchor anchor
+
+
+textColor : Color -> Attribute msg
+textColor color =
+    Internal.TextColor color
+
+
+fontSize : Int -> Attribute msg
+fontSize px =
+    Internal.FontSize px
+
+
+fontFamily : List String -> Attribute msg
+fontFamily fonts =
+    Internal.FontFamily fonts
