@@ -194,17 +194,17 @@ toSvgAttributes attribute =
 
                 BottomLeft ->
                     [ Svg.Attributes.textAnchor "start"
-                    , Svg.Attributes.dominantBaseline "baseline"
+                    , Svg.Attributes.dominantBaseline "alphabetic"
                     ]
 
                 BottomCenter ->
                     [ Svg.Attributes.textAnchor "middle"
-                    , Svg.Attributes.alignmentBaseline "baseline"
+                    , Svg.Attributes.alignmentBaseline "alphabetic"
                     ]
 
                 BottomRight ->
                     [ Svg.Attributes.textAnchor "end"
-                    , Svg.Attributes.alignmentBaseline "baseline"
+                    , Svg.Attributes.alignmentBaseline "alphabetic"
                     ]
 
         OnClick message ->
