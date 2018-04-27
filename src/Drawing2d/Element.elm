@@ -1,22 +1,45 @@
-module Drawing2d.Element exposing (Element, toSvgElement)
+module Drawing2d.Element exposing (Element(..), map, toSvgElement)
 
-import Axis2d
-import Circle2d
-import Direction2d
+import Arc2d exposing (Arc2d)
+import Axis2d exposing (Axis2d)
+import Circle2d exposing (Circle2d)
+import CubicSpline2d exposing (CubicSpline2d)
+import Direction2d exposing (Direction2d)
 import Drawing2d.Attribute as Attribute exposing (Attribute, Context)
-import Drawing2d.Internal as Internal
-import Frame2d
+import Ellipse2d exposing (Ellipse2d)
+import EllipticalArc2d exposing (EllipticalArc2d)
+import Frame2d exposing (Frame2d)
 import Geometry.Svg as Svg
-import LineSegment2d
-import Point2d
-import Rectangle2d
+import LineSegment2d exposing (LineSegment2d)
+import Point2d exposing (Point2d)
+import Polygon2d exposing (Polygon2d)
+import Polyline2d exposing (Polyline2d)
+import QuadraticSpline2d exposing (QuadraticSpline2d)
+import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg)
 import Svg.Attributes
-import Triangle2d
+import Triangle2d exposing (Triangle2d)
 
 
-type alias Element msg =
-    Internal.Element msg
+type Element msg
+    = Empty
+    | Group (List (Attribute msg)) (List (Element msg))
+    | PlaceIn Frame2d (Element msg)
+    | ScaleAbout Point2d Float (Element msg)
+    | LineSegment (List (Attribute msg)) LineSegment2d
+    | Triangle (List (Attribute msg)) Triangle2d
+    | Dot (List (Attribute msg)) Point2d
+    | Arc (List (Attribute msg)) Arc2d
+    | CubicSpline (List (Attribute msg)) CubicSpline2d
+    | QuadraticSpline (List (Attribute msg)) QuadraticSpline2d
+    | Polyline (List (Attribute msg)) Polyline2d
+    | Polygon (List (Attribute msg)) Polygon2d
+    | Circle (List (Attribute msg)) Circle2d
+    | Ellipse (List (Attribute msg)) Ellipse2d
+    | EllipticalArc (List (Attribute msg)) EllipticalArc2d
+    | Text (List (Attribute msg)) Point2d String
+    | TextShape (List (Attribute msg)) Point2d String
+    | RoundedRectangle (List (Attribute msg)) Float Rectangle2d
 
 
 svgAttributes : List (Attribute msg) -> List (Svg.Attribute msg)
@@ -29,13 +52,13 @@ applyAttributes attributes context =
     List.foldl Attribute.apply context attributes
 
 
-toSvgElement : Internal.Context -> Element msg -> Svg msg
+toSvgElement : Context -> Element msg -> Svg msg
 toSvgElement parentContext element =
     case element of
-        Internal.Empty ->
+        Empty ->
             Svg.text ""
 
-        Internal.Group attributes children ->
+        Group attributes children ->
             let
                 localContext =
                     parentContext |> applyAttributes attributes
@@ -43,59 +66,19 @@ toSvgElement parentContext element =
             Svg.g (svgAttributes attributes)
                 (List.map (toSvgElement localContext) children)
 
-        Internal.PlaceIn frame element ->
+        PlaceIn frame element ->
             Svg.placeIn frame (toSvgElement parentContext element)
 
-        Internal.ScaleAbout point scale element ->
+        ScaleAbout point scale element ->
             Svg.scaleAbout point scale (toSvgElement parentContext element)
 
-        Internal.Arrow attributes basePoint length direction ->
-            let
-                localContext =
-                    parentContext |> applyAttributes attributes
-
-                localFrame =
-                    Frame2d.withXDirection direction basePoint
-
-                (Internal.TriangularTip tipOptions) =
-                    localContext.arrowTipStyle
-
-                tipPoint =
-                    Point2d.fromCoordinatesIn localFrame ( length, 0 )
-
-                stemLength =
-                    length - tipOptions.length
-
-                tipBasePoint =
-                    Point2d.fromCoordinatesIn localFrame ( stemLength, 0 )
-
-                stem =
-                    LineSegment2d.from basePoint tipBasePoint
-
-                tipHalfWidth =
-                    tipOptions.width / 2
-
-                leftPoint =
-                    Point2d.fromCoordinatesIn localFrame
-                        ( stemLength, tipHalfWidth )
-
-                rightPoint =
-                    Point2d.fromCoordinatesIn localFrame
-                        ( stemLength, -tipHalfWidth )
-
-                tip =
-                    Triangle2d.fromVertices ( rightPoint, tipPoint, leftPoint )
-            in
-            Svg.g (svgAttributes attributes)
-                [ Svg.lineSegment2d [] stem, Svg.triangle2d [] tip ]
-
-        Internal.LineSegment attributes lineSegment ->
+        LineSegment attributes lineSegment ->
             Svg.lineSegment2d (svgAttributes attributes) lineSegment
 
-        Internal.Triangle attributes triangle ->
+        Triangle attributes triangle ->
             Svg.triangle2d (svgAttributes attributes) triangle
 
-        Internal.Dot attributes point ->
+        Dot attributes point ->
             let
                 localContext =
                     parentContext |> applyAttributes attributes
@@ -103,31 +86,31 @@ toSvgElement parentContext element =
             Svg.circle2d (svgAttributes attributes)
                 (Circle2d.withRadius localContext.dotRadius point)
 
-        Internal.Arc attributes arc ->
+        Arc attributes arc ->
             Svg.arc2d (svgAttributes attributes) arc
 
-        Internal.QuadraticSpline attributes quadraticSpline ->
+        QuadraticSpline attributes quadraticSpline ->
             Svg.quadraticSpline2d (svgAttributes attributes) quadraticSpline
 
-        Internal.CubicSpline attributes cubicSpline ->
+        CubicSpline attributes cubicSpline ->
             Svg.cubicSpline2d (svgAttributes attributes) cubicSpline
 
-        Internal.Circle attributes circle ->
+        Circle attributes circle ->
             Svg.circle2d (svgAttributes attributes) circle
 
-        Internal.Ellipse attributes ellipse ->
+        Ellipse attributes ellipse ->
             Svg.ellipse2d (svgAttributes attributes) ellipse
 
-        Internal.EllipticalArc attributes ellipticalArc ->
+        EllipticalArc attributes ellipticalArc ->
             Svg.ellipticalArc2d (svgAttributes attributes) ellipticalArc
 
-        Internal.Polyline attributes polyline ->
+        Polyline attributes polyline ->
             Svg.polyline2d (svgAttributes attributes) polyline
 
-        Internal.Polygon attributes polygon ->
+        Polygon attributes polygon ->
             Svg.polygon2d (svgAttributes attributes) polygon
 
-        Internal.Text attributes point string ->
+        Text attributes point string ->
             let
                 ( x, y ) =
                     Point2d.coordinates point
@@ -157,7 +140,7 @@ toSvgElement parentContext element =
                 [ Svg.text string ]
                 |> Svg.mirrorAcross mirrorAxis
 
-        Internal.TextShape attributes point string ->
+        TextShape attributes point string ->
             let
                 ( x, y ) =
                     Point2d.coordinates point
@@ -175,7 +158,7 @@ toSvgElement parentContext element =
                 [ Svg.text string ]
                 |> Svg.mirrorAcross mirrorAxis
 
-        Internal.RoundedRectangle attributes radius rectangle ->
+        RoundedRectangle attributes radius rectangle ->
             let
                 ( width, height ) =
                     Rectangle2d.dimensions rectangle
@@ -212,3 +195,71 @@ toSvgElement parentContext element =
                 )
                 []
                 |> Svg.placeIn (Rectangle2d.axes rectangle)
+
+
+map : (a -> b) -> Element a -> Element b
+map function element =
+    let
+        mapAttributes =
+            List.map (Attribute.map function)
+
+        mapElement =
+            map function
+    in
+    case element of
+        Empty ->
+            Empty
+
+        Group attributes elements ->
+            Group (mapAttributes attributes)
+                (List.map mapElement elements)
+
+        PlaceIn frame element ->
+            PlaceIn frame (mapElement element)
+
+        ScaleAbout point scale element ->
+            ScaleAbout point scale (mapElement element)
+
+        LineSegment attributes lineSegment ->
+            LineSegment (mapAttributes attributes) lineSegment
+
+        Triangle attributes triangle ->
+            Triangle (mapAttributes attributes) triangle
+
+        Dot attributes point ->
+            Dot (mapAttributes attributes) point
+
+        Arc attributes arc ->
+            Arc (mapAttributes attributes) arc
+
+        CubicSpline attributes spline ->
+            CubicSpline (mapAttributes attributes) spline
+
+        QuadraticSpline attributes spline ->
+            QuadraticSpline (mapAttributes attributes) spline
+
+        Polyline attributes polyline ->
+            Polyline (mapAttributes attributes) polyline
+
+        Polygon attributes polygon ->
+            Polygon (mapAttributes attributes) polygon
+
+        Circle attributes circle ->
+            Circle (mapAttributes attributes) circle
+
+        Ellipse attributes ellipse ->
+            Ellipse (mapAttributes attributes) ellipse
+
+        EllipticalArc attributes arc ->
+            EllipticalArc (mapAttributes attributes) arc
+
+        Text attributes point string ->
+            Text (mapAttributes attributes) point string
+
+        TextShape attributes point string ->
+            TextShape (mapAttributes attributes) point string
+
+        RoundedRectangle attributes radius rectangle ->
+            RoundedRectangle (mapAttributes attributes)
+                radius
+                rectangle

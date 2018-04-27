@@ -12,53 +12,53 @@ module Drawing2d.Text
         , topRight
         )
 
-import Drawing2d.Internal as Internal
+import Drawing2d.TextAnchor as TextAnchor
 
 
 type alias Anchor =
-    Internal.Anchor
+    TextAnchor.Anchor
 
 
 topLeft : Anchor
 topLeft =
-    Internal.TopLeft
+    TextAnchor.TopLeft
 
 
 topCenter : Anchor
 topCenter =
-    Internal.TopCenter
+    TextAnchor.TopCenter
 
 
 topRight : Anchor
 topRight =
-    Internal.TopRight
+    TextAnchor.TopRight
 
 
 centerLeft : Anchor
 centerLeft =
-    Internal.CenterLeft
+    TextAnchor.CenterLeft
 
 
 center : Anchor
 center =
-    Internal.Center
+    TextAnchor.Center
 
 
 centerRight : Anchor
 centerRight =
-    Internal.CenterRight
+    TextAnchor.CenterRight
 
 
 bottomLeft : Anchor
 bottomLeft =
-    Internal.BottomLeft
+    TextAnchor.BottomLeft
 
 
 bottomCenter : Anchor
 bottomCenter =
-    Internal.BottomCenter
+    TextAnchor.BottomCenter
 
 
 bottomRight : Anchor
 bottomRight =
-    Internal.BottomRight
+    TextAnchor.BottomRight

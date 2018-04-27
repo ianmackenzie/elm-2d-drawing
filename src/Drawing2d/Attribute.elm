@@ -1,8 +1,19 @@
-module Drawing2d.Attribute exposing (Attribute, Context, apply, toSvgAttributes)
+module Drawing2d.Attribute
+    exposing
+        ( Attribute(..)
+        , Context
+        , FillStyle(..)
+        , StrokeStyle(..)
+        , apply
+        , defaultContext
+        , map
+        , toSvgAttributes
+        )
 
 import Color exposing (Color)
 import Drawing2d.Font as Font
-import Drawing2d.Internal as Internal
+import Drawing2d.Text as Text
+import Drawing2d.TextAnchor as TextAnchor
 import Html.Events
 import Json.Decode as Decode
 import Mouse
@@ -10,12 +21,38 @@ import Svg
 import Svg.Attributes
 
 
-type alias Attribute msg =
-    Internal.Attribute msg
+type FillStyle
+    = FillColor Color
+    | NoFill
+
+
+type StrokeStyle
+    = StrokeColor Color
+    | NoStroke
+
+
+type Attribute msg
+    = FillStyle FillStyle
+    | StrokeStyle StrokeStyle
+    | StrokeWidth Float
+    | DotRadius Float
+    | TextAnchor Text.Anchor
+    | TextColor Color
+    | FontSize Int
+    | FontFamily (List String)
+    | OnClick msg
+    | OnMouseDown (Mouse.Position -> msg)
 
 
 type alias Context =
-    Internal.Context
+    { dotRadius : Float
+    }
+
+
+defaultContext : Context
+defaultContext =
+    { dotRadius = 3
+    }
 
 
 normalizeFont : String -> String
@@ -51,7 +88,7 @@ colorStrings color =
 toSvgAttributes : Attribute msg -> List (Svg.Attribute msg)
 toSvgAttributes attribute =
     case attribute of
-        Internal.FillStyle (Internal.FillColor color) ->
+        FillStyle (FillColor color) ->
             let
                 ( rgbString, alphaString ) =
                     colorStrings color
@@ -60,10 +97,10 @@ toSvgAttributes attribute =
             , Svg.Attributes.fillOpacity alphaString
             ]
 
-        Internal.FillStyle Internal.NoFill ->
+        FillStyle NoFill ->
             [ Svg.Attributes.fill "none" ]
 
-        Internal.StrokeStyle (Internal.StrokeColor color) ->
+        StrokeStyle (StrokeColor color) ->
             let
                 ( rgbString, alphaString ) =
                     colorStrings color
@@ -72,83 +109,36 @@ toSvgAttributes attribute =
             , Svg.Attributes.strokeOpacity alphaString
             ]
 
-        Internal.StrokeStyle Internal.NoStroke ->
+        StrokeStyle NoStroke ->
             [ Svg.Attributes.stroke "none" ]
 
-        Internal.StrokeWidth width ->
+        StrokeWidth width ->
             [ Svg.Attributes.strokeWidth (toString width ++ "px") ]
 
-        Internal.ArrowTipStyle _ ->
+        DotRadius _ ->
             []
 
-        Internal.DotRadius _ ->
-            []
+        TextAnchor anchor ->
+            TextAnchor.toSvgAttributes anchor
 
-        Internal.TextAnchor anchor ->
-            case anchor of
-                Internal.TopLeft ->
-                    [ Svg.Attributes.textAnchor "start"
-                    , Svg.Attributes.dominantBaseline "hanging"
-                    ]
-
-                Internal.TopCenter ->
-                    [ Svg.Attributes.textAnchor "middle"
-                    , Svg.Attributes.dominantBaseline "hanging"
-                    ]
-
-                Internal.TopRight ->
-                    [ Svg.Attributes.textAnchor "end"
-                    , Svg.Attributes.dominantBaseline "hanging"
-                    ]
-
-                Internal.CenterLeft ->
-                    [ Svg.Attributes.textAnchor "start"
-                    , Svg.Attributes.dominantBaseline "middle"
-                    ]
-
-                Internal.Center ->
-                    [ Svg.Attributes.textAnchor "middle"
-                    , Svg.Attributes.dominantBaseline "middle"
-                    ]
-
-                Internal.CenterRight ->
-                    [ Svg.Attributes.textAnchor "end"
-                    , Svg.Attributes.dominantBaseline "middle"
-                    ]
-
-                Internal.BottomLeft ->
-                    [ Svg.Attributes.textAnchor "start"
-                    , Svg.Attributes.dominantBaseline "alphabetic"
-                    ]
-
-                Internal.BottomCenter ->
-                    [ Svg.Attributes.textAnchor "middle"
-                    , Svg.Attributes.alignmentBaseline "alphabetic"
-                    ]
-
-                Internal.BottomRight ->
-                    [ Svg.Attributes.textAnchor "end"
-                    , Svg.Attributes.alignmentBaseline "alphabetic"
-                    ]
-
-        Internal.TextColor color ->
+        TextColor color ->
             [ Svg.Attributes.color (Tuple.first (colorStrings color)) ]
 
-        Internal.FontSize px ->
+        FontSize px ->
             [ Svg.Attributes.fontSize (toString px ++ "px") ]
 
-        Internal.FontFamily fonts ->
+        FontFamily fonts ->
             [ Svg.Attributes.fontFamily
                 (fonts |> List.map normalizeFont |> String.join ",")
             ]
 
-        Internal.OnClick message ->
+        OnClick message ->
             [ Html.Events.onWithOptions "click"
                 { preventDefault = True, stopPropagation = True }
                 (Decode.succeed message)
             ]
 
-        Internal.OnMouseDown handler ->
+        OnMouseDown handler ->
             [ Html.Events.onWithOptions "mousedown"
                 { preventDefault = True, stopPropagation = True }
                 (Mouse.position |> Decode.map handler)
@@ -158,35 +148,66 @@ toSvgAttributes attribute =
 apply : Attribute msg -> Context -> Context
 apply attribute context =
     case attribute of
-        Internal.FillStyle _ ->
+        FillStyle _ ->
             context
 
-        Internal.StrokeStyle _ ->
+        StrokeStyle _ ->
             context
 
-        Internal.ArrowTipStyle arrowTipStyle ->
-            { context | arrowTipStyle = arrowTipStyle }
-
-        Internal.DotRadius dotRadius ->
+        DotRadius dotRadius ->
             { context | dotRadius = dotRadius }
 
-        Internal.StrokeWidth _ ->
+        StrokeWidth _ ->
             context
 
-        Internal.TextAnchor _ ->
+        TextAnchor _ ->
             context
 
-        Internal.TextColor _ ->
+        TextColor _ ->
             context
 
-        Internal.FontSize _ ->
+        FontSize _ ->
             context
 
-        Internal.FontFamily _ ->
+        FontFamily _ ->
             context
 
-        Internal.OnClick _ ->
+        OnClick _ ->
             context
 
-        Internal.OnMouseDown _ ->
+        OnMouseDown _ ->
             context
+
+
+map : (a -> b) -> Attribute a -> Attribute b
+map function attribute =
+    case attribute of
+        FillStyle style ->
+            FillStyle style
+
+        StrokeStyle style ->
+            StrokeStyle style
+
+        StrokeWidth width ->
+            StrokeWidth width
+
+        DotRadius radius ->
+            DotRadius radius
+
+        TextAnchor anchor ->
+            TextAnchor anchor
+
+        TextColor color ->
+            TextColor color
+
+        FontSize px ->
+            FontSize px
+
+        FontFamily fonts ->
+            FontFamily fonts
+
+        OnClick message ->
+            OnClick (function message)
+
+        OnMouseDown handler ->
+            OnMouseDown (handler >> function)

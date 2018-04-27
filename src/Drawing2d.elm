@@ -57,7 +57,6 @@ import Direction2d exposing (Direction2d)
 import Drawing2d.Attribute as Attribute
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Element as Element
-import Drawing2d.Internal as Internal exposing (defaultContext)
 import Drawing2d.Text as Text
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
@@ -77,11 +76,11 @@ import Vector2d exposing (Vector2d)
 
 
 type alias Element msg =
-    Internal.Element msg
+    Element.Element msg
 
 
 type alias Attribute msg =
-    Internal.Attribute msg
+    Attribute.Attribute msg
 
 
 toHtml : BoundingBox2d -> List (Attribute msg) -> List (Element msg) -> Html msg
@@ -98,7 +97,7 @@ toHtml boundingBox attributes elements =
             BoundingBox2d.dimensions boundingBox
 
         context =
-            List.foldl Attribute.apply defaultContext attributes
+            List.foldl Attribute.apply Attribute.defaultContext attributes
 
         defaultAttributes =
             [ Attributes.textColor Color.black
@@ -129,22 +128,7 @@ toHtml boundingBox attributes elements =
 
 empty : Element msg
 empty =
-    Internal.Empty
-
-
-arrow : Point2d -> Vector2d -> Element msg
-arrow =
-    arrowWith []
-
-
-arrowWith : List (Attribute msg) -> Point2d -> Vector2d -> Element msg
-arrowWith attributes basePoint vector =
-    case Vector2d.lengthAndDirection vector of
-        Just ( length, direction ) ->
-            Internal.Arrow attributes basePoint length direction
-
-        Nothing ->
-            empty
+    Element.Empty
 
 
 lineSegment : LineSegment2d -> Element msg
@@ -154,7 +138,7 @@ lineSegment =
 
 lineSegmentWith : List (Attribute msg) -> LineSegment2d -> Element msg
 lineSegmentWith attributes lineSegment =
-    Internal.LineSegment attributes lineSegment
+    Element.LineSegment attributes lineSegment
 
 
 triangle : Triangle2d -> Element msg
@@ -164,7 +148,7 @@ triangle =
 
 triangleWith : List (Attribute msg) -> Triangle2d -> Element msg
 triangleWith attributes triangle =
-    Internal.Triangle attributes triangle
+    Element.Triangle attributes triangle
 
 
 group : List (Element msg) -> Element msg
@@ -174,12 +158,12 @@ group =
 
 groupWith : List (Attribute msg) -> List (Element msg) -> Element msg
 groupWith attributes elements =
-    Internal.Group attributes elements
+    Element.Group attributes elements
 
 
 placeIn : Frame2d -> Element msg -> Element msg
 placeIn frame element =
-    Internal.PlaceIn frame element
+    Element.PlaceIn frame element
 
 
 relativeTo : Frame2d -> Element msg -> Element msg
@@ -194,7 +178,7 @@ dot =
 
 dotWith : List (Attribute msg) -> Point2d -> Element msg
 dotWith attributes point =
-    Internal.Dot attributes point
+    Element.Dot attributes point
 
 
 translateBy : Vector2d -> Element msg -> Element msg
@@ -209,7 +193,7 @@ translateIn direction distance element =
 
 scaleAbout : Point2d -> Float -> Element msg -> Element msg
 scaleAbout point scale element =
-    Internal.ScaleAbout point scale element
+    Element.ScaleAbout point scale element
 
 
 mirrorAcross : Axis2d -> Element msg -> Element msg
@@ -224,7 +208,7 @@ arc =
 
 arcWith : List (Attribute msg) -> Arc2d -> Element msg
 arcWith attributes arc =
-    Internal.Arc attributes arc
+    Element.Arc attributes arc
 
 
 quadraticSpline : QuadraticSpline2d -> Element msg
@@ -234,7 +218,7 @@ quadraticSpline =
 
 quadraticSplineWith : List (Attribute msg) -> QuadraticSpline2d -> Element msg
 quadraticSplineWith attributes quadraticSpline =
-    Internal.QuadraticSpline attributes quadraticSpline
+    Element.QuadraticSpline attributes quadraticSpline
 
 
 cubicSpline : CubicSpline2d -> Element msg
@@ -244,7 +228,7 @@ cubicSpline =
 
 cubicSplineWith : List (Attribute msg) -> CubicSpline2d -> Element msg
 cubicSplineWith attributes cubicSpline =
-    Internal.CubicSpline attributes cubicSpline
+    Element.CubicSpline attributes cubicSpline
 
 
 polyline : Polyline2d -> Element msg
@@ -254,7 +238,7 @@ polyline =
 
 polylineWith : List (Attribute msg) -> Polyline2d -> Element msg
 polylineWith attributes polyline =
-    Internal.Polyline attributes polyline
+    Element.Polyline attributes polyline
 
 
 polygon : Polygon2d -> Element msg
@@ -264,7 +248,7 @@ polygon =
 
 polygonWith : List (Attribute msg) -> Polygon2d -> Element msg
 polygonWith attributes polygon =
-    Internal.Polygon attributes polygon
+    Element.Polygon attributes polygon
 
 
 circle : Circle2d -> Element msg
@@ -274,7 +258,7 @@ circle =
 
 circleWith : List (Attribute msg) -> Circle2d -> Element msg
 circleWith attributes circle =
-    Internal.Circle attributes circle
+    Element.Circle attributes circle
 
 
 ellipticalArc : EllipticalArc2d -> Element msg
@@ -284,7 +268,7 @@ ellipticalArc =
 
 ellipticalArcWith : List (Attribute msg) -> EllipticalArc2d -> Element msg
 ellipticalArcWith attributes ellipticalArc =
-    Internal.EllipticalArc attributes ellipticalArc
+    Element.EllipticalArc attributes ellipticalArc
 
 
 ellipse : Ellipse2d -> Element msg
@@ -294,7 +278,7 @@ ellipse =
 
 ellipseWith : List (Attribute msg) -> Ellipse2d -> Element msg
 ellipseWith attributes ellipse =
-    Internal.Ellipse attributes ellipse
+    Element.Ellipse attributes ellipse
 
 
 rectangle : Rectangle2d -> Element msg
@@ -314,7 +298,7 @@ roundedRectangle =
 
 roundedRectangleWith : List (Attribute msg) -> Float -> Rectangle2d -> Element msg
 roundedRectangleWith attributes radius rectangle =
-    Internal.RoundedRectangle attributes radius rectangle
+    Element.RoundedRectangle attributes radius rectangle
 
 
 text : Point2d -> String -> Element msg
@@ -324,7 +308,7 @@ text =
 
 textWith : List (Attribute msg) -> Point2d -> String -> Element msg
 textWith attributes point string =
-    Internal.Text attributes point string
+    Element.Text attributes point string
 
 
 textShape : Point2d -> String -> Element msg
@@ -334,112 +318,9 @@ textShape =
 
 textShapeWith : List (Attribute msg) -> Point2d -> String -> Element msg
 textShapeWith attributes point string =
-    Internal.TextShape attributes point string
-
-
-mapAttribute : (a -> b) -> Attribute a -> Attribute b
-mapAttribute function attribute =
-    case attribute of
-        Internal.FillStyle style ->
-            Internal.FillStyle style
-
-        Internal.StrokeStyle style ->
-            Internal.StrokeStyle style
-
-        Internal.StrokeWidth width ->
-            Internal.StrokeWidth width
-
-        Internal.ArrowTipStyle style ->
-            Internal.ArrowTipStyle style
-
-        Internal.DotRadius radius ->
-            Internal.DotRadius radius
-
-        Internal.TextAnchor anchor ->
-            Internal.TextAnchor anchor
-
-        Internal.TextColor color ->
-            Internal.TextColor color
-
-        Internal.FontSize px ->
-            Internal.FontSize px
-
-        Internal.FontFamily fonts ->
-            Internal.FontFamily fonts
-
-        Internal.OnClick message ->
-            Internal.OnClick (function message)
-
-        Internal.OnMouseDown handler ->
-            Internal.OnMouseDown (handler >> function)
+    Element.TextShape attributes point string
 
 
 map : (a -> b) -> Element a -> Element b
-map function element =
-    let
-        mapAttributes =
-            List.map (mapAttribute function)
-
-        mapElement =
-            map function
-    in
-    case element of
-        Internal.Empty ->
-            Internal.Empty
-
-        Internal.Group attributes elements ->
-            Internal.Group (mapAttributes attributes)
-                (List.map mapElement elements)
-
-        Internal.PlaceIn frame element ->
-            Internal.PlaceIn frame (mapElement element)
-
-        Internal.ScaleAbout point scale element ->
-            Internal.ScaleAbout point scale (mapElement element)
-
-        Internal.Arrow attributes point length direction ->
-            Internal.Arrow (mapAttributes attributes) point length direction
-
-        Internal.LineSegment attributes lineSegment ->
-            Internal.LineSegment (mapAttributes attributes) lineSegment
-
-        Internal.Triangle attributes triangle ->
-            Internal.Triangle (mapAttributes attributes) triangle
-
-        Internal.Dot attributes point ->
-            Internal.Dot (mapAttributes attributes) point
-
-        Internal.Arc attributes arc ->
-            Internal.Arc (mapAttributes attributes) arc
-
-        Internal.CubicSpline attributes spline ->
-            Internal.CubicSpline (mapAttributes attributes) spline
-
-        Internal.QuadraticSpline attributes spline ->
-            Internal.QuadraticSpline (mapAttributes attributes) spline
-
-        Internal.Polyline attributes polyline ->
-            Internal.Polyline (mapAttributes attributes) polyline
-
-        Internal.Polygon attributes polygon ->
-            Internal.Polygon (mapAttributes attributes) polygon
-
-        Internal.Circle attributes circle ->
-            Internal.Circle (mapAttributes attributes) circle
-
-        Internal.Ellipse attributes ellipse ->
-            Internal.Ellipse (mapAttributes attributes) ellipse
-
-        Internal.EllipticalArc attributes arc ->
-            Internal.EllipticalArc (mapAttributes attributes) arc
-
-        Internal.Text attributes point string ->
-            Internal.Text (mapAttributes attributes) point string
-
-        Internal.TextShape attributes point string ->
-            Internal.TextShape (mapAttributes attributes) point string
-
-        Internal.RoundedRectangle attributes radius rectangle ->
-            Internal.RoundedRectangle (mapAttributes attributes)
-                radius
-                rectangle
+map =
+    Element.map

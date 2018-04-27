@@ -6,6 +6,7 @@ module Drawing2d.Attributes
         , fillColor
         , fontFamily
         , fontSize
+        , map
         , noFill
         , noStroke
         , onClick
@@ -19,86 +20,95 @@ module Drawing2d.Attributes
         )
 
 import Color exposing (Color)
-import Drawing2d.Internal as Internal exposing (Attribute)
+import Drawing2d.Attribute as Attribute
 import Drawing2d.Text as Text
 import Mouse
 
 
+type alias Attribute msg =
+    Attribute.Attribute msg
+
+
 dotRadius : Float -> Attribute msg
 dotRadius radius =
-    Internal.DotRadius radius
+    Attribute.DotRadius radius
 
 
 fillColor : Color -> Attribute msg
 fillColor color =
-    Internal.FillStyle (Internal.FillColor color)
+    Attribute.FillStyle (Attribute.FillColor color)
 
 
 noFill : Attribute msg
 noFill =
-    Internal.FillStyle Internal.NoFill
+    Attribute.FillStyle Attribute.NoFill
 
 
 blackFill : Attribute msg
 blackFill =
-    Internal.FillStyle (Internal.FillColor Color.black)
+    Attribute.FillStyle (Attribute.FillColor Color.black)
 
 
 whiteFill : Attribute msg
 whiteFill =
-    Internal.FillStyle (Internal.FillColor Color.white)
+    Attribute.FillStyle (Attribute.FillColor Color.white)
 
 
 strokeColor : Color -> Attribute msg
 strokeColor color =
-    Internal.StrokeStyle (Internal.StrokeColor color)
+    Attribute.StrokeStyle (Attribute.StrokeColor color)
 
 
 noStroke : Attribute msg
 noStroke =
-    Internal.StrokeStyle Internal.NoStroke
+    Attribute.StrokeStyle Attribute.NoStroke
 
 
 blackStroke : Attribute msg
 blackStroke =
-    Internal.StrokeStyle (Internal.StrokeColor Color.black)
+    Attribute.StrokeStyle (Attribute.StrokeColor Color.black)
 
 
 whiteStroke : Attribute msg
 whiteStroke =
-    Internal.StrokeStyle (Internal.StrokeColor Color.white)
+    Attribute.StrokeStyle (Attribute.StrokeColor Color.white)
 
 
 strokeWidth : Float -> Attribute msg
 strokeWidth width =
-    Internal.StrokeWidth width
+    Attribute.StrokeWidth width
 
 
 onClick : msg -> Attribute msg
 onClick message =
-    Internal.OnClick message
+    Attribute.OnClick message
 
 
 onMouseDown : (Mouse.Position -> msg) -> Attribute msg
 onMouseDown handler =
-    Internal.OnMouseDown handler
+    Attribute.OnMouseDown handler
 
 
 textAnchor : Text.Anchor -> Attribute msg
 textAnchor anchor =
-    Internal.TextAnchor anchor
+    Attribute.TextAnchor anchor
 
 
 textColor : Color -> Attribute msg
 textColor color =
-    Internal.TextColor color
+    Attribute.TextColor color
 
 
 fontSize : Int -> Attribute msg
 fontSize px =
-    Internal.FontSize px
+    Attribute.FontSize px
 
 
 fontFamily : List String -> Attribute msg
 fontFamily fonts =
-    Internal.FontFamily fonts
+    Attribute.FontFamily fonts
+
+
+map : (a -> b) -> Attribute a -> Attribute b
+map =
+    Attribute.map
