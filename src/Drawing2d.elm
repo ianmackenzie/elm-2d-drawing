@@ -31,6 +31,7 @@ module Drawing2d
         , rectangle
         , rectangleWith
         , relativeTo
+        , rotateAround
         , roundedRectangle
         , roundedRectangleWith
         , scaleAbout
@@ -192,6 +193,11 @@ translateIn direction distance element =
 scaleAbout : Point2d -> Float -> Element msg -> Element msg
 scaleAbout point scale element =
     Element.ScaleAbout point scale element
+
+
+rotateAround : Point2d -> Float -> Element msg -> Element msg
+rotateAround point angle element =
+    placeIn (Frame2d.rotateAround point angle Frame2d.xy) element
 
 
 mirrorAcross : Axis2d -> Element msg -> Element msg
