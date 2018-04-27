@@ -1,11 +1,13 @@
-module Drawing2d.Element exposing (Element(..), map, toSvgElement)
+module Drawing2d.Element exposing (Element(..), map, render)
 
 import Arc2d exposing (Arc2d)
 import Axis2d exposing (Axis2d)
 import Circle2d exposing (Circle2d)
 import CubicSpline2d exposing (CubicSpline2d)
 import Direction2d exposing (Direction2d)
-import Drawing2d.Attribute as Attribute exposing (Attribute, Context)
+import Drawing2d.Attribute as Attribute exposing (Attribute)
+import Drawing2d.Context as Context exposing (Context)
+import Drawing2d.Defs exposing (Defs)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -42,76 +44,151 @@ type Element msg
     | RoundedRectangle (List (Attribute msg)) Float Rectangle2d
 
 
-svgAttributes : List (Attribute msg) -> List (Svg.Attribute msg)
-svgAttributes attributes =
-    List.concat (List.map Attribute.toSvgAttributes attributes)
+applyAttribute : Attribute msg -> ( Context, Defs, List (List (Svg.Attribute msg)) ) -> ( Context, Defs, List (List (Svg.Attribute msg)) )
+applyAttribute attribute ( context, defs, accumulatedAttributes ) =
+    let
+        ( updatedContext, updatedDefs, svgAttributes ) =
+            Attribute.apply attribute context defs
+    in
+    ( updatedContext, updatedDefs, svgAttributes :: accumulatedAttributes )
 
 
-applyAttributes : List (Attribute msg) -> Context -> Context
-applyAttributes attributes context =
-    List.foldl Attribute.apply context attributes
+applyAttributes : List (Attribute msg) -> Context -> Defs -> ( Context, Defs, List (Svg.Attribute msg) )
+applyAttributes attributes context defs =
+    let
+        ( updatedContext, updatedDefs, accumulatedAttributes ) =
+            List.foldl applyAttribute ( context, defs, [] ) attributes
+    in
+    ( updatedContext
+    , updatedDefs
+    , accumulatedAttributes |> List.reverse |> List.concat
+    )
 
 
-toSvgElement : Context -> Element msg -> Svg msg
-toSvgElement parentContext element =
+render : Context -> Defs -> Element msg -> ( Svg msg, Defs )
+render parentContext currentDefs element =
     case element of
         Empty ->
-            Svg.text ""
+            ( Svg.text "", currentDefs )
 
         Group attributes children ->
             let
-                localContext =
-                    parentContext |> applyAttributes attributes
+                ( localContext, postGroupDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+
+                processChild childElement ( accumulatedSvgElements, preChildDefs ) =
+                    let
+                        ( childSvgElement, postChildDefs ) =
+                            render localContext preChildDefs childElement
+                    in
+                    ( childSvgElement :: accumulatedSvgElements, postChildDefs )
+
+                ( accumulatedChildElements, postChildrenDefs ) =
+                    List.foldl processChild ( [], postGroupDefs ) children
             in
-            Svg.g (svgAttributes attributes)
-                (List.map (toSvgElement localContext) children)
+            ( Svg.g svgAttributes (List.reverse accumulatedChildElements)
+            , postChildrenDefs
+            )
 
-        PlaceIn frame element ->
-            Svg.placeIn frame (toSvgElement parentContext element)
+        PlaceIn frame child ->
+            let
+                ( childSvg, updatedDefs ) =
+                    render parentContext currentDefs child
+            in
+            ( Svg.placeIn frame childSvg, updatedDefs )
 
-        ScaleAbout point scale element ->
-            Svg.scaleAbout point scale (toSvgElement parentContext element)
+        ScaleAbout point scale child ->
+            let
+                ( childSvg, updatedDefs ) =
+                    render parentContext currentDefs child
+            in
+            ( Svg.scaleAbout point scale childSvg, updatedDefs )
 
         LineSegment attributes lineSegment ->
-            Svg.lineSegment2d (svgAttributes attributes) lineSegment
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.lineSegment2d svgAttributes lineSegment, updatedDefs )
 
         Triangle attributes triangle ->
-            Svg.triangle2d (svgAttributes attributes) triangle
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.triangle2d svgAttributes triangle, updatedDefs )
 
         Dot attributes point ->
             let
-                localContext =
-                    parentContext |> applyAttributes attributes
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+
+                circle =
+                    Circle2d.withRadius localContext.dotRadius point
             in
-            Svg.circle2d (svgAttributes attributes)
-                (Circle2d.withRadius localContext.dotRadius point)
+            ( Svg.circle2d svgAttributes circle, updatedDefs )
 
         Arc attributes arc ->
-            Svg.arc2d (svgAttributes attributes) arc
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.arc2d svgAttributes arc, updatedDefs )
 
-        QuadraticSpline attributes quadraticSpline ->
-            Svg.quadraticSpline2d (svgAttributes attributes) quadraticSpline
+        QuadraticSpline attributes spline ->
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.quadraticSpline2d svgAttributes spline, updatedDefs )
 
-        CubicSpline attributes cubicSpline ->
-            Svg.cubicSpline2d (svgAttributes attributes) cubicSpline
+        CubicSpline attributes spline ->
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.cubicSpline2d svgAttributes spline, updatedDefs )
 
         Circle attributes circle ->
-            Svg.circle2d (svgAttributes attributes) circle
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.circle2d svgAttributes circle, updatedDefs )
 
         Ellipse attributes ellipse ->
-            Svg.ellipse2d (svgAttributes attributes) ellipse
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.ellipse2d svgAttributes ellipse, updatedDefs )
 
         EllipticalArc attributes ellipticalArc ->
-            Svg.ellipticalArc2d (svgAttributes attributes) ellipticalArc
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.ellipticalArc2d svgAttributes ellipticalArc, updatedDefs )
 
         Polyline attributes polyline ->
-            Svg.polyline2d (svgAttributes attributes) polyline
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.polyline2d svgAttributes polyline, updatedDefs )
 
         Polygon attributes polygon ->
-            Svg.polygon2d (svgAttributes attributes) polygon
+            let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+            in
+            ( Svg.polygon2d svgAttributes polygon, updatedDefs )
 
         Text attributes point string ->
             let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+
                 ( x, y ) =
                     Point2d.coordinates point
 
@@ -130,18 +207,23 @@ toSvgElement parentContext element =
                 strokeAttribute =
                     Svg.Attributes.stroke "none"
             in
-            Svg.text_
+            ( Svg.text_
                 (xAttribute
                     :: yAttribute
                     :: fillAttribute
                     :: strokeAttribute
-                    :: svgAttributes attributes
+                    :: svgAttributes
                 )
                 [ Svg.text string ]
                 |> Svg.mirrorAcross mirrorAxis
+            , updatedDefs
+            )
 
         TextShape attributes point string ->
             let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+
                 ( x, y ) =
                     Point2d.coordinates point
 
@@ -154,12 +236,17 @@ toSvgElement parentContext element =
                 yAttribute =
                     Svg.Attributes.y (toString y)
             in
-            Svg.text_ (xAttribute :: yAttribute :: svgAttributes attributes)
+            ( Svg.text_ (xAttribute :: yAttribute :: svgAttributes)
                 [ Svg.text string ]
                 |> Svg.mirrorAcross mirrorAxis
+            , updatedDefs
+            )
 
         RoundedRectangle attributes radius rectangle ->
             let
+                ( localContext, updatedDefs, svgAttributes ) =
+                    applyAttributes attributes parentContext currentDefs
+
                 ( width, height ) =
                     Rectangle2d.dimensions rectangle
 
@@ -184,17 +271,19 @@ toSvgElement parentContext element =
                 ryAttribute =
                     Svg.Attributes.ry radiusString
             in
-            Svg.rect
+            ( Svg.rect
                 (xAttribute
                     :: yAttribute
                     :: widthAttribute
                     :: heightAttribute
                     :: rxAttribute
                     :: ryAttribute
-                    :: svgAttributes attributes
+                    :: svgAttributes
                 )
                 []
                 |> Svg.placeIn (Rectangle2d.axes rectangle)
+            , updatedDefs
+            )
 
 
 map : (a -> b) -> Element a -> Element b

@@ -6,6 +6,7 @@ module Drawing2d.Attributes
         , fillColor
         , fontFamily
         , fontSize
+        , linearGradientFill
         , map
         , noFill
         , noStroke
@@ -22,6 +23,7 @@ module Drawing2d.Attributes
 import Color exposing (Color)
 import Drawing2d.Attribute as Attribute
 import Drawing2d.Text as Text
+import LineSegment2d exposing (LineSegment2d)
 import Mouse
 
 
@@ -52,6 +54,11 @@ blackFill =
 whiteFill : Attribute msg
 whiteFill =
     Attribute.FillStyle (Attribute.FillColor Color.white)
+
+
+linearGradientFill : LineSegment2d -> List ( Float, Color ) -> Attribute msg
+linearGradientFill lineSegment stops =
+    Attribute.FillStyle (Attribute.LinearGradientFill lineSegment stops)
 
 
 strokeColor : Color -> Attribute msg

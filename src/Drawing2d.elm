@@ -55,6 +55,8 @@ import CubicSpline2d exposing (CubicSpline2d)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attribute as Attribute
 import Drawing2d.Attributes as Attributes
+import Drawing2d.Context as Context exposing (Context)
+import Drawing2d.Defs as Defs exposing (Defs)
 import Drawing2d.Element as Element
 import Drawing2d.Text as Text
 import Ellipse2d exposing (Ellipse2d)
@@ -95,15 +97,20 @@ toHtml boundingBox attributes elements =
         ( width, height ) =
             BoundingBox2d.dimensions boundingBox
 
-        context =
-            List.foldl Attribute.apply Attribute.defaultContext attributes
-
         defaultAttributes =
             [ Attributes.textColor Color.black
             , Attributes.whiteFill
             , Attributes.blackStroke
             , Attributes.textAnchor Text.bottomLeft
             ]
+
+        ( rootSvgElement, defs ) =
+            Element.render
+                Context.default
+                Defs.init
+                (groupWith defaultAttributes [ groupWith attributes elements ]
+                    |> relativeTo topLeftFrame
+                )
     in
     Html.div
         [ Html.Attributes.style
@@ -118,10 +125,7 @@ toHtml boundingBox attributes elements =
             , Svg.Attributes.height (toString height)
             , Html.Attributes.style [ ( "display", "block" ) ]
             ]
-            [ groupWith defaultAttributes [ groupWith attributes elements ]
-                |> relativeTo topLeftFrame
-                |> Element.toSvgElement context
-            ]
+            [ Defs.toSvgElement defs, rootSvgElement ]
         ]
 
 
