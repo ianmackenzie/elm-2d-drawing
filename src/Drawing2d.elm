@@ -33,6 +33,8 @@ module Drawing2d
         , rectangle
         , rectangleWith
         , relativeTo
+        , roundedRectangle
+        , roundedRectangleWith
         , scaleAbout
         , text
         , textShape
@@ -305,6 +307,16 @@ rectangleWith attributes rectangle =
     polygonWith attributes (Rectangle2d.toPolygon rectangle)
 
 
+roundedRectangle : Float -> Rectangle2d -> Element msg
+roundedRectangle =
+    roundedRectangleWith []
+
+
+roundedRectangleWith : List (Attribute msg) -> Float -> Rectangle2d -> Element msg
+roundedRectangleWith attributes radius rectangle =
+    Internal.RoundedRectangle attributes radius rectangle
+
+
 text : Point2d -> String -> Element msg
 text =
     textWith []
@@ -426,3 +438,8 @@ map function element =
 
         Internal.TextShape attributes point string ->
             Internal.TextShape (mapAttributes attributes) point string
+
+        Internal.RoundedRectangle attributes radius rectangle ->
+            Internal.RoundedRectangle (mapAttributes attributes)
+                radius
+                rectangle

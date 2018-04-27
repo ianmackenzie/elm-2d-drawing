@@ -174,3 +174,41 @@ toSvgElement parentContext element =
             Svg.text_ (xAttribute :: yAttribute :: svgAttributes attributes)
                 [ Svg.text string ]
                 |> Svg.mirrorAcross mirrorAxis
+
+        Internal.RoundedRectangle attributes radius rectangle ->
+            let
+                ( width, height ) =
+                    Rectangle2d.dimensions rectangle
+
+                xAttribute =
+                    Svg.Attributes.x (toString (-width / 2))
+
+                yAttribute =
+                    Svg.Attributes.y (toString (-height / 2))
+
+                widthAttribute =
+                    Svg.Attributes.width (toString width)
+
+                heightAttribute =
+                    Svg.Attributes.height (toString height)
+
+                radiusString =
+                    toString radius
+
+                rxAttribute =
+                    Svg.Attributes.rx radiusString
+
+                ryAttribute =
+                    Svg.Attributes.ry radiusString
+            in
+            Svg.rect
+                (xAttribute
+                    :: yAttribute
+                    :: widthAttribute
+                    :: heightAttribute
+                    :: rxAttribute
+                    :: ryAttribute
+                    :: svgAttributes attributes
+                )
+                []
+                |> Svg.placeIn (Rectangle2d.axes rectangle)

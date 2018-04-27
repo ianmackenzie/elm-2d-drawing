@@ -14,6 +14,7 @@ import Point2d as Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Polyline2d exposing (Polyline2d)
 import QuadraticSpline2d exposing (QuadraticSpline2d)
+import Rectangle2d exposing (Rectangle2d)
 import Triangle2d exposing (Triangle2d)
 
 
@@ -76,6 +77,7 @@ type Element msg
     | EllipticalArc (List (Attribute msg)) EllipticalArc2d
     | Text (List (Attribute msg)) Point2d String
     | TextShape (List (Attribute msg)) Point2d String
+    | RoundedRectangle (List (Attribute msg)) Float Rectangle2d
 
 
 type alias Context =
