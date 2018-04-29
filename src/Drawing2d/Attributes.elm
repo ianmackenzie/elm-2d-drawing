@@ -51,12 +51,12 @@ noFill =
 
 blackFill : Attribute msg
 blackFill =
-    Attribute.FillStyle (Attribute.FillColor Color.black)
+    fill Color.black
 
 
 whiteFill : Attribute msg
 whiteFill =
-    Attribute.FillStyle (Attribute.FillColor Color.white)
+    fill Color.white
 
 
 gradientFillAlong : Axis2d -> List ( Float, Color ) -> Attribute msg
@@ -85,12 +85,12 @@ noStroke =
 
 blackStroke : Attribute msg
 blackStroke =
-    Attribute.StrokeStyle (Attribute.StrokeColor Color.black)
+    stroke Color.black
 
 
 whiteStroke : Attribute msg
 whiteStroke =
-    Attribute.StrokeStyle (Attribute.StrokeColor Color.white)
+    stroke Color.white
 
 
 strokeWidth : Float -> Attribute msg
