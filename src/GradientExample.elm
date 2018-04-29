@@ -4,14 +4,30 @@ import BoundingBox2d
 import Color
 import Drawing2d
 import Drawing2d.Attributes as Attributes
+import Drawing2d.Text as Text
 import Html exposing (Html)
+import Html.Events
 import LineSegment2d
 import Point2d
 import Rectangle2d
 
 
-main : Html msg
-main =
+type alias Model =
+    { transform : Bool
+    }
+
+
+type Msg
+    = ToggleTransform
+
+
+update : Msg -> Model -> Model
+update ToggleTransform model =
+    { model | transform = not model.transform }
+
+
+view : Model -> Html Msg
+view model =
     let
         renderBounds =
             BoundingBox2d.fromExtrema
@@ -54,8 +70,33 @@ main =
                 , Drawing2d.lineSegment gradientLine
                 , Drawing2d.dot p1
                 , Drawing2d.dot p2
+                , Drawing2d.textWith
+                    [ Attributes.textAnchor Text.topLeft
+                    , Attributes.fontSize 20
+                    ]
+                    lowerLeftCorner
+                    "lower left"
                 ]
-                |> Drawing2d.scaleAbout lowerLeftCorner 0.5
-                |> Drawing2d.rotateAround lowerLeftCorner (degrees 30)
+
+        rendered =
+            if model.transform then
+                box
+                    |> Drawing2d.scaleAbout lowerLeftCorner 0.5
+                    |> Drawing2d.rotateAround lowerLeftCorner (degrees 30)
+            else
+                box
     in
-    Drawing2d.toHtml renderBounds [] [ box ]
+    Html.div []
+        [ Drawing2d.toHtml renderBounds [] [ rendered ]
+        , Html.button [ Html.Events.onClick ToggleTransform ]
+            [ Html.text "Toggle transform " ]
+        ]
+
+
+main : Program Never Model Msg
+main =
+    Html.beginnerProgram
+        { model = { transform = False }
+        , update = update
+        , view = view
+        }

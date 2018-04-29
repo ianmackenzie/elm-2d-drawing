@@ -120,9 +120,9 @@ apply attribute context defs =
             )
 
         FontSize px ->
-            ( context
+            ( { context | fontSize = toFloat px }
             , defs
-            , [ Svg.Attributes.fontSize (toString px ++ "px") ]
+            , []
             )
 
         FontFamily fonts ->

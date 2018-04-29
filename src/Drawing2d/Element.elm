@@ -21,6 +21,7 @@ import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg)
 import Svg.Attributes
 import Triangle2d exposing (Triangle2d)
+import VirtualDom
 
 
 type Element msg
@@ -50,6 +51,16 @@ applyAttribute attribute ( context, defs, accumulatedAttributes ) =
             Attribute.apply attribute context defs
     in
     ( updatedContext, updatedDefs, svgAttributes :: accumulatedAttributes )
+
+
+nonScalingStrokeAttribute : Svg.Attribute msg
+nonScalingStrokeAttribute =
+    VirtualDom.attribute "vector-effect" "non-scaling-stroke"
+
+
+withNonScalingStroke : List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+withNonScalingStroke attributes =
+    nonScalingStrokeAttribute :: attributes
 
 
 applyAttributes : List (Attribute msg) -> Context -> Defs -> ( Context, Defs, List (Svg.Attribute msg) )
@@ -98,8 +109,14 @@ render parentContext currentDefs element =
 
         ScaleAbout point scale child ->
             let
+                localContext =
+                    { parentContext
+                        | scaleCorrection =
+                            parentContext.scaleCorrection / scale
+                    }
+
                 ( childSvg, updatedDefs ) =
-                    render parentContext currentDefs child
+                    render localContext currentDefs child
             in
             ( Svg.scaleAbout point scale childSvg, updatedDefs )
 
@@ -108,80 +125,108 @@ render parentContext currentDefs element =
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.lineSegment2d svgAttributes lineSegment, updatedDefs )
+            ( Svg.lineSegment2d (svgAttributes |> withNonScalingStroke)
+                lineSegment
+            , updatedDefs
+            )
 
         Triangle attributes triangle ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.triangle2d svgAttributes triangle, updatedDefs )
+            ( Svg.triangle2d (svgAttributes |> withNonScalingStroke) triangle
+            , updatedDefs
+            )
 
         Dot attributes point ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
 
+                dotRadius =
+                    localContext.dotRadius * localContext.scaleCorrection
+
                 circle =
-                    Circle2d.withRadius localContext.dotRadius point
+                    Circle2d.withRadius dotRadius point
             in
-            ( Svg.circle2d svgAttributes circle, updatedDefs )
+            ( Svg.circle2d (svgAttributes |> withNonScalingStroke) circle
+            , updatedDefs
+            )
 
         Arc attributes arc ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.arc2d svgAttributes arc, updatedDefs )
+            ( Svg.arc2d (svgAttributes |> withNonScalingStroke) arc
+            , updatedDefs
+            )
 
         QuadraticSpline attributes spline ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.quadraticSpline2d svgAttributes spline, updatedDefs )
+            ( Svg.quadraticSpline2d (svgAttributes |> withNonScalingStroke)
+                spline
+            , updatedDefs
+            )
 
         CubicSpline attributes spline ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.cubicSpline2d svgAttributes spline, updatedDefs )
+            ( Svg.cubicSpline2d (svgAttributes |> withNonScalingStroke) spline
+            , updatedDefs
+            )
 
         Circle attributes circle ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.circle2d svgAttributes circle, updatedDefs )
+            ( Svg.circle2d (svgAttributes |> withNonScalingStroke) circle
+            , updatedDefs
+            )
 
         Ellipse attributes ellipse ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.ellipse2d svgAttributes ellipse, updatedDefs )
+            ( Svg.ellipse2d (svgAttributes |> withNonScalingStroke) ellipse
+            , updatedDefs
+            )
 
         EllipticalArc attributes ellipticalArc ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.ellipticalArc2d svgAttributes ellipticalArc, updatedDefs )
+            ( Svg.ellipticalArc2d (svgAttributes |> withNonScalingStroke)
+                ellipticalArc
+            , updatedDefs
+            )
 
         Polyline attributes polyline ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.polyline2d svgAttributes polyline, updatedDefs )
+            ( Svg.polyline2d (svgAttributes |> withNonScalingStroke) polyline
+            , updatedDefs
+            )
 
         Polygon attributes polygon ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
             in
-            ( Svg.polygon2d svgAttributes polygon, updatedDefs )
+            ( Svg.polygon2d (svgAttributes |> withNonScalingStroke) polygon
+            , updatedDefs
+            )
 
         Text attributes point string ->
             let
@@ -193,6 +238,12 @@ render parentContext currentDefs element =
 
                 mirrorAxis =
                     Axis2d.through point Direction2d.x
+
+                fontSize =
+                    localContext.fontSize * localContext.scaleCorrection
+
+                fontSizeAttribute =
+                    Svg.Attributes.fontSize (toString fontSize)
 
                 xAttribute =
                     Svg.Attributes.x (toString x)
@@ -207,7 +258,8 @@ render parentContext currentDefs element =
                     Svg.Attributes.stroke "none"
             in
             ( Svg.text_
-                (xAttribute
+                (fontSizeAttribute
+                    :: xAttribute
                     :: yAttribute
                     :: fillAttribute
                     :: strokeAttribute
@@ -248,7 +300,8 @@ render parentContext currentDefs element =
                     Svg.Attributes.ry radiusString
             in
             ( Svg.rect
-                (xAttribute
+                (nonScalingStrokeAttribute
+                    :: xAttribute
                     :: yAttribute
                     :: widthAttribute
                     :: heightAttribute
