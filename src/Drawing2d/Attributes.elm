@@ -6,7 +6,8 @@ module Drawing2d.Attributes
         , fillColor
         , fontFamily
         , fontSize
-        , linearGradientFill
+        , gradientFillAlong
+        , gradientFillFrom
         , map
         , noFill
         , noStroke
@@ -20,11 +21,13 @@ module Drawing2d.Attributes
         , whiteStroke
         )
 
+import Axis2d exposing (Axis2d)
 import Color exposing (Color)
 import Drawing2d.Attribute as Attribute
+import Drawing2d.LinearGradient as LinearGradient
 import Drawing2d.Text as Text
-import LineSegment2d exposing (LineSegment2d)
 import Mouse
+import Point2d exposing (Point2d)
 
 
 type alias Attribute msg =
@@ -56,13 +59,22 @@ whiteFill =
     Attribute.FillStyle (Attribute.FillColor Color.white)
 
 
-linearGradientFill : LineSegment2d -> List ( Float, Color ) -> Attribute msg
-linearGradientFill lineSegment stops =
-    Attribute.FillStyle (Attribute.LinearGradientFill lineSegment stops)
+gradientFillAlong : Axis2d -> List ( Float, Color ) -> Attribute msg
+gradientFillAlong axis distanceStops =
+    Attribute.FillStyle <|
+        Attribute.LinearGradientFill <|
+            LinearGradient.along axis distanceStops
 
 
 strokeColor : Color -> Attribute msg
 strokeColor color =
+gradientFillFrom : ( Point2d, Color ) -> ( Point2d, Color ) -> Attribute msg
+gradientFillFrom start end =
+    Attribute.FillStyle <|
+        Attribute.LinearGradientFill <|
+            LinearGradient.from start end
+
+
     Attribute.StrokeStyle (Attribute.StrokeColor color)
 
 

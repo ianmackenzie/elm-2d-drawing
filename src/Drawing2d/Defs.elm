@@ -8,14 +8,14 @@ module Drawing2d.Defs
 
 import Color exposing (Color)
 import Drawing2d.Color as Color
-import LineSegment2d exposing (LineSegment2d)
+import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Point2d
 import Svg exposing (Svg)
 import Svg.Attributes
 
 
 type Def
-    = LinearGradient LineSegment2d (List ( Float, Color ))
+    = LinearGradient LinearGradient
 
 
 type Defs
@@ -46,9 +46,9 @@ add def (Defs defs) =
     ( id, updatedDefs )
 
 
-addLinearGradient : LineSegment2d -> List ( Float, Color ) -> Defs -> ( String, Defs )
-addLinearGradient lineSegment stops =
-    add (LinearGradient lineSegment stops)
+addLinearGradient : LinearGradient -> Defs -> ( String, Defs )
+addLinearGradient gradient =
+    add (LinearGradient gradient)
 
 
 stopElement : ( Float, Color ) -> Svg msg
@@ -68,16 +68,13 @@ stopElement ( offset, color ) =
 entryToElement : ( String, Def ) -> Svg msg
 entryToElement ( id, def ) =
     case def of
-        LinearGradient lineSegment stops ->
+        LinearGradient gradient ->
             let
-                ( p1, p2 ) =
-                    LineSegment2d.endpoints lineSegment
-
                 ( x1, y1 ) =
-                    Point2d.coordinates p1
+                    Point2d.coordinates (LinearGradient.startPoint gradient)
 
                 ( x2, y2 ) =
-                    Point2d.coordinates p2
+                    Point2d.coordinates (LinearGradient.endPoint gradient)
             in
             Svg.linearGradient
                 [ Svg.Attributes.id id
@@ -87,7 +84,7 @@ entryToElement ( id, def ) =
                 , Svg.Attributes.y2 (toString y2)
                 , Svg.Attributes.gradientUnits "userSpaceOnUse"
                 ]
-                (List.map stopElement stops)
+                (List.map stopElement (LinearGradient.stops gradient))
 
 
 toSvgElement : Defs -> Svg msg

@@ -57,15 +57,13 @@ view model =
         gradientLine =
             LineSegment2d.from p1 p2
 
-        stops =
-            [ ( 0, Color.red )
-            , ( 1, Color.blue )
-            ]
-
         box =
             Drawing2d.group
                 [ Drawing2d.rectangleWith
-                    [ Attributes.linearGradientFill gradientLine stops ]
+                    [ Attributes.gradientFillFrom
+                        ( p1, Color.red )
+                        ( p2, Color.blue )
+                    ]
                     rectangle
                 , Drawing2d.lineSegment gradientLine
                 , Drawing2d.dot p1

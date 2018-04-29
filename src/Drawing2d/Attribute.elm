@@ -12,11 +12,11 @@ import Drawing2d.Color as Color
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs as Defs exposing (Defs)
 import Drawing2d.Font as Font
+import Drawing2d.LinearGradient exposing (LinearGradient)
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
 import Html.Events
 import Json.Decode as Decode
-import LineSegment2d exposing (LineSegment2d)
 import Mouse
 import Svg
 import Svg.Attributes
@@ -25,7 +25,7 @@ import Svg.Attributes
 type FillStyle
     = FillColor Color
     | NoFill
-    | LinearGradientFill LineSegment2d (List ( Float, Color ))
+    | LinearGradientFill LinearGradient
 
 
 type StrokeStyle
@@ -76,10 +76,10 @@ apply attribute context defs =
         FillStyle NoFill ->
             ( context, defs, [ Svg.Attributes.fill "none" ] )
 
-        FillStyle (LinearGradientFill lineSegment stops) ->
+        FillStyle (LinearGradientFill gradient) ->
             let
                 ( defId, updatedDefs ) =
-                    Defs.addLinearGradient lineSegment stops defs
+                    Defs.addLinearGradient gradient defs
 
                 fillAttribute =
                     Svg.Attributes.fill ("url(#" ++ defId ++ ")")
