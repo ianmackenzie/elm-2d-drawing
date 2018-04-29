@@ -3,7 +3,7 @@ module Drawing2d.Attributes
         ( blackFill
         , blackStroke
         , dotRadius
-        , fillColor
+        , fill
         , fontFamily
         , fontSize
         , gradientFillAlong
@@ -13,7 +13,7 @@ module Drawing2d.Attributes
         , noStroke
         , onClick
         , onMouseDown
-        , strokeColor
+        , stroke
         , strokeWidth
         , textAnchor
         , textColor
@@ -39,8 +39,8 @@ dotRadius radius =
     Attribute.DotRadius radius
 
 
-fillColor : Color -> Attribute msg
-fillColor color =
+fill : Color -> Attribute msg
+fill color =
     Attribute.FillStyle (Attribute.FillColor color)
 
 
@@ -66,8 +66,6 @@ gradientFillAlong axis distanceStops =
             LinearGradient.along axis distanceStops
 
 
-strokeColor : Color -> Attribute msg
-strokeColor color =
 gradientFillFrom : ( Point2d, Color ) -> ( Point2d, Color ) -> Attribute msg
 gradientFillFrom start end =
     Attribute.FillStyle <|
@@ -75,6 +73,8 @@ gradientFillFrom start end =
             LinearGradient.from start end
 
 
+stroke : Color -> Attribute msg
+stroke color =
     Attribute.StrokeStyle (Attribute.StrokeColor color)
 
 
