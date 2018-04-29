@@ -36,8 +36,6 @@ module Drawing2d
         , roundedRectangleWith
         , scaleAbout
         , text
-        , textShape
-        , textShapeWith
         , textWith
         , toHtml
         , translateBy
@@ -317,16 +315,6 @@ text =
 textWith : List (Attribute msg) -> Point2d -> String -> Element msg
 textWith attributes point string =
     Element.Text attributes point string
-
-
-textShape : Point2d -> String -> Element msg
-textShape =
-    textShapeWith []
-
-
-textShapeWith : List (Attribute msg) -> Point2d -> String -> Element msg
-textShapeWith attributes point string =
-    Element.TextShape attributes point string
 
 
 map : (a -> b) -> Element a -> Element b

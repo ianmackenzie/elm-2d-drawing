@@ -40,7 +40,6 @@ type Element msg
     | Ellipse (List (Attribute msg)) Ellipse2d
     | EllipticalArc (List (Attribute msg)) EllipticalArc2d
     | Text (List (Attribute msg)) Point2d String
-    | TextShape (List (Attribute msg)) Point2d String
     | RoundedRectangle (List (Attribute msg)) Float Rectangle2d
 
 
@@ -219,29 +218,6 @@ render parentContext currentDefs element =
             , updatedDefs
             )
 
-        TextShape attributes point string ->
-            let
-                ( localContext, updatedDefs, svgAttributes ) =
-                    applyAttributes attributes parentContext currentDefs
-
-                ( x, y ) =
-                    Point2d.coordinates point
-
-                mirrorAxis =
-                    Axis2d.through point Direction2d.x
-
-                xAttribute =
-                    Svg.Attributes.x (toString x)
-
-                yAttribute =
-                    Svg.Attributes.y (toString y)
-            in
-            ( Svg.text_ (xAttribute :: yAttribute :: svgAttributes)
-                [ Svg.text string ]
-                |> Svg.mirrorAcross mirrorAxis
-            , updatedDefs
-            )
-
         RoundedRectangle attributes radius rectangle ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
@@ -344,9 +320,6 @@ map function element =
 
         Text attributes point string ->
             Text (mapAttributes attributes) point string
-
-        TextShape attributes point string ->
-            TextShape (mapAttributes attributes) point string
 
         RoundedRectangle attributes radius rectangle ->
             RoundedRectangle (mapAttributes attributes)
