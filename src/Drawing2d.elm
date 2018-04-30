@@ -104,7 +104,7 @@ toHtml boundingBox attributes elements =
 
         ( rootSvgElement, defs ) =
             Element.render
-                Context.default
+                Context.init
                 Defs.init
                 (groupWith defaultAttributes [ groupWith attributes elements ]
                     |> relativeTo topLeftFrame

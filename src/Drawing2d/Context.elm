@@ -1,4 +1,4 @@
-module Drawing2d.Context exposing (Context, default)
+module Drawing2d.Context exposing (Context, init)
 
 
 type alias Context =
@@ -8,9 +8,9 @@ type alias Context =
     }
 
 
-default : Context
-default =
     { dotRadius = 3
     , fontSize = 20
+init : Context
+init =
     , scaleCorrection = 1
     }
