@@ -69,7 +69,8 @@ main =
         , Attributes.fillColor Color.orange
         , Attributes.strokeColor Color.blue
         ]
-        [ Drawing2d.dot (Point2d.fromCoordinates ( 100, 100 ))
+        [ Drawing2d.dot
+            (Point2d.fromCoordinates ( 100, 100 ))
         , Drawing2d.dotWith
             [ Attributes.dotRadius 8, Attributes.fillColor Color.green ]
             (Point2d.fromCoordinates ( 700, 500 ))
@@ -82,13 +83,15 @@ main =
         , Drawing2d.dotWith
             [ Attributes.blackFill, Attributes.dotRadius 3 ]
             (Arc2d.centerPoint arc)
-        , text Text.topLeft ( 300, 200 ) "topLeft"
-        , text Text.topCenter ( 500, 200 ) "topCenter"
-        , text Text.topRight ( 700, 200 ) "topRight"
-        , text Text.centerLeft ( 300, 150 ) "centerLeft"
-        , text Text.center ( 500, 150 ) "center"
-        , text Text.centerRight ( 700, 150 ) "centerRight"
-        , text Text.bottomLeft ( 300, 100 ) "bottomLeft"
-        , text Text.bottomCenter ( 500, 100 ) "bottomCenter"
-        , text Text.bottomRight ( 700, 100 ) "bottomRight"
+        , Drawing2d.group
+            [ text Text.topLeft ( 300, 200 ) "topLeft"
+            , text Text.topCenter ( 500, 200 ) "topCenter"
+            , text Text.topRight ( 700, 200 ) "topRight"
+            , text Text.centerLeft ( 300, 150 ) "centerLeft"
+            , text Text.center ( 500, 150 ) "center"
+            , text Text.centerRight ( 700, 150 ) "centerRight"
+            , text Text.bottomLeft ( 300, 100 ) "bottomLeft"
+            , text Text.bottomCenter ( 500, 100 ) "bottomCenter"
+            , text Text.bottomRight ( 700, 100 ) "bottomRight"
+            ]
         ]
