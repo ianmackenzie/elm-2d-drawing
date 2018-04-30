@@ -120,10 +120,7 @@ apply attribute context defs =
             )
 
         FontSize px ->
-            ( { context | fontSize = toFloat px }
-            , defs
-            , []
-            )
+            ( { context | fontSize = toFloat px }, defs, [] )
 
         FontFamily fonts ->
             ( context
