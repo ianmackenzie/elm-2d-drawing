@@ -44,7 +44,7 @@ main =
                 (degrees 90)
 
         arcPoints =
-            List.map (Arc2d.pointOn arc) (Parameter.numSteps 16)
+            Arc2d.pointsOn arc (Parameter.numSteps 16)
 
         text anchor coordinates string =
             let
