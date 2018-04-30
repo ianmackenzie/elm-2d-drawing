@@ -40,14 +40,13 @@ main =
                 , maxX = 200
                 , maxY = 200
                 }
-        , Drawing2d.group
+        , Drawing2d.dots
             (let
                 circle =
                     Circle2d.withRadius 50
                         (Point2d.fromCoordinates ( 200, 200 ))
              in
              Arc2d.pointsOn (Circle2d.toArc circle) (Parameter.numSteps 32)
-                |> List.map Drawing2d.dot
             )
         , Drawing2d.text (Point2d.fromCoordinates ( 50, 750 ))
             "Test text"

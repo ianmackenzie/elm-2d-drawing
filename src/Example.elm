@@ -77,9 +77,9 @@ main =
         , Drawing2d.groupWith
             [ Attributes.strokeWidth 2 ]
             (List.map Drawing2d.lineSegment [ lineSegment, mirroredSegment ])
-        , Drawing2d.groupWith
+        , Drawing2d.dotsWith
             [ Attributes.whiteFill, Attributes.blackStroke ]
-            (List.map Drawing2d.dot arcPoints)
+            arcPoints
         , Drawing2d.dotWith
             [ Attributes.blackFill, Attributes.dotRadius 3 ]
             (Arc2d.centerPoint arc)
