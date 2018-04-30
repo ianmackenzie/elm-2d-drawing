@@ -53,16 +53,13 @@ main =
             in
             Drawing2d.group
                 [ Drawing2d.textWith
-                    [ Attributes.textAnchor anchor
-                    , Attributes.noStroke
-                    , Attributes.blackFill
-                    ]
+                    [ Attributes.textAnchor anchor ]
                     point
                     string
                 , Drawing2d.dotWith
                     [ Attributes.dotRadius 2
                     , Attributes.blackFill
-                    , Attributes.noStroke
+                    , Attributes.noBorder
                     ]
                     point
                 ]
