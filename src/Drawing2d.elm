@@ -10,6 +10,8 @@ module Drawing2d
         , cubicSplineWith
         , dot
         , dotWith
+        , dots
+        , dotsWith
         , ellipse
         , ellipseWith
         , ellipticalArc
@@ -186,6 +188,16 @@ dot =
 dotWith : List (Attribute msg) -> Point2d -> Element msg
 dotWith attributes point =
     Element.Dot attributes point
+
+
+dots : List Point2d -> Element msg
+dots =
+    dotsWith []
+
+
+dotsWith : List (Attribute msg) -> List Point2d -> Element msg
+dotsWith attributes points =
+    groupWith attributes (List.map dot points)
 
 
 translateBy : Vector2d -> Element msg -> Element msg
