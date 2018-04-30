@@ -23,8 +23,8 @@ import Svg.Attributes
 
 
 type FillStyle
-    = FillColor Color
-    | NoFill
+    = NoFill
+    | FillColor Color
     | LinearGradientFill LinearGradient
 
 
