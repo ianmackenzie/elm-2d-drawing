@@ -37,37 +37,32 @@ view model =
                 , maxY = 800
                 }
 
-        rectangle =
-            Rectangle2d.fromExtrema
-                { minX = 100
-                , maxX = 700
-                , minY = 100
-                , maxY = 700
-                }
-
         lowerLeftCorner =
             Point2d.fromCoordinates ( 100, 100 )
 
-        p1 =
+        upperRightCorner =
+            Point2d.fromCoordinates ( 700, 700 )
+
+        gradientStartPoint =
             Point2d.fromCoordinates ( 300, 300 )
 
-        p2 =
+        gradientEndPoint =
             Point2d.fromCoordinates ( 500, 500 )
 
         gradientLine =
-            LineSegment2d.from p1 p2
+            LineSegment2d.from gradientStartPoint gradientEndPoint
 
         box =
             Drawing2d.group
                 [ Drawing2d.rectangleWith
                     [ Attributes.gradientFillFrom
-                        ( p1, Color.red )
-                        ( p2, Color.blue )
+                        ( gradientStartPoint, Color.red )
+                        ( gradientEndPoint, Color.blue )
                     ]
-                    rectangle
+                    (Rectangle2d.from lowerLeftCorner upperRightCorner)
                 , Drawing2d.lineSegment gradientLine
-                , Drawing2d.dot p1
-                , Drawing2d.dot p2
+                , Drawing2d.dot gradientStartPoint
+                , Drawing2d.dot gradientEndPoint
                 , Drawing2d.textWith
                     [ Attributes.textAnchor Text.topLeft
                     , Attributes.fontSize 20
