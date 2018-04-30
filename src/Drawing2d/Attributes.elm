@@ -2,6 +2,7 @@ module Drawing2d.Attributes
     exposing
         ( blackFill
         , blackStroke
+        , blackText
         , dotRadius
         , fill
         , fontFamily
@@ -19,6 +20,7 @@ module Drawing2d.Attributes
         , textColor
         , whiteFill
         , whiteStroke
+        , whiteText
         )
 
 import Axis2d exposing (Axis2d)
@@ -111,6 +113,16 @@ onMouseDown handler =
 textAnchor : Text.Anchor -> Attribute msg
 textAnchor anchor =
     Attribute.TextAnchor anchor
+
+
+blackText : Attribute msg
+blackText =
+    textColor Color.black
+
+
+whiteText : Attribute msg
+whiteText =
+    textColor Color.white
 
 
 textColor : Color -> Attribute msg
