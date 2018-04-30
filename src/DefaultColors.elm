@@ -53,14 +53,13 @@ main =
             )
         , Drawing2d.text (Point2d.fromCoordinates ( 50, 750 ))
             "Test text"
-        , Drawing2d.groupWith
+        , Drawing2d.textWith
             [ Attributes.fontFamily [ Font.sansSerif ]
             , Attributes.fontSize 36
             , Attributes.textColor Color.darkGrey
             , Attributes.fillColor Color.orange
             , Attributes.strokeColor Color.blue
             ]
-            [ Drawing2d.textShape (Point2d.fromCoordinates ( 100, 700 )) "Large styled text"
-            , Drawing2d.text (Point2d.fromCoordinates ( 100, 650 )) "Large colored text"
-            ]
+            (Point2d.fromCoordinates ( 100, 650 ))
+            "Large colored text"
         ]
