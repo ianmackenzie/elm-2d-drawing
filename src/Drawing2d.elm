@@ -53,6 +53,7 @@ import CubicSpline2d exposing (CubicSpline2d)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attribute as Attribute
 import Drawing2d.Attributes as Attributes
+import Drawing2d.Border as Border
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs as Defs exposing (Defs)
 import Drawing2d.Element as Element
@@ -96,10 +97,15 @@ toHtml boundingBox attributes elements =
             BoundingBox2d.dimensions boundingBox
 
         defaultAttributes =
-            [ Attributes.textColor Color.black
+            [ Attributes.blackStroke
+            , Attributes.strokeWidth 1
             , Attributes.whiteFill
-            , Attributes.blackStroke
+            , Attributes.strokedBorder
+            , Attributes.borderPosition Border.centered
+            , Attributes.fontSize 20
+            , Attributes.textColor Color.black
             , Attributes.textAnchor Text.bottomLeft
+            , Attributes.dotRadius 3
             ]
 
         ( rootSvgElement, defs ) =

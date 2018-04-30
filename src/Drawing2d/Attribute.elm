@@ -2,12 +2,12 @@ module Drawing2d.Attribute
     exposing
         ( Attribute(..)
         , FillStyle(..)
-        , StrokeStyle(..)
         , apply
         , map
         )
 
 import Color exposing (Color)
+import Drawing2d.Border as Border exposing (BorderPosition)
 import Drawing2d.Color as Color
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs as Defs exposing (Defs)
@@ -28,14 +28,9 @@ type FillStyle
     | LinearGradientFill LinearGradient
 
 
-type StrokeStyle
-    = StrokeColor Color
-    | NoStroke
-
-
 type Attribute msg
     = FillStyle FillStyle
-    | StrokeStyle StrokeStyle
+    | StrokeColor Color
     | StrokeWidth Float
     | DotRadius Float
     | TextAnchor Text.Anchor
@@ -44,6 +39,8 @@ type Attribute msg
     | FontFamily (List String)
     | OnClick msg
     | OnMouseDown (Mouse.Position -> msg)
+    | BordersEnabled Bool
+    | BorderPosition BorderPosition
 
 
 normalizeFont : String -> String
@@ -86,7 +83,7 @@ apply attribute context defs =
             in
             ( context, updatedDefs, [ fillAttribute ] )
 
-        StrokeStyle (StrokeColor color) ->
+        StrokeColor color ->
             let
                 ( rgbString, alphaString ) =
                     Color.strings color
@@ -98,14 +95,17 @@ apply attribute context defs =
               ]
             )
 
-        StrokeStyle NoStroke ->
-            ( context, defs, [ Svg.Attributes.stroke "none" ] )
-
         StrokeWidth width ->
             ( context
             , defs
             , [ Svg.Attributes.strokeWidth (toString width ++ "px") ]
             )
+
+        BordersEnabled bordersEnabled ->
+            ( { context | bordersEnabled = bordersEnabled }, defs, [] )
+
+        BorderPosition position ->
+            ( { context | borderPosition = position }, defs, [] )
 
         DotRadius radius ->
             ( { context | dotRadius = radius }, defs, [] )
@@ -155,11 +155,17 @@ map function attribute =
         FillStyle style ->
             FillStyle style
 
-        StrokeStyle style ->
-            StrokeStyle style
+        StrokeColor color ->
+            StrokeColor color
 
         StrokeWidth width ->
             StrokeWidth width
+
+        BordersEnabled bordersEnabled ->
+            BordersEnabled bordersEnabled
+
+        BorderPosition position ->
+            BorderPosition position
 
         DotRadius radius ->
             DotRadius radius

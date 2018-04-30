@@ -3,6 +3,7 @@ module Drawing2d.Attributes
         ( blackFill
         , blackStroke
         , blackText
+        , borderPosition
         , dotRadius
         , fillColor
         , fontFamily
@@ -10,12 +11,13 @@ module Drawing2d.Attributes
         , gradientFillAlong
         , gradientFillFrom
         , map
+        , noBorder
         , noFill
-        , noStroke
         , onClick
         , onMouseDown
         , strokeColor
         , strokeWidth
+        , strokedBorder
         , textAnchor
         , textColor
         , whiteFill
@@ -26,6 +28,7 @@ module Drawing2d.Attributes
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
 import Drawing2d.Attribute as Attribute
+import Drawing2d.Border as Border exposing (BorderPosition)
 import Drawing2d.LinearGradient as LinearGradient
 import Drawing2d.Text as Text
 import Mouse
@@ -75,14 +78,24 @@ gradientFillFrom start end =
             LinearGradient.from start end
 
 
-    Attribute.StrokeStyle (Attribute.StrokeColor color)
 strokeColor : Color -> Attribute msg
 strokeColor color =
+    Attribute.StrokeColor color
 
 
-noStroke : Attribute msg
-noStroke =
-    Attribute.StrokeStyle Attribute.NoStroke
+noBorder : Attribute msg
+noBorder =
+    Attribute.BordersEnabled False
+
+
+strokedBorder : Attribute msg
+strokedBorder =
+    Attribute.BordersEnabled True
+
+
+borderPosition : BorderPosition -> Attribute msg
+borderPosition position =
+    Attribute.BorderPosition position
 
 
 blackStroke : Attribute msg
