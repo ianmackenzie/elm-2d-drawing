@@ -1,11 +1,12 @@
 module Example exposing (..)
 
+import Arc2d
 import BoundingBox2d
+import Circle2d
 import Color
 import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Font as Font
-import Frame2d
 import Geometry.Parameter as Parameter
 import Html exposing (Html)
 import Point2d
@@ -40,15 +41,12 @@ main =
                 , maxY = 200
                 }
         , Drawing2d.group
-            (Parameter.numSteps 32
-                |> List.map
-                    (\t ->
-                        Point2d.fromPolarCoordinatesIn
-                            (Frame2d.atPoint
-                                (Point2d.fromCoordinates ( 200, 200 ))
-                            )
-                            ( 50, t * turns 1 )
-                    )
+            (let
+                circle =
+                    Circle2d.withRadius 50
+                        (Point2d.fromCoordinates ( 200, 200 ))
+             in
+             Arc2d.pointsOn (Circle2d.toArc circle) (Parameter.numSteps 32)
                 |> List.map Drawing2d.dot
             )
         , Drawing2d.text (Point2d.fromCoordinates ( 50, 750 ))
