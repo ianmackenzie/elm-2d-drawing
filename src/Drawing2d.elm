@@ -19,6 +19,7 @@ module Drawing2d
         , empty
         , group
         , groupWith
+        , image
         , lineSegment
         , lineSegmentWith
         , map
@@ -333,6 +334,11 @@ text =
 textWith : List (Attribute msg) -> Point2d -> String -> Element msg
 textWith attributes point string =
     Element.Text attributes point string
+
+
+image : String -> Rectangle2d -> Element msg
+image url rectangle =
+    Element.Image url rectangle
 
 
 map : (a -> b) -> Element a -> Element b

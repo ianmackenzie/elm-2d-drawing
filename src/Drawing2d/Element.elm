@@ -43,6 +43,7 @@ type Element msg
     | EllipticalArc (List (Attribute msg)) EllipticalArc2d
     | Text (List (Attribute msg)) Point2d String
     | RoundedRectangle (List (Attribute msg)) Float Rectangle2d
+    | Image String Rectangle2d
 
 
 applyAttribute : Attribute msg -> ( Context, Defs, List (List (Svg.Attribute msg)) ) -> ( Context, Defs, List (List (Svg.Attribute msg)) )
@@ -306,6 +307,24 @@ render parentContext currentDefs element =
             , updatedDefs
             )
 
+        Image url rectangle ->
+            let
+                ( width, height ) =
+                    Rectangle2d.dimensions rectangle
+            in
+            ( Svg.image
+                [ Svg.Attributes.xlinkHref url
+                , Svg.Attributes.x (toString (-width / 2))
+                , Svg.Attributes.y (toString (-height / 2))
+                , Svg.Attributes.width (toString width)
+                , Svg.Attributes.height (toString height)
+                ]
+                []
+                |> Svg.placeIn (Rectangle2d.axes rectangle)
+                |> Svg.mirrorAcross (Rectangle2d.xAxis rectangle)
+            , currentDefs
+            )
+
 
 map : (a -> b) -> Element a -> Element b
 map function element =
@@ -370,3 +389,6 @@ map function element =
             RoundedRectangle (mapAttributes attributes)
                 radius
                 rectangle
+
+        Image url rectangle ->
+            Image url rectangle
