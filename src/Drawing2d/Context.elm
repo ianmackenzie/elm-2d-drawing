@@ -1,6 +1,7 @@
 module Drawing2d.Context exposing (Context, init)
 
 import Drawing2d.Border as Border exposing (BorderPosition)
+import Drawing2d.GradientContext as GradientContext exposing (GradientContext)
 
 
 type alias Context =
@@ -10,6 +11,7 @@ type alias Context =
     , bordersEnabled : Bool
     , borderPosition : BorderPosition
     , strokeWidth : Float
+    , gradientContext : GradientContext
     }
 
 
@@ -21,4 +23,5 @@ init =
     , bordersEnabled = False
     , borderPosition = Border.centered
     , strokeWidth = 0
+    , gradientContext = GradientContext.none
     }

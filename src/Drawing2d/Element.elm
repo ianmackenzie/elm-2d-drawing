@@ -9,6 +9,7 @@ import Drawing2d.Attribute as Attribute exposing (Attribute)
 import Drawing2d.BorderPosition as BorderPosition
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs exposing (Defs)
+import Drawing2d.GradientContext as GradientContext
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -93,12 +94,18 @@ drawRegionWith parentContext currentDefs attributes draw geometry =
         ( localContext, defsFromAttributes, convertedAttributes ) =
             applyAttributes attributes parentContext currentDefs
 
+        ( defsWithGradientReference, attributesWithGradientReference ) =
+            GradientContext.apply localContext.gradientContext
+                defsFromAttributes
+                convertedAttributes
+
         ( finalAttributes, finalDefs ) =
             if localContext.bordersEnabled then
                 case localContext.borderPosition of
                     BorderPosition.Centered ->
-                        ( nonScalingStrokeAttribute :: convertedAttributes
-                        , defsFromAttributes
+                        ( nonScalingStrokeAttribute
+                            :: attributesWithGradientReference
+                        , defsWithGradientReference
                         )
 
                     BorderPosition.Inside ->
@@ -107,7 +114,9 @@ drawRegionWith parentContext currentDefs attributes draw geometry =
                     BorderPosition.Outside ->
                         Debug.crash "TODO"
             else
-                ( noStrokeAttribute :: convertedAttributes, defsFromAttributes )
+                ( noStrokeAttribute :: attributesWithGradientReference
+                , defsWithGradientReference
+                )
     in
     ( draw finalAttributes geometry, finalDefs )
 
@@ -158,8 +167,15 @@ render parentContext currentDefs element =
 
         PlaceIn frame child ->
             let
+                localContext =
+                    { parentContext
+                        | gradientContext =
+                            GradientContext.relativeTo frame
+                                parentContext.gradientContext
+                    }
+
                 ( childSvg, updatedDefs ) =
-                    render parentContext currentDefs child
+                    render localContext currentDefs child
             in
             ( Svg.placeIn frame childSvg, updatedDefs )
 
@@ -169,6 +185,10 @@ render parentContext currentDefs element =
                     { parentContext
                         | scaleCorrection =
                             parentContext.scaleCorrection / scale
+                        , gradientContext =
+                            GradientContext.scaleAbout point
+                                (1 / scale)
+                                parentContext.gradientContext
                     }
 
                 ( childSvg, updatedDefs ) =
@@ -184,8 +204,16 @@ render parentContext currentDefs element =
 
         Dot attributes point ->
             let
-                ( localContext, updatedDefs, svgAttributes ) =
+                ( localContext, defsFromAttributes, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
+
+                ( finalDefs, svgAttributesWithGradient ) =
+                    GradientContext.apply localContext.gradientContext
+                        defsFromAttributes
+                        svgAttributes
+
+                finalAttributes =
+                    nonScalingStrokeAttribute :: svgAttributesWithGradient
 
                 dotRadius =
                     localContext.dotRadius * localContext.scaleCorrection
@@ -193,9 +221,7 @@ render parentContext currentDefs element =
                 circle =
                     Circle2d.withRadius dotRadius point
             in
-            ( Svg.circle2d (nonScalingStrokeAttribute :: svgAttributes) circle
-            , updatedDefs
-            )
+            ( Svg.circle2d finalAttributes circle, finalDefs )
 
         Arc attributes arc ->
             drawCurve attributes Svg.arc2d arc
@@ -265,8 +291,20 @@ render parentContext currentDefs element =
 
         RoundedRectangle attributes radius rectangle ->
             let
-                ( localContext, updatedDefs, svgAttributes ) =
+                ( localContext, defsFromAttributes, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
+
+                rectangleAxes =
+                    Rectangle2d.axes rectangle
+
+                finalGradientContext =
+                    localContext.gradientContext
+                        |> GradientContext.relativeTo rectangleAxes
+
+                ( finalDefs, svgAttributesWithGradient ) =
+                    GradientContext.apply finalGradientContext
+                        defsFromAttributes
+                        svgAttributes
 
                 ( width, height ) =
                     Rectangle2d.dimensions rectangle
@@ -300,11 +338,11 @@ render parentContext currentDefs element =
                     :: heightAttribute
                     :: rxAttribute
                     :: ryAttribute
-                    :: svgAttributes
+                    :: svgAttributesWithGradient
                 )
                 []
                 |> Svg.placeIn (Rectangle2d.axes rectangle)
-            , updatedDefs
+            , finalDefs
             )
 
         Image url rectangle ->

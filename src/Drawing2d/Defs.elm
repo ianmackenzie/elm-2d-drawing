@@ -1,21 +1,22 @@
 module Drawing2d.Defs
     exposing
         ( Defs
-        , addLinearGradient
+        , addLinearGradientStops
         , init
+        , instantiateLinearGradient
         , toSvgElement
         )
 
 import Color exposing (Color)
 import Drawing2d.Color as Color
-import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
-import Point2d
+import Point2d exposing (Point2d)
 import Svg exposing (Svg)
 import Svg.Attributes
 
 
 type Def
-    = LinearGradient LinearGradient
+    = LinearGradientStops (List ( Float, Color ))
+    | LinearGradientInstantiation String Point2d Point2d
 
 
 type Defs
@@ -46,9 +47,14 @@ add def (Defs defs) =
     ( id, updatedDefs )
 
 
-addLinearGradient : LinearGradient -> Defs -> ( String, Defs )
-addLinearGradient gradient =
-    add (LinearGradient gradient)
+addLinearGradientStops : List ( Float, Color ) -> Defs -> ( String, Defs )
+addLinearGradientStops stops =
+    add (LinearGradientStops stops)
+
+
+instantiateLinearGradient : String -> Point2d -> Point2d -> Defs -> ( String, Defs )
+instantiateLinearGradient id localStartPoint localEndPoint defs =
+    add (LinearGradientInstantiation id localStartPoint localEndPoint) defs
 
 
 stopElement : ( Float, Color ) -> Svg msg
@@ -65,16 +71,27 @@ stopElement ( offset, color ) =
         []
 
 
+gradientUnitsAttribute : Svg.Attribute msg
+gradientUnitsAttribute =
+    Svg.Attributes.gradientUnits "userSpaceOnUse"
+
+
 entryToElement : ( String, Def ) -> Svg msg
 entryToElement ( id, def ) =
     case def of
-        LinearGradient gradient ->
+        LinearGradientStops stops ->
+            Svg.linearGradient
+                [ Svg.Attributes.id id
+                ]
+                (List.map stopElement stops)
+
+        LinearGradientInstantiation referencedId startPoint endPoint ->
             let
                 ( x1, y1 ) =
-                    Point2d.coordinates (LinearGradient.startPoint gradient)
+                    Point2d.coordinates startPoint
 
                 ( x2, y2 ) =
-                    Point2d.coordinates (LinearGradient.endPoint gradient)
+                    Point2d.coordinates endPoint
             in
             Svg.linearGradient
                 [ Svg.Attributes.id id
@@ -82,11 +99,12 @@ entryToElement ( id, def ) =
                 , Svg.Attributes.y1 (toString y1)
                 , Svg.Attributes.x2 (toString x2)
                 , Svg.Attributes.y2 (toString y2)
-                , Svg.Attributes.gradientUnits "userSpaceOnUse"
+                , gradientUnitsAttribute
+                , Svg.Attributes.xlinkHref ("url(#" ++ referencedId ++ ")")
                 ]
-                (List.map stopElement (LinearGradient.stops gradient))
+                []
 
 
 toSvgElement : Defs -> Svg msg
 toSvgElement (Defs defs) =
-    Svg.defs [] (List.map entryToElement defs.entries)
+    Svg.defs [] (List.map entryToElement (List.reverse defs.entries))

@@ -12,7 +12,8 @@ import Drawing2d.Color as Color
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs as Defs exposing (Defs)
 import Drawing2d.Font as Font
-import Drawing2d.LinearGradient exposing (LinearGradient)
+import Drawing2d.GradientContext as GradientContext
+import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
 import Html.Events
@@ -63,7 +64,7 @@ apply attribute context defs =
                 ( rgbString, alphaString ) =
                     Color.strings color
             in
-            ( context
+            ( { context | gradientContext = GradientContext.none }
             , defs
             , [ Svg.Attributes.fill rgbString
               , Svg.Attributes.fillOpacity alphaString
@@ -71,17 +72,27 @@ apply attribute context defs =
             )
 
         FillStyle NoFill ->
-            ( context, defs, [ Svg.Attributes.fill "none" ] )
+            ( { context | gradientContext = GradientContext.none }
+            , defs
+            , [ Svg.Attributes.fill "none" ]
+            )
 
         FillStyle (LinearGradientFill gradient) ->
             let
                 ( defId, updatedDefs ) =
-                    Defs.addLinearGradient gradient defs
+                    Defs.addLinearGradientStops
+                        (LinearGradient.stops gradient)
+                        defs
 
-                fillAttribute =
-                    Svg.Attributes.fill ("url(#" ++ defId ++ ")")
+                updatedContext =
+                    { context
+                        | gradientContext =
+                            GradientContext.linear defId
+                                (LinearGradient.startPoint gradient)
+                                (LinearGradient.endPoint gradient)
+                    }
             in
-            ( context, updatedDefs, [ fillAttribute ] )
+            ( updatedContext, updatedDefs, [] )
 
         StrokeColor color ->
             let
