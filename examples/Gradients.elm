@@ -125,9 +125,7 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ example1
-        , example2
-        , example3 model.angle
-        , Html.button [ Html.Events.onClick Toggle ] [ Html.text "Toggle" ]
+        , Html.div [ Html.Events.onClick Toggle ] [ example3 model.angle ]
         ]
 
 
