@@ -4,12 +4,15 @@ module Drawing2d.LinearGradient
         , along
         , endPoint
         , from
+        , relativeTo
+        , scaleAbout
         , startPoint
         , stops
         )
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
+import Frame2d exposing (Frame2d)
 import Point2d exposing (Point2d)
 
 
@@ -100,3 +103,21 @@ endPoint (LinearGradient gradient) =
 stops : LinearGradient -> List ( Float, Color )
 stops (LinearGradient gradient) =
     gradient.stops
+
+
+relativeTo : Frame2d -> LinearGradient -> LinearGradient
+relativeTo frame (LinearGradient gradient) =
+    LinearGradient
+        { startPoint = Point2d.relativeTo frame gradient.startPoint
+        , endPoint = Point2d.relativeTo frame gradient.endPoint
+        , stops = gradient.stops
+        }
+
+
+scaleAbout : Point2d -> Float -> LinearGradient -> LinearGradient
+scaleAbout centerPoint scale (LinearGradient gradient) =
+    LinearGradient
+        { startPoint = Point2d.scaleAbout centerPoint scale gradient.startPoint
+        , endPoint = Point2d.scaleAbout centerPoint scale gradient.endPoint
+        , stops = gradient.stops
+        }

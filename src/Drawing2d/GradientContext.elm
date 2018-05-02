@@ -9,6 +9,7 @@ module Drawing2d.GradientContext
         )
 
 import Drawing2d.Defs as Defs exposing (Defs)
+import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Frame2d exposing (Frame2d)
 import Point2d exposing (Point2d)
 import Svg
@@ -17,7 +18,7 @@ import Svg.Attributes
 
 type GradientContext
     = NoContext
-    | LinearContext String Point2d Point2d
+    | LinearContext LinearGradient
 
 
 none : GradientContext
@@ -25,9 +26,9 @@ none =
     NoContext
 
 
-linear : String -> Point2d -> Point2d -> GradientContext
-linear id startPoint endPoint =
-    LinearContext id startPoint endPoint
+linear : LinearGradient -> GradientContext
+linear =
+    LinearContext
 
 
 relativeTo : Frame2d -> GradientContext -> GradientContext
@@ -36,10 +37,8 @@ relativeTo frame gradientContext =
         NoContext ->
             NoContext
 
-        LinearContext id startPoint endPoint ->
-            LinearContext id
-                (Point2d.relativeTo frame startPoint)
-                (Point2d.relativeTo frame endPoint)
+        LinearContext linearGradient ->
+            LinearContext (LinearGradient.relativeTo frame linearGradient)
 
 
 scaleAbout : Point2d -> Float -> GradientContext -> GradientContext
@@ -48,10 +47,8 @@ scaleAbout point scale gradientContext =
         NoContext ->
             NoContext
 
-        LinearContext id startPoint endPoint ->
-            LinearContext id
-                (Point2d.scaleAbout point scale startPoint)
-                (Point2d.scaleAbout point scale endPoint)
+        LinearContext linearGradient ->
+            LinearContext (LinearGradient.scaleAbout point scale linearGradient)
 
 
 apply : GradientContext -> Defs -> List (Svg.Attribute msg) -> ( Defs, List (Svg.Attribute msg) )
@@ -60,13 +57,10 @@ apply gradientContext defs currentAttributes =
         NoContext ->
             ( defs, currentAttributes )
 
-        LinearContext referencedId localStartPoint localEndPoint ->
+        LinearContext linearGradient ->
             let
                 ( id, updatedDefs ) =
-                    defs
-                        |> Defs.instantiateLinearGradient referencedId
-                            localStartPoint
-                            localEndPoint
+                    Defs.addLinearGradient linearGradient defs
 
                 fillAttribute =
                     Svg.Attributes.fill ("url(#" ++ id ++ ")")

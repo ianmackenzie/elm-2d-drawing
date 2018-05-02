@@ -1,22 +1,21 @@
 module Drawing2d.Defs
     exposing
         ( Defs
-        , addLinearGradientStops
+        , addLinearGradient
         , init
-        , instantiateLinearGradient
         , toSvgElement
         )
 
 import Color exposing (Color)
 import Drawing2d.Color as Color
+import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Point2d exposing (Point2d)
 import Svg exposing (Svg)
 import Svg.Attributes
 
 
 type Def
-    = LinearGradientStops (List ( Float, Color ))
-    | LinearGradientInstantiation String Point2d Point2d
+    = LinearGradient LinearGradient
 
 
 type Defs
@@ -47,14 +46,9 @@ add def (Defs defs) =
     ( id, updatedDefs )
 
 
-addLinearGradientStops : List ( Float, Color ) -> Defs -> ( String, Defs )
-addLinearGradientStops stops =
-    add (LinearGradientStops stops)
-
-
-instantiateLinearGradient : String -> Point2d -> Point2d -> Defs -> ( String, Defs )
-instantiateLinearGradient id localStartPoint localEndPoint defs =
-    add (LinearGradientInstantiation id localStartPoint localEndPoint) defs
+addLinearGradient : LinearGradient -> Defs -> ( String, Defs )
+addLinearGradient linearGradient =
+    add (LinearGradient linearGradient)
 
 
 stopElement : ( Float, Color ) -> Svg msg
@@ -79,19 +73,15 @@ gradientUnitsAttribute =
 entryToElement : ( String, Def ) -> Svg msg
 entryToElement ( id, def ) =
     case def of
-        LinearGradientStops stops ->
-            Svg.linearGradient
-                [ Svg.Attributes.id id
-                ]
-                (List.map stopElement stops)
-
-        LinearGradientInstantiation referencedId startPoint endPoint ->
+        LinearGradient linearGradient ->
             let
                 ( x1, y1 ) =
-                    Point2d.coordinates startPoint
+                    Point2d.coordinates
+                        (LinearGradient.startPoint linearGradient)
 
                 ( x2, y2 ) =
-                    Point2d.coordinates endPoint
+                    Point2d.coordinates
+                        (LinearGradient.endPoint linearGradient)
             in
             Svg.linearGradient
                 [ Svg.Attributes.id id
@@ -100,9 +90,8 @@ entryToElement ( id, def ) =
                 , Svg.Attributes.x2 (toString x2)
                 , Svg.Attributes.y2 (toString y2)
                 , gradientUnitsAttribute
-                , Svg.Attributes.xlinkHref ("#" ++ referencedId)
                 ]
-                []
+                (List.map stopElement (LinearGradient.stops linearGradient))
 
 
 toSvgElement : Defs -> Svg msg

@@ -79,20 +79,12 @@ apply attribute context defs =
 
         FillStyle (LinearGradientFill gradient) ->
             let
-                ( defId, updatedDefs ) =
-                    Defs.addLinearGradientStops
-                        (LinearGradient.stops gradient)
-                        defs
-
                 updatedContext =
                     { context
-                        | gradientContext =
-                            GradientContext.linear defId
-                                (LinearGradient.startPoint gradient)
-                                (LinearGradient.endPoint gradient)
+                        | gradientContext = GradientContext.linear gradient
                     }
             in
-            ( updatedContext, updatedDefs, [] )
+            ( updatedContext, defs, [] )
 
         StrokeColor color ->
             let

@@ -94,7 +94,7 @@ drawRegionWith parentContext currentDefs attributes draw geometry =
         ( localContext, defsFromAttributes, convertedAttributes ) =
             applyAttributes attributes parentContext currentDefs
 
-        ( defsWithGradientReference, attributesWithGradientReference ) =
+        ( defsWithGradient, attributesWithGradient ) =
             GradientContext.apply localContext.gradientContext
                 defsFromAttributes
                 convertedAttributes
@@ -103,9 +103,8 @@ drawRegionWith parentContext currentDefs attributes draw geometry =
             if localContext.bordersEnabled then
                 case localContext.borderPosition of
                     BorderPosition.Centered ->
-                        ( nonScalingStrokeAttribute
-                            :: attributesWithGradientReference
-                        , defsWithGradientReference
+                        ( nonScalingStrokeAttribute :: attributesWithGradient
+                        , defsWithGradient
                         )
 
                     BorderPosition.Inside ->
@@ -114,8 +113,8 @@ drawRegionWith parentContext currentDefs attributes draw geometry =
                     BorderPosition.Outside ->
                         Debug.crash "TODO"
             else
-                ( noStrokeAttribute :: attributesWithGradientReference
-                , defsWithGradientReference
+                ( noStrokeAttribute :: attributesWithGradient
+                , defsWithGradient
                 )
     in
     ( draw finalAttributes geometry, finalDefs )
