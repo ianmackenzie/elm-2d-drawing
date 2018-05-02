@@ -4,6 +4,7 @@ module Drawing2d.LinearGradient
         , along
         , endPoint
         , from
+        , placeIn
         , relativeTo
         , scaleAbout
         , startPoint
@@ -110,6 +111,15 @@ relativeTo frame (LinearGradient gradient) =
     LinearGradient
         { startPoint = Point2d.relativeTo frame gradient.startPoint
         , endPoint = Point2d.relativeTo frame gradient.endPoint
+        , stops = gradient.stops
+        }
+
+
+placeIn : Frame2d -> LinearGradient -> LinearGradient
+placeIn frame (LinearGradient gradient) =
+    LinearGradient
+        { startPoint = Point2d.placeIn frame gradient.startPoint
+        , endPoint = Point2d.placeIn frame gradient.endPoint
         , stops = gradient.stops
         }
 

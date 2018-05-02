@@ -12,7 +12,6 @@ import Drawing2d.Color as Color
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs as Defs exposing (Defs)
 import Drawing2d.Font as Font
-import Drawing2d.GradientContext as GradientContext
 import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
@@ -63,93 +62,127 @@ apply attribute context defs =
             let
                 ( rgbString, alphaString ) =
                     Color.strings color
+
+                newAttributes =
+                    [ Svg.Attributes.fill rgbString
+                    , Svg.Attributes.fillOpacity alphaString
+                    ]
             in
-            ( { context | gradientContext = GradientContext.none }
-            , defs
-            , [ Svg.Attributes.fill rgbString
-              , Svg.Attributes.fillOpacity alphaString
-              ]
-            )
+            ( context, defs, newAttributes )
 
         FillStyle NoFill ->
-            ( { context | gradientContext = GradientContext.none }
-            , defs
-            , [ Svg.Attributes.fill "none" ]
-            )
+            let
+                newAttributes =
+                    [ Svg.Attributes.fill "none" ]
+            in
+            ( context, defs, newAttributes )
 
         FillStyle (LinearGradientFill gradient) ->
             let
-                updatedContext =
-                    { context
-                        | gradientContext = GradientContext.linear gradient
-                    }
+                placedGradient =
+                    LinearGradient.placeIn context.placementFrame gradient
+
+                ( id, updatedDefs ) =
+                    Defs.addLinearGradient placedGradient defs
+
+                newAttributes =
+                    [ Svg.Attributes.fill ("url(#" ++ id ++ ")") ]
             in
-            ( updatedContext, defs, [] )
+            ( context, updatedDefs, newAttributes )
 
         StrokeColor color ->
             let
                 ( rgbString, alphaString ) =
                     Color.strings color
+
+                newAttributes =
+                    [ Svg.Attributes.stroke rgbString
+                    , Svg.Attributes.strokeOpacity alphaString
+                    ]
             in
-            ( context
-            , defs
-            , [ Svg.Attributes.stroke rgbString
-              , Svg.Attributes.strokeOpacity alphaString
-              ]
-            )
+            ( context, defs, newAttributes )
 
         StrokeWidth width ->
-            ( context
-            , defs
-            , [ Svg.Attributes.strokeWidth (toString width ++ "px") ]
-            )
+            let
+                newAttributes =
+                    [ Svg.Attributes.strokeWidth (toString width ++ "px") ]
+            in
+            ( context, defs, newAttributes )
 
         BordersEnabled bordersEnabled ->
-            ( { context | bordersEnabled = bordersEnabled }, defs, [] )
+            let
+                updatedContext =
+                    { context | bordersEnabled = bordersEnabled }
+            in
+            ( updatedContext, defs, [] )
 
         BorderPosition position ->
-            ( { context | borderPosition = position }, defs, [] )
+            let
+                updatedContext =
+                    { context | borderPosition = position }
+            in
+            ( updatedContext, defs, [] )
 
         DotRadius radius ->
-            ( { context | dotRadius = radius }, defs, [] )
+            let
+                updatedContext =
+                    { context | dotRadius = radius }
+            in
+            ( updatedContext, defs, [] )
 
         TextAnchor anchor ->
-            ( context, defs, TextAnchor.toSvgAttributes anchor )
+            let
+                newAttributes =
+                    TextAnchor.toSvgAttributes anchor
+            in
+            ( context, defs, newAttributes )
 
         TextColor color ->
-            ( context
-            , defs
-            , [ Svg.Attributes.color (Tuple.first (Color.strings color)) ]
-            )
+            let
+                textColor =
+                    Tuple.first (Color.strings color)
+
+                newAttributes =
+                    [ Svg.Attributes.color textColor ]
+            in
+            ( context, defs, newAttributes )
 
         FontSize px ->
-            ( { context | fontSize = toFloat px }, defs, [] )
+            let
+                newAttributes =
+                    [ Svg.Attributes.fontSize (toString px) ]
+            in
+            ( context, defs, newAttributes )
 
         FontFamily fonts ->
-            ( context
-            , defs
-            , [ Svg.Attributes.fontFamily
-                    (fonts |> List.map normalizeFont |> String.join ",")
-              ]
-            )
+            let
+                fontFamily =
+                    fonts |> List.map normalizeFont |> String.join ","
+
+                newAttributes =
+                    [ Svg.Attributes.fontFamily fontFamily ]
+            in
+            ( context, defs, newAttributes )
 
         OnClick message ->
-            ( context
-            , defs
-            , [ Html.Events.onWithOptions "click"
-                    { preventDefault = True, stopPropagation = True }
-                    (Decode.succeed message)
-              ]
-            )
+            let
+                newAttributes =
+                    [ Html.Events.onWithOptions "click"
+                        { preventDefault = True, stopPropagation = True }
+                        (Decode.succeed message)
+                    ]
+            in
+            ( context, defs, newAttributes )
 
         OnMouseDown handler ->
-            ( context
-            , defs
-            , [ Html.Events.onWithOptions "mousedown"
-                    { preventDefault = True, stopPropagation = True }
-                    (Mouse.position |> Decode.map handler)
-              ]
-            )
+            let
+                newAttributes =
+                    [ Html.Events.onWithOptions "mousedown"
+                        { preventDefault = True, stopPropagation = True }
+                        (Mouse.position |> Decode.map handler)
+                    ]
+            in
+            ( context, defs, newAttributes )
 
 
 map : (a -> b) -> Attribute a -> Attribute b

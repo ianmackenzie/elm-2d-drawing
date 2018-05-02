@@ -37,7 +37,6 @@ module Drawing2d
         , rotateAround
         , roundedRectangle
         , roundedRectangleWith
-        , scaleAbout
         , text
         , textWith
         , toHtml
@@ -89,13 +88,6 @@ type alias Attribute msg =
 toHtml : BoundingBox2d -> List (Attribute msg) -> List (Element msg) -> Html msg
 toHtml boundingBox attributes elements =
     let
-        { minX, maxY } =
-            BoundingBox2d.extrema boundingBox
-
-        topLeftFrame =
-            Frame2d.atPoint (Point2d.fromCoordinates ( minX, maxY ))
-                |> Frame2d.flipY
-
         ( width, height ) =
             BoundingBox2d.dimensions boundingBox
 
@@ -111,13 +103,11 @@ toHtml boundingBox attributes elements =
             , Attributes.dotRadius 3
             ]
 
+        rootElement =
+            groupWith (defaultAttributes ++ attributes) elements
+
         ( rootSvgElement, defs ) =
-            Element.render
-                Context.init
-                Defs.init
-                (groupWith defaultAttributes [ groupWith attributes elements ]
-                    |> relativeTo topLeftFrame
-                )
+            Element.render (Context.init boundingBox) Defs.init rootElement
     in
     Html.div
         [ Html.Attributes.style
@@ -209,11 +199,6 @@ translateBy displacement element =
 translateIn : Direction2d -> Float -> Element msg -> Element msg
 translateIn direction distance element =
     translateBy (Vector2d.withLength distance direction) element
-
-
-scaleAbout : Point2d -> Float -> Element msg -> Element msg
-scaleAbout point scale element =
-    Element.ScaleAbout point scale element
 
 
 rotateAround : Point2d -> Float -> Element msg -> Element msg

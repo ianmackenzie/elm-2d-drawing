@@ -1,27 +1,29 @@
 module Drawing2d.Context exposing (Context, init)
 
+import BoundingBox2d exposing (BoundingBox2d)
 import Drawing2d.Border as Border exposing (BorderPosition)
-import Drawing2d.GradientContext as GradientContext exposing (GradientContext)
+import Frame2d exposing (Frame2d)
 
 
 type alias Context =
     { dotRadius : Float
-    , fontSize : Float
-    , scaleCorrection : Float
     , bordersEnabled : Bool
     , borderPosition : BorderPosition
-    , strokeWidth : Float
-    , gradientContext : GradientContext
+    , placementFrame : Frame2d
     }
 
 
-init : Context
-init =
+init : BoundingBox2d -> Context
+init renderBounds =
+    let
+        { minX, maxY } =
+            BoundingBox2d.extrema renderBounds
+
+        topLeftFrame =
+            Frame2d.atCoordinates ( minX, maxY ) |> Frame2d.flipY
+    in
     { dotRadius = 0
-    , fontSize = 0
-    , scaleCorrection = 1
     , bordersEnabled = False
     , borderPosition = Border.centered
-    , strokeWidth = 0
-    , gradientContext = GradientContext.none
+    , placementFrame = Frame2d.xy |> Frame2d.relativeTo topLeftFrame
     }

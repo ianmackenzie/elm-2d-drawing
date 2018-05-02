@@ -9,7 +9,6 @@ import Drawing2d.Attribute as Attribute exposing (Attribute)
 import Drawing2d.BorderPosition as BorderPosition
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs exposing (Defs)
-import Drawing2d.GradientContext as GradientContext
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -23,14 +22,12 @@ import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg)
 import Svg.Attributes
 import Triangle2d exposing (Triangle2d)
-import VirtualDom
 
 
 type Element msg
     = Empty
     | Group (List (Attribute msg)) (List (Element msg))
     | PlaceIn Frame2d (Element msg)
-    | ScaleAbout Point2d Float (Element msg)
     | LineSegment (List (Attribute msg)) LineSegment2d
     | Triangle (List (Attribute msg)) Triangle2d
     | Dot (List (Attribute msg)) Point2d
@@ -56,11 +53,6 @@ applyAttribute attribute ( context, defs, accumulatedAttributes ) =
     ( updatedContext, updatedDefs, svgAttributes :: accumulatedAttributes )
 
 
-nonScalingStrokeAttribute : Svg.Attribute msg
-nonScalingStrokeAttribute =
-    VirtualDom.attribute "vector-effect" "non-scaling-stroke"
-
-
 noFillAttribute : Svg.Attribute msg
 noFillAttribute =
     Svg.Attributes.fill "none"
@@ -73,39 +65,35 @@ noStrokeAttribute =
 
 curveAttributes : List (Svg.Attribute msg) -> List (Svg.Attribute msg)
 curveAttributes attributes =
-    noFillAttribute :: nonScalingStrokeAttribute :: attributes
+    noFillAttribute :: attributes
 
 
-drawCurveWith : Context -> Defs -> List (Attribute msg) -> (List (Svg.Attribute msg) -> a -> Svg msg) -> a -> ( Svg msg, Defs )
-drawCurveWith parentContext currentDefs attributes draw geometry =
+drawCurveWith : Context -> Defs -> List (Attribute msg) -> (List (Svg.Attribute msg) -> a -> Svg msg) -> (Frame2d -> a -> a) -> a -> ( Svg msg, Defs )
+drawCurveWith parentContext currentDefs attributes draw placeIn geometry =
     let
         ( localContext, updatedDefs, convertedAttributes ) =
             applyAttributes attributes parentContext currentDefs
 
         finalAttributes =
-            noFillAttribute :: nonScalingStrokeAttribute :: convertedAttributes
+            noFillAttribute :: convertedAttributes
+
+        placedGeometry =
+            placeIn localContext.placementFrame geometry
     in
-    ( draw finalAttributes geometry, updatedDefs )
+    ( draw finalAttributes placedGeometry, updatedDefs )
 
 
-drawRegionWith : Context -> Defs -> List (Attribute msg) -> (List (Svg.Attribute msg) -> a -> Svg msg) -> a -> ( Svg msg, Defs )
-drawRegionWith parentContext currentDefs attributes draw geometry =
+drawRegionWith : Context -> Defs -> List (Attribute msg) -> (List (Svg.Attribute msg) -> a -> Svg msg) -> (Frame2d -> a -> a) -> a -> ( Svg msg, Defs )
+drawRegionWith parentContext currentDefs attributes draw placeIn geometry =
     let
-        ( localContext, defsFromAttributes, convertedAttributes ) =
+        ( localContext, updatedDefs, convertedAttributes ) =
             applyAttributes attributes parentContext currentDefs
-
-        ( defsWithGradient, attributesWithGradient ) =
-            GradientContext.apply localContext.gradientContext
-                defsFromAttributes
-                convertedAttributes
 
         ( finalAttributes, finalDefs ) =
             if localContext.bordersEnabled then
                 case localContext.borderPosition of
                     BorderPosition.Centered ->
-                        ( nonScalingStrokeAttribute :: attributesWithGradient
-                        , defsWithGradient
-                        )
+                        ( convertedAttributes, updatedDefs )
 
                     BorderPosition.Inside ->
                         Debug.crash "TODO"
@@ -113,11 +101,12 @@ drawRegionWith parentContext currentDefs attributes draw geometry =
                     BorderPosition.Outside ->
                         Debug.crash "TODO"
             else
-                ( noStrokeAttribute :: attributesWithGradient
-                , defsWithGradient
-                )
+                ( noStrokeAttribute :: convertedAttributes, updatedDefs )
+
+        placedGeometry =
+            placeIn localContext.placementFrame geometry
     in
-    ( draw finalAttributes geometry, finalDefs )
+    ( draw finalAttributes placedGeometry, finalDefs )
 
 
 applyAttributes : List (Attribute msg) -> Context -> Defs -> ( Context, Defs, List (Svg.Attribute msg) )
@@ -164,104 +153,79 @@ render parentContext currentDefs element =
             , postChildrenDefs
             )
 
-        PlaceIn frame child ->
+        PlaceIn frame element ->
             let
-                localContext =
+                childContext =
                     { parentContext
-                        | gradientContext =
-                            GradientContext.relativeTo frame
-                                parentContext.gradientContext
+                        | placementFrame =
+                            Frame2d.placeIn parentContext.placementFrame frame
                     }
-
-                ( childSvg, updatedDefs ) =
-                    render localContext currentDefs child
             in
-            ( Svg.placeIn frame childSvg, updatedDefs )
-
-        ScaleAbout point scale child ->
-            let
-                localContext =
-                    { parentContext
-                        | scaleCorrection =
-                            parentContext.scaleCorrection / scale
-                        , gradientContext =
-                            GradientContext.scaleAbout point
-                                (1 / scale)
-                                parentContext.gradientContext
-                    }
-
-                ( childSvg, updatedDefs ) =
-                    render localContext currentDefs child
-            in
-            ( Svg.scaleAbout point scale childSvg, updatedDefs )
+            render childContext currentDefs element
 
         LineSegment attributes lineSegment ->
-            drawCurve attributes Svg.lineSegment2d lineSegment
+            drawCurve attributes
+                Svg.lineSegment2d
+                LineSegment2d.placeIn
+                lineSegment
 
         Triangle attributes triangle ->
-            drawRegion attributes Svg.triangle2d triangle
+            drawRegion attributes Svg.triangle2d Triangle2d.placeIn triangle
 
         Dot attributes point ->
             let
-                ( localContext, defsFromAttributes, svgAttributes ) =
+                ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
 
-                ( finalDefs, svgAttributesWithGradient ) =
-                    GradientContext.apply localContext.gradientContext
-                        defsFromAttributes
-                        svgAttributes
-
-                finalAttributes =
-                    nonScalingStrokeAttribute :: svgAttributesWithGradient
-
-                dotRadius =
-                    localContext.dotRadius * localContext.scaleCorrection
-
                 circle =
-                    Circle2d.withRadius dotRadius point
+                    Circle2d.withRadius localContext.dotRadius
+                        (Point2d.placeIn localContext.placementFrame point)
             in
-            ( Svg.circle2d finalAttributes circle, finalDefs )
+            ( Svg.circle2d svgAttributes circle, updatedDefs )
 
         Arc attributes arc ->
-            drawCurve attributes Svg.arc2d arc
+            drawCurve attributes Svg.arc2d Arc2d.placeIn arc
 
         QuadraticSpline attributes spline ->
-            drawCurve attributes Svg.quadraticSpline2d spline
+            drawCurve attributes
+                Svg.quadraticSpline2d
+                QuadraticSpline2d.placeIn
+                spline
 
         CubicSpline attributes spline ->
-            drawCurve attributes Svg.cubicSpline2d spline
+            drawCurve attributes Svg.cubicSpline2d CubicSpline2d.placeIn spline
 
         Circle attributes circle ->
-            drawRegion attributes Svg.circle2d circle
+            drawRegion attributes Svg.circle2d Circle2d.placeIn circle
 
         Ellipse attributes ellipse ->
-            drawRegion attributes Svg.ellipse2d ellipse
+            drawRegion attributes Svg.ellipse2d Ellipse2d.placeIn ellipse
 
         EllipticalArc attributes ellipticalArc ->
-            drawCurve attributes Svg.ellipticalArc2d ellipticalArc
+            drawCurve attributes
+                Svg.ellipticalArc2d
+                EllipticalArc2d.placeIn
+                ellipticalArc
 
         Polyline attributes polyline ->
-            drawCurve attributes Svg.polyline2d polyline
+            drawCurve attributes Svg.polyline2d Polyline2d.placeIn polyline
 
         Polygon attributes polygon ->
-            drawRegion attributes Svg.polygon2d polygon
+            drawRegion attributes Svg.polygon2d Polygon2d.placeIn polygon
 
         Text attributes point string ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
 
+                placedPoint =
+                    Point2d.placeIn localContext.placementFrame point
+
                 ( x, y ) =
-                    Point2d.coordinates point
+                    Point2d.coordinates placedPoint
 
                 mirrorAxis =
-                    Axis2d.through point Direction2d.x
-
-                fontSize =
-                    localContext.fontSize * localContext.scaleCorrection
-
-                fontSizeAttribute =
-                    Svg.Attributes.fontSize (toString fontSize)
+                    Axis2d.through placedPoint Direction2d.x
 
                 xAttribute =
                     Svg.Attributes.x (toString x)
@@ -276,8 +240,7 @@ render parentContext currentDefs element =
                     Svg.Attributes.stroke "none"
             in
             ( Svg.text_
-                (fontSizeAttribute
-                    :: xAttribute
+                (xAttribute
                     :: yAttribute
                     :: fillAttribute
                     :: strokeAttribute
@@ -288,66 +251,154 @@ render parentContext currentDefs element =
             , updatedDefs
             )
 
-        RoundedRectangle attributes radius rectangle ->
+        RoundedRectangle attributes radius originalRectangle ->
             let
-                ( localContext, defsFromAttributes, svgAttributes ) =
+                ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
 
-                rectangleAxes =
-                    Rectangle2d.axes rectangle
-
-                finalGradientContext =
-                    localContext.gradientContext
-                        |> GradientContext.relativeTo rectangleAxes
-
-                ( finalDefs, svgAttributesWithGradient ) =
-                    GradientContext.apply finalGradientContext
-                        defsFromAttributes
-                        svgAttributes
+                placedRectangle =
+                    originalRectangle
+                        |> Rectangle2d.placeIn localContext.placementFrame
 
                 ( width, height ) =
-                    Rectangle2d.dimensions rectangle
+                    Rectangle2d.dimensions placedRectangle
 
-                xAttribute =
-                    Svg.Attributes.x (toString (-width / 2))
+                halfWidth =
+                    width / 2
 
-                yAttribute =
-                    Svg.Attributes.y (toString (-height / 2))
+                halfHeight =
+                    height / 2
 
-                widthAttribute =
-                    Svg.Attributes.width (toString width)
+                rectangleAxes =
+                    Rectangle2d.axes placedRectangle
 
-                heightAttribute =
-                    Svg.Attributes.height (toString height)
+                p0 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( halfWidth - radius, -halfHeight )
+
+                p1 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( halfWidth, -halfHeight + radius )
+
+                p2 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( halfWidth, halfHeight - radius )
+
+                p3 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( halfWidth - radius, halfHeight )
+
+                p4 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( -halfWidth + radius, halfHeight )
+
+                p5 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( -halfWidth, halfHeight - radius )
+
+                p6 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( -halfWidth, -halfHeight + radius )
+
+                p7 =
+                    Point2d.fromCoordinatesIn rectangleAxes
+                        ( -halfWidth + radius, -halfHeight )
+
+                x0 =
+                    toString (Point2d.xCoordinate p0)
+
+                y0 =
+                    toString (Point2d.yCoordinate p0)
+
+                x1 =
+                    toString (Point2d.xCoordinate p1)
+
+                y1 =
+                    toString (Point2d.yCoordinate p1)
+
+                x2 =
+                    toString (Point2d.xCoordinate p2)
+
+                y2 =
+                    toString (Point2d.yCoordinate p2)
+
+                x3 =
+                    toString (Point2d.xCoordinate p3)
+
+                y3 =
+                    toString (Point2d.yCoordinate p3)
+
+                x4 =
+                    toString (Point2d.xCoordinate p4)
+
+                y4 =
+                    toString (Point2d.yCoordinate p4)
+
+                x5 =
+                    toString (Point2d.xCoordinate p5)
+
+                y5 =
+                    toString (Point2d.yCoordinate p5)
+
+                x6 =
+                    toString (Point2d.xCoordinate p6)
+
+                y6 =
+                    toString (Point2d.yCoordinate p6)
+
+                x7 =
+                    toString (Point2d.xCoordinate p7)
+
+                y7 =
+                    toString (Point2d.yCoordinate p7)
 
                 radiusString =
                     toString radius
 
-                rxAttribute =
-                    Svg.Attributes.rx radiusString
+                moveTo x y =
+                    "M " ++ x ++ " " ++ y
 
-                ryAttribute =
-                    Svg.Attributes.ry radiusString
+                lineTo x y =
+                    "L " ++ x ++ " " ++ y
+
+                arcTo x y =
+                    String.join " "
+                        [ "A"
+                        , radiusString
+                        , radiusString
+                        , "0"
+                        , "0"
+                        , "0"
+                        , x
+                        , y
+                        ]
+
+                path =
+                    String.join " "
+                        [ moveTo x0 y0
+                        , arcTo x1 y1
+                        , lineTo x2 y2
+                        , arcTo x3 y3
+                        , lineTo x4 y4
+                        , arcTo x5 y5
+                        , lineTo x6 y6
+                        , arcTo x7 y7
+                        , "Z"
+                        ]
+
+                pathAttribute =
+                    Svg.Attributes.d path
             in
-            ( Svg.rect
-                (nonScalingStrokeAttribute
-                    :: xAttribute
-                    :: yAttribute
-                    :: widthAttribute
-                    :: heightAttribute
-                    :: rxAttribute
-                    :: ryAttribute
-                    :: svgAttributesWithGradient
-                )
-                []
-                |> Svg.placeIn (Rectangle2d.axes rectangle)
-            , finalDefs
-            )
+            ( Svg.path (pathAttribute :: svgAttributes) [], updatedDefs )
 
-        Image url rectangle ->
+        Image url originalRectangle ->
             let
+                placedRectangle =
+                    originalRectangle
+                        |> Rectangle2d.placeIn parentContext.placementFrame
+
                 ( width, height ) =
-                    Rectangle2d.dimensions rectangle
+                    Rectangle2d.dimensions placedRectangle
             in
             ( Svg.image
                 [ Svg.Attributes.xlinkHref url
@@ -357,8 +408,8 @@ render parentContext currentDefs element =
                 , Svg.Attributes.height (toString height)
                 ]
                 []
-                |> Svg.placeIn (Rectangle2d.axes rectangle)
-                |> Svg.mirrorAcross (Rectangle2d.xAxis rectangle)
+                |> Svg.placeIn (Rectangle2d.axes placedRectangle)
+                |> Svg.mirrorAcross (Rectangle2d.xAxis placedRectangle)
             , currentDefs
             )
 
@@ -382,9 +433,6 @@ map function element =
 
         PlaceIn frame element ->
             PlaceIn frame (mapElement element)
-
-        ScaleAbout point scale element ->
-            ScaleAbout point scale (mapElement element)
 
         LineSegment attributes lineSegment ->
             LineSegment (mapAttributes attributes) lineSegment
