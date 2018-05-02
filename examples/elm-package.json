@@ -1,0 +1,27 @@
+{
+    "version": "1.0.0",
+    "summary": "Examples",
+    "repository": "https://github.com/ianmackenzie/elm-2d-drawing.git",
+    "license": "MPL-2.0",
+    "source-directories": [
+        ".",
+        "../src",
+        "../../elm-geometry/src",
+        "../../elm-geometry-svg/src"
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "Skinney/elm-array-exploration": "2.0.5 <= v < 3.0.0",
+        "elm-community/basics-extra": "2.3.0 <= v < 3.0.0",
+        "elm-lang/animation-frame": "1.0.1 <= v < 2.0.0",
+        "elm-lang/core": "5.1.1 <= v < 6.0.0",
+        "elm-lang/html": "2.0.0 <= v < 3.0.0",
+        "elm-lang/mouse": "1.0.1 <= v < 2.0.0",
+        "elm-lang/svg": "2.0.0 <= v < 3.0.0",
+        "elm-lang/virtual-dom": "2.0.4 <= v < 3.0.0",
+        "ianmackenzie/elm-float-extra": "1.0.0 <= v < 2.0.0",
+        "ianmackenzie/elm-interval": "1.0.0 <= v < 2.0.0",
+        "ianmackenzie/elm-triangular-mesh": "1.0.0 <= v < 2.0.0"
+    },
+    "elm-version": "0.18.0 <= v < 0.19.0"
+}
