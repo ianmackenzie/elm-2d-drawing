@@ -100,7 +100,7 @@ entryToElement ( id, def ) =
                 , Svg.Attributes.x2 (toString x2)
                 , Svg.Attributes.y2 (toString y2)
                 , gradientUnitsAttribute
-                , Svg.Attributes.xlinkHref ("url(#" ++ referencedId ++ ")")
+                , Svg.Attributes.xlinkHref ("#" ++ referencedId)
                 ]
                 []
 
