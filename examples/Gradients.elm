@@ -112,9 +112,7 @@ example3 angle =
         []
         [ Drawing2d.rectangle square
         , Drawing2d.groupWith
-            [ diagonalGradientAttribute
-            , Attributes.dotRadius 50
-            ]
+            [ diagonalGradientAttribute, Attributes.dotRadius 50 ]
             [ Drawing2d.dots points
                 |> Drawing2d.rotateAround centerPoint angle
             ]
