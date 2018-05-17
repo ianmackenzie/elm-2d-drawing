@@ -218,14 +218,8 @@ render parentContext currentDefs element =
                 ( localContext, updatedDefs, svgAttributes ) =
                     applyAttributes attributes parentContext currentDefs
 
-                placedPoint =
-                    Point2d.placeIn localContext.placementFrame point
-
                 ( x, y ) =
-                    Point2d.coordinates placedPoint
-
-                mirrorAxis =
-                    Axis2d.through placedPoint Direction2d.x
+                    Point2d.coordinates point
 
                 xAttribute =
                     Svg.Attributes.x (toString x)
@@ -247,7 +241,8 @@ render parentContext currentDefs element =
                     :: svgAttributes
                 )
                 [ Svg.text string ]
-                |> Svg.mirrorAcross mirrorAxis
+                |> Svg.mirrorAcross (Axis2d.through point Direction2d.x)
+                |> Svg.placeIn localContext.placementFrame
             , updatedDefs
             )
 
