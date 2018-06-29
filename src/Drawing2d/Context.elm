@@ -20,7 +20,7 @@ init renderBounds =
             BoundingBox2d.extrema renderBounds
 
         topLeftFrame =
-            Frame2d.atCoordinates ( minX, maxY ) |> Frame2d.flipY
+            Frame2d.atCoordinates ( minX, maxY ) |> Frame2d.reverseY
     in
     { dotRadius = 0
     , bordersEnabled = False

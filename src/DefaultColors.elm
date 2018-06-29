@@ -4,10 +4,10 @@ import Arc2d
 import BoundingBox2d
 import Circle2d
 import Color
+import Curve.ParameterValue as ParameterValue
 import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Font as Font
-import Geometry.Parameter as Parameter
 import Html exposing (Html)
 import Point2d
 import Rectangle2d
@@ -46,7 +46,9 @@ main =
                     Circle2d.withRadius 50
                         (Point2d.fromCoordinates ( 200, 200 ))
              in
-             Arc2d.pointsOn (Circle2d.toArc circle) (Parameter.numSteps 32)
+             circle
+                |> Circle2d.toArc
+                |> Arc2d.pointsAt (ParameterValue.steps 32)
             )
         , Drawing2d.text (Point2d.fromCoordinates ( 50, 750 ))
             "Test text"

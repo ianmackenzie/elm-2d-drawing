@@ -4,11 +4,11 @@ import Arc2d
 import Axis2d
 import BoundingBox2d
 import Color
+import Curve.ParameterValue as ParameterValue
 import Direction2d
 import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Text as Text
-import Geometry.Parameter as Parameter
 import Html exposing (Html)
 import LineSegment2d
 import Point2d
@@ -44,7 +44,7 @@ main =
                 (degrees 90)
 
         arcPoints =
-            Arc2d.pointsOn arc (Parameter.numSteps 16)
+            arc |> Arc2d.pointsAt (ParameterValue.steps 16)
 
         text anchor coordinates string =
             let
