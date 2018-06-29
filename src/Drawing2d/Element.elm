@@ -86,8 +86,32 @@ drawCurveWith parentContext currentDefs attributes draw placeIn geometry =
 drawRegionWith : Context -> Defs -> List (Attribute msg) -> (List (Svg.Attribute msg) -> a -> Svg msg) -> (Frame2d -> a -> a) -> a -> ( Svg msg, Defs )
 drawRegionWith parentContext currentDefs attributes draw placeIn geometry =
     let
+        ( localContext, updatedDefs, svgAttributes ) =
+            applyRegionAttributes attributes parentContext currentDefs
+
+        placedGeometry =
+            placeIn localContext.placementFrame geometry
+    in
+    ( draw svgAttributes placedGeometry, updatedDefs )
+
+
+applyAttributes : List (Attribute msg) -> Context -> Defs -> ( Context, Defs, List (Svg.Attribute msg) )
+applyAttributes attributes context defs =
+    let
+        ( updatedContext, updatedDefs, accumulatedAttributes ) =
+            List.foldl applyAttribute ( context, defs, [] ) attributes
+    in
+    ( updatedContext
+    , updatedDefs
+    , accumulatedAttributes |> List.reverse |> List.concat
+    )
+
+
+applyRegionAttributes : List (Attribute msg) -> Context -> Defs -> ( Context, Defs, List (Svg.Attribute msg) )
+applyRegionAttributes attributes context defs =
+    let
         ( localContext, updatedDefs, convertedAttributes ) =
-            applyAttributes attributes parentContext currentDefs
+            applyAttributes attributes context defs
 
         ( finalAttributes, finalDefs ) =
             if localContext.bordersEnabled then
@@ -102,23 +126,8 @@ drawRegionWith parentContext currentDefs attributes draw placeIn geometry =
                         Debug.crash "TODO"
             else
                 ( noStrokeAttribute :: convertedAttributes, updatedDefs )
-
-        placedGeometry =
-            placeIn localContext.placementFrame geometry
     in
-    ( draw finalAttributes placedGeometry, finalDefs )
-
-
-applyAttributes : List (Attribute msg) -> Context -> Defs -> ( Context, Defs, List (Svg.Attribute msg) )
-applyAttributes attributes context defs =
-    let
-        ( updatedContext, updatedDefs, accumulatedAttributes ) =
-            List.foldl applyAttribute ( context, defs, [] ) attributes
-    in
-    ( updatedContext
-    , updatedDefs
-    , accumulatedAttributes |> List.reverse |> List.concat
-    )
+    ( localContext, finalDefs, finalAttributes )
 
 
 render : Context -> Defs -> Element msg -> ( Svg msg, Defs )
@@ -175,7 +184,7 @@ render parentContext currentDefs element =
         Dot attributes point ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
-                    applyAttributes attributes parentContext currentDefs
+                    applyRegionAttributes attributes parentContext currentDefs
 
                 circle =
                     Circle2d.withRadius localContext.dotRadius
@@ -249,7 +258,7 @@ render parentContext currentDefs element =
         RoundedRectangle attributes radius originalRectangle ->
             let
                 ( localContext, updatedDefs, svgAttributes ) =
-                    applyAttributes attributes parentContext currentDefs
+                    applyRegionAttributes attributes parentContext currentDefs
 
                 placedRectangle =
                     originalRectangle
