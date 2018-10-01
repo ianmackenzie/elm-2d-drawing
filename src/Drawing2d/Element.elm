@@ -1,5 +1,7 @@
 module Drawing2d.Element exposing (Element(..), map, render)
 
+--import Rectangle2d exposing (Rectangle2d)
+
 import Arc2d exposing (Arc2d)
 import Axis2d exposing (Axis2d)
 import Circle2d exposing (Circle2d)
@@ -120,10 +122,11 @@ applyRegionAttributes attributes context defs =
                         ( convertedAttributes, updatedDefs )
 
                     BorderPosition.Inside ->
-                        Debug.crash "TODO"
+                        Debug.todo "TODO"
 
                     BorderPosition.Outside ->
-                        Debug.crash "TODO"
+                        Debug.todo "TODO"
+
             else
                 ( noStrokeAttribute :: convertedAttributes, updatedDefs )
     in
@@ -162,7 +165,7 @@ render parentContext currentDefs element =
             , postChildrenDefs
             )
 
-        PlaceIn frame element ->
+        PlaceIn frame childElement ->
             let
                 childContext =
                     { parentContext
@@ -170,7 +173,7 @@ render parentContext currentDefs element =
                             Frame2d.placeIn parentContext.placementFrame frame
                     }
             in
-            render childContext currentDefs element
+            render childContext currentDefs childElement
 
         LineSegment attributes lineSegment ->
             drawCurve attributes
@@ -231,10 +234,10 @@ render parentContext currentDefs element =
                     Point2d.coordinates point
 
                 xAttribute =
-                    Svg.Attributes.x (toString x)
+                    Svg.Attributes.x (String.fromFloat x)
 
                 yAttribute =
-                    Svg.Attributes.y (toString y)
+                    Svg.Attributes.y (String.fromFloat y)
 
                 fillAttribute =
                     Svg.Attributes.fill "currentColor"
@@ -309,55 +312,55 @@ render parentContext currentDefs element =
                         ( -halfWidth + radius, -halfHeight )
 
                 x0 =
-                    toString (Point2d.xCoordinate p0)
+                    String.fromFloat (Point2d.xCoordinate p0)
 
                 y0 =
-                    toString (Point2d.yCoordinate p0)
+                    String.fromFloat (Point2d.yCoordinate p0)
 
                 x1 =
-                    toString (Point2d.xCoordinate p1)
+                    String.fromFloat (Point2d.xCoordinate p1)
 
                 y1 =
-                    toString (Point2d.yCoordinate p1)
+                    String.fromFloat (Point2d.yCoordinate p1)
 
                 x2 =
-                    toString (Point2d.xCoordinate p2)
+                    String.fromFloat (Point2d.xCoordinate p2)
 
                 y2 =
-                    toString (Point2d.yCoordinate p2)
+                    String.fromFloat (Point2d.yCoordinate p2)
 
                 x3 =
-                    toString (Point2d.xCoordinate p3)
+                    String.fromFloat (Point2d.xCoordinate p3)
 
                 y3 =
-                    toString (Point2d.yCoordinate p3)
+                    String.fromFloat (Point2d.yCoordinate p3)
 
                 x4 =
-                    toString (Point2d.xCoordinate p4)
+                    String.fromFloat (Point2d.xCoordinate p4)
 
                 y4 =
-                    toString (Point2d.yCoordinate p4)
+                    String.fromFloat (Point2d.yCoordinate p4)
 
                 x5 =
-                    toString (Point2d.xCoordinate p5)
+                    String.fromFloat (Point2d.xCoordinate p5)
 
                 y5 =
-                    toString (Point2d.yCoordinate p5)
+                    String.fromFloat (Point2d.yCoordinate p5)
 
                 x6 =
-                    toString (Point2d.xCoordinate p6)
+                    String.fromFloat (Point2d.xCoordinate p6)
 
                 y6 =
-                    toString (Point2d.yCoordinate p6)
+                    String.fromFloat (Point2d.yCoordinate p6)
 
                 x7 =
-                    toString (Point2d.xCoordinate p7)
+                    String.fromFloat (Point2d.xCoordinate p7)
 
                 y7 =
-                    toString (Point2d.yCoordinate p7)
+                    String.fromFloat (Point2d.yCoordinate p7)
 
                 radiusString =
-                    toString radius
+                    String.fromFloat radius
 
                 moveTo x y =
                     "M " ++ x ++ " " ++ y
@@ -406,10 +409,10 @@ render parentContext currentDefs element =
             in
             ( Svg.image
                 [ Svg.Attributes.xlinkHref url
-                , Svg.Attributes.x (toString (-width / 2))
-                , Svg.Attributes.y (toString (-height / 2))
-                , Svg.Attributes.width (toString width)
-                , Svg.Attributes.height (toString height)
+                , Svg.Attributes.x (String.fromFloat (-width / 2))
+                , Svg.Attributes.y (String.fromFloat (-height / 2))
+                , Svg.Attributes.width (String.fromFloat width)
+                , Svg.Attributes.height (String.fromFloat height)
                 ]
                 []
                 |> Svg.placeIn (Rectangle2d.axes placedRectangle)
@@ -435,8 +438,8 @@ map function element =
             Group (mapAttributes attributes)
                 (List.map mapElement elements)
 
-        PlaceIn frame element ->
-            PlaceIn frame (mapElement element)
+        PlaceIn frame childElement ->
+            PlaceIn frame (mapElement childElement)
 
         LineSegment attributes lineSegment ->
             LineSegment (mapAttributes attributes) lineSegment

@@ -1,14 +1,12 @@
-module Drawing2d.Attribute
-    exposing
-        ( Attribute(..)
-        , FillStyle(..)
-        , apply
-        , map
-        )
+module Drawing2d.Attribute exposing
+    ( Attribute(..)
+    , FillStyle(..)
+    , apply
+    , map
+    )
 
 import Color exposing (Color)
 import Drawing2d.Border as Border exposing (BorderPosition)
-import Drawing2d.Color as Color
 import Drawing2d.Context as Context exposing (Context)
 import Drawing2d.Defs as Defs exposing (Defs)
 import Drawing2d.Font as Font
@@ -16,8 +14,8 @@ import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
 import Html.Events
+import Html.Events.Extra.Mouse as Mouse
 import Json.Decode as Decode
-import Mouse
 import Svg
 import Svg.Attributes
 
@@ -38,7 +36,7 @@ type Attribute msg
     | FontSize Int
     | FontFamily (List String)
     | OnClick msg
-    | OnMouseDown (Mouse.Position -> msg)
+    | OnMouseDown (Mouse.Event -> msg)
     | BordersEnabled Bool
     | BorderPosition BorderPosition
 
@@ -47,10 +45,13 @@ normalizeFont : String -> String
 normalizeFont font =
     if font == Font.serif then
         font
+
     else if font == Font.sansSerif then
         font
+
     else if font == Font.monospace then
         font
+
     else
         "\"" ++ font ++ "\""
 
@@ -60,13 +61,8 @@ apply attribute context defs =
     case attribute of
         FillStyle (FillColor color) ->
             let
-                ( rgbString, alphaString ) =
-                    Color.strings color
-
                 newAttributes =
-                    [ Svg.Attributes.fill rgbString
-                    , Svg.Attributes.fillOpacity alphaString
-                    ]
+                    [ Svg.Attributes.fill (Color.toCssString color) ]
             in
             ( context, defs, newAttributes )
 
@@ -92,20 +88,17 @@ apply attribute context defs =
 
         StrokeColor color ->
             let
-                ( rgbString, alphaString ) =
-                    Color.strings color
-
                 newAttributes =
-                    [ Svg.Attributes.stroke rgbString
-                    , Svg.Attributes.strokeOpacity alphaString
-                    ]
+                    [ Svg.Attributes.stroke (Color.toCssString color) ]
             in
             ( context, defs, newAttributes )
 
         StrokeWidth width ->
             let
                 newAttributes =
-                    [ Svg.Attributes.strokeWidth (toString width ++ "px") ]
+                    [ Svg.Attributes.strokeWidth
+                        (String.fromFloat width ++ "px")
+                    ]
             in
             ( context, defs, newAttributes )
 
@@ -139,18 +132,15 @@ apply attribute context defs =
 
         TextColor color ->
             let
-                textColor =
-                    Tuple.first (Color.strings color)
-
                 newAttributes =
-                    [ Svg.Attributes.color textColor ]
+                    [ Svg.Attributes.color (Color.toCssString color) ]
             in
             ( context, defs, newAttributes )
 
         FontSize px ->
             let
                 newAttributes =
-                    [ Svg.Attributes.fontSize (toString px) ]
+                    [ Svg.Attributes.fontSize (String.fromInt px) ]
             in
             ( context, defs, newAttributes )
 
@@ -165,24 +155,10 @@ apply attribute context defs =
             ( context, defs, newAttributes )
 
         OnClick message ->
-            let
-                newAttributes =
-                    [ Html.Events.onWithOptions "click"
-                        { preventDefault = True, stopPropagation = True }
-                        (Decode.succeed message)
-                    ]
-            in
-            ( context, defs, newAttributes )
+            ( context, defs, [ Mouse.onClick (always message) ] )
 
         OnMouseDown handler ->
-            let
-                newAttributes =
-                    [ Html.Events.onWithOptions "mousedown"
-                        { preventDefault = True, stopPropagation = True }
-                        (Mouse.position |> Decode.map handler)
-                    ]
-            in
-            ( context, defs, newAttributes )
+            ( context, defs, [ Mouse.onDown handler ] )
 
 
 map : (a -> b) -> Attribute a -> Attribute b

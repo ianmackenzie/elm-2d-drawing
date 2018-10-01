@@ -1,4 +1,4 @@
-module GradientExample exposing (..)
+module GradientExample exposing (Model, Msg(..), main, update, view)
 
 import BoundingBox2d
 import Color
@@ -76,6 +76,7 @@ view model =
                 box
                     |> Drawing2d.scaleAbout lowerLeftCorner 0.5
                     |> Drawing2d.rotateAround lowerLeftCorner (degrees 30)
+
             else
                 box
     in

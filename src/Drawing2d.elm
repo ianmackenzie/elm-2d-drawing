@@ -1,50 +1,49 @@
-module Drawing2d
-    exposing
-        ( Attribute
-        , Element
-        , arc
-        , arcWith
-        , circle
-        , circleWith
-        , cubicSpline
-        , cubicSplineWith
-        , dot
-        , dotWith
-        , dots
-        , dotsWith
-        , ellipse
-        , ellipseWith
-        , ellipticalArc
-        , ellipticalArcWith
-        , empty
-        , group
-        , groupWith
-        , image
-        , lineSegment
-        , lineSegmentWith
-        , map
-        , mirrorAcross
-        , placeIn
-        , polygon
-        , polygonWith
-        , polyline
-        , polylineWith
-        , quadraticSpline
-        , quadraticSplineWith
-        , rectangle
-        , rectangleWith
-        , relativeTo
-        , rotateAround
-        , roundedRectangle
-        , roundedRectangleWith
-        , text
-        , textWith
-        , toHtml
-        , translateBy
-        , translateIn
-        , triangle
-        , triangleWith
-        )
+module Drawing2d exposing
+    ( Attribute
+    , Element
+    , arc
+    , arcWith
+    , circle
+    , circleWith
+    , cubicSpline
+    , cubicSplineWith
+    , dot
+    , dotWith
+    , dots
+    , dotsWith
+    , ellipse
+    , ellipseWith
+    , ellipticalArc
+    , ellipticalArcWith
+    , empty
+    , group
+    , groupWith
+    , image
+    , lineSegment
+    , lineSegmentWith
+    , map
+    , mirrorAcross
+    , placeIn
+    , polygon
+    , polygonWith
+    , polyline
+    , polylineWith
+    , quadraticSpline
+    , quadraticSplineWith
+    , rectangle
+    , rectangleWith
+    , relativeTo
+    , rotateAround
+    , roundedRectangle
+    , roundedRectangleWith
+    , text
+    , textWith
+    , toHtml
+    , translateBy
+    , translateIn
+    , triangle
+    , triangleWith
+    )
 
 import Arc2d exposing (Arc2d)
 import Axis2d exposing (Axis2d)
@@ -110,17 +109,15 @@ toHtml boundingBox attributes elements =
             Element.render (Context.init boundingBox) Defs.init rootElement
     in
     Html.div
-        [ Html.Attributes.style
-            [ ( "border", "0" )
-            , ( "padding", "0" )
-            , ( "margin", "0" )
-            , ( "display", "inline-block" )
-            ]
+        [ Html.Attributes.style "border" "0"
+        , Html.Attributes.style "padding" "0"
+        , Html.Attributes.style "margin" "0"
+        , Html.Attributes.style "display" "inline-block"
         ]
         [ Svg.svg
-            [ Svg.Attributes.width (toString width)
-            , Svg.Attributes.height (toString height)
-            , Html.Attributes.style [ ( "display", "block" ) ]
+            [ Svg.Attributes.width (String.fromFloat width)
+            , Svg.Attributes.height (String.fromFloat height)
+            , Html.Attributes.style "display" "block"
             ]
             [ Defs.toSvgElement defs, rootSvgElement ]
         ]
@@ -137,8 +134,8 @@ lineSegment =
 
 
 lineSegmentWith : List (Attribute msg) -> LineSegment2d -> Element msg
-lineSegmentWith attributes lineSegment =
-    Element.LineSegment attributes lineSegment
+lineSegmentWith attributes givenLineSegment =
+    Element.LineSegment attributes givenLineSegment
 
 
 triangle : Triangle2d -> Element msg
@@ -147,8 +144,8 @@ triangle =
 
 
 triangleWith : List (Attribute msg) -> Triangle2d -> Element msg
-triangleWith attributes triangle =
-    Element.Triangle attributes triangle
+triangleWith attributes givenTriangle =
+    Element.Triangle attributes givenTriangle
 
 
 group : List (Element msg) -> Element msg
@@ -217,8 +214,8 @@ arc =
 
 
 arcWith : List (Attribute msg) -> Arc2d -> Element msg
-arcWith attributes arc =
-    Element.Arc attributes arc
+arcWith attributes givenArc =
+    Element.Arc attributes givenArc
 
 
 quadraticSpline : QuadraticSpline2d -> Element msg
@@ -227,8 +224,8 @@ quadraticSpline =
 
 
 quadraticSplineWith : List (Attribute msg) -> QuadraticSpline2d -> Element msg
-quadraticSplineWith attributes quadraticSpline =
-    Element.QuadraticSpline attributes quadraticSpline
+quadraticSplineWith attributes givenSpline =
+    Element.QuadraticSpline attributes givenSpline
 
 
 cubicSpline : CubicSpline2d -> Element msg
@@ -237,8 +234,8 @@ cubicSpline =
 
 
 cubicSplineWith : List (Attribute msg) -> CubicSpline2d -> Element msg
-cubicSplineWith attributes cubicSpline =
-    Element.CubicSpline attributes cubicSpline
+cubicSplineWith attributes givenSpline =
+    Element.CubicSpline attributes givenSpline
 
 
 polyline : Polyline2d -> Element msg
@@ -247,8 +244,8 @@ polyline =
 
 
 polylineWith : List (Attribute msg) -> Polyline2d -> Element msg
-polylineWith attributes polyline =
-    Element.Polyline attributes polyline
+polylineWith attributes givenPolyline =
+    Element.Polyline attributes givenPolyline
 
 
 polygon : Polygon2d -> Element msg
@@ -257,8 +254,8 @@ polygon =
 
 
 polygonWith : List (Attribute msg) -> Polygon2d -> Element msg
-polygonWith attributes polygon =
-    Element.Polygon attributes polygon
+polygonWith attributes givenPolygon =
+    Element.Polygon attributes givenPolygon
 
 
 circle : Circle2d -> Element msg
@@ -267,8 +264,8 @@ circle =
 
 
 circleWith : List (Attribute msg) -> Circle2d -> Element msg
-circleWith attributes circle =
-    Element.Circle attributes circle
+circleWith attributes givenCircle =
+    Element.Circle attributes givenCircle
 
 
 ellipticalArc : EllipticalArc2d -> Element msg
@@ -277,8 +274,8 @@ ellipticalArc =
 
 
 ellipticalArcWith : List (Attribute msg) -> EllipticalArc2d -> Element msg
-ellipticalArcWith attributes ellipticalArc =
-    Element.EllipticalArc attributes ellipticalArc
+ellipticalArcWith attributes givenArc =
+    Element.EllipticalArc attributes givenArc
 
 
 ellipse : Ellipse2d -> Element msg
@@ -287,8 +284,8 @@ ellipse =
 
 
 ellipseWith : List (Attribute msg) -> Ellipse2d -> Element msg
-ellipseWith attributes ellipse =
-    Element.Ellipse attributes ellipse
+ellipseWith attributes givenEllipse =
+    Element.Ellipse attributes givenEllipse
 
 
 rectangle : Rectangle2d -> Element msg
@@ -297,8 +294,8 @@ rectangle =
 
 
 rectangleWith : List (Attribute msg) -> Rectangle2d -> Element msg
-rectangleWith attributes rectangle =
-    polygonWith attributes (Rectangle2d.toPolygon rectangle)
+rectangleWith attributes givenRectangle =
+    polygonWith attributes (Rectangle2d.toPolygon givenRectangle)
 
 
 roundedRectangle : Float -> Rectangle2d -> Element msg
@@ -307,8 +304,8 @@ roundedRectangle =
 
 
 roundedRectangleWith : List (Attribute msg) -> Float -> Rectangle2d -> Element msg
-roundedRectangleWith attributes radius rectangle =
-    Element.RoundedRectangle attributes radius rectangle
+roundedRectangleWith attributes radius givenRectangle =
+    Element.RoundedRectangle attributes radius givenRectangle
 
 
 text : Point2d -> String -> Element msg
@@ -322,8 +319,8 @@ textWith attributes point string =
 
 
 image : String -> Rectangle2d -> Element msg
-image url rectangle =
-    Element.Image url rectangle
+image url givenRectangle =
+    Element.Image url givenRectangle
 
 
 map : (a -> b) -> Element a -> Element b

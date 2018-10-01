@@ -1,4 +1,4 @@
-module Example exposing (..)
+module Example exposing (main)
 
 import Arc2d
 import BoundingBox2d

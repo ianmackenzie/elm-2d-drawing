@@ -1,13 +1,11 @@
-module Drawing2d.Defs
-    exposing
-        ( Defs
-        , addLinearGradient
-        , init
-        , toSvgElement
-        )
+module Drawing2d.Defs exposing
+    ( Defs
+    , addLinearGradient
+    , init
+    , toSvgElement
+    )
 
 import Color exposing (Color)
-import Drawing2d.Color as Color
 import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Point2d exposing (Point2d)
 import Svg exposing (Svg)
@@ -34,7 +32,7 @@ add : Def -> Defs -> ( String, Defs )
 add def (Defs defs) =
     let
         id =
-            "defs" ++ toString defs.nextIndex
+            "defs" ++ String.fromInt defs.nextIndex
 
         updatedDefs =
             Defs
@@ -53,14 +51,9 @@ addLinearGradient linearGradient =
 
 stopElement : ( Float, Color ) -> Svg msg
 stopElement ( offset, color ) =
-    let
-        ( colorString, opacityString ) =
-            Color.strings color
-    in
     Svg.stop
-        [ Svg.Attributes.offset (toString offset)
-        , Svg.Attributes.stopColor colorString
-        , Svg.Attributes.stopOpacity opacityString
+        [ Svg.Attributes.offset (String.fromFloat offset)
+        , Svg.Attributes.stopColor (Color.toCssString color)
         ]
         []
 
@@ -85,10 +78,10 @@ entryToElement ( id, def ) =
             in
             Svg.linearGradient
                 [ Svg.Attributes.id id
-                , Svg.Attributes.x1 (toString x1)
-                , Svg.Attributes.y1 (toString y1)
-                , Svg.Attributes.x2 (toString x2)
-                , Svg.Attributes.y2 (toString y2)
+                , Svg.Attributes.x1 (String.fromFloat x1)
+                , Svg.Attributes.y1 (String.fromFloat y1)
+                , Svg.Attributes.x2 (String.fromFloat x2)
+                , Svg.Attributes.y2 (String.fromFloat y2)
                 , gradientUnitsAttribute
                 ]
                 (List.map stopElement (LinearGradient.stops linearGradient))

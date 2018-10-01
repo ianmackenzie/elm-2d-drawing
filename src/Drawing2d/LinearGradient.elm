@@ -1,15 +1,14 @@
-module Drawing2d.LinearGradient
-    exposing
-        ( LinearGradient
-        , along
-        , endPoint
-        , from
-        , placeIn
-        , relativeTo
-        , scaleAbout
-        , startPoint
-        , stops
-        )
+module Drawing2d.LinearGradient exposing
+    ( LinearGradient
+    , along
+    , endPoint
+    , from
+    , placeIn
+    , relativeTo
+    , scaleAbout
+    , startPoint
+    , stops
+    )
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
@@ -53,15 +52,16 @@ along axis distanceStops =
                 ( endDistance, endColor ) =
                     lastDistanceStop
 
-                startPoint =
+                startPoint_ =
                     Point2d.along axis startDistance
 
-                endPoint =
+                endPoint_ =
                     Point2d.along axis endDistance
 
-                stops =
+                fractionStops =
                     if startDistance == endDistance then
                         [ ( 0, endColor ) ]
+
                     else
                         let
                             delta =
@@ -76,18 +76,18 @@ along axis distanceStops =
                                 )
             in
             LinearGradient
-                { startPoint = startPoint
-                , endPoint = endPoint
-                , stops = stops
+                { startPoint = startPoint_
+                , endPoint = endPoint_
+                , stops = fractionStops
                 }
 
 
 from : ( Point2d, Color ) -> ( Point2d, Color ) -> LinearGradient
-from ( startPoint, startColor ) ( endPoint, endColor ) =
+from ( givenStartPoint, givenStartColor ) ( givenEndPoint, givenEndColor ) =
     LinearGradient
-        { startPoint = startPoint
-        , endPoint = endPoint
-        , stops = [ ( 0, startColor ), ( 1, endColor ) ]
+        { startPoint = givenStartPoint
+        , endPoint = givenEndPoint
+        , stops = [ ( 0, givenStartColor ), ( 1, givenEndColor ) ]
         }
 
 

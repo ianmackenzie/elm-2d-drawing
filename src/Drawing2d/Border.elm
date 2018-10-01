@@ -1,10 +1,9 @@
-module Drawing2d.Border
-    exposing
-        ( BorderPosition
-        , centered
-        , inside
-        , outside
-        )
+module Drawing2d.Border exposing
+    ( BorderPosition
+    , centered
+    , inside
+    , outside
+    )
 
 import Drawing2d.BorderPosition as BorderPosition
 
