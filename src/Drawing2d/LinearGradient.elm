@@ -1,15 +1,14 @@
-module Drawing2d.LinearGradient
-    exposing
-        ( LinearGradient
-        , along
-        , endPoint
-        , from
-        , placeIn
-        , relativeTo
-        , scaleAbout
-        , startPoint
-        , stops
-        )
+module Drawing2d.LinearGradient exposing
+    ( LinearGradient
+    , along
+    , endPoint
+    , from
+    , placeIn
+    , relativeTo
+    , scaleAbout
+    , startPoint
+    , stops
+    )
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
@@ -17,15 +16,15 @@ import Frame2d exposing (Frame2d)
 import Point2d exposing (Point2d)
 
 
-type LinearGradient
+type LinearGradient units coordinates
     = LinearGradient
-        { startPoint : Point2d
-        , endPoint : Point2d
+        { startPoint : Point2d units coordinates
+        , endPoint : Point2d units coordinates
         , stops : List ( Float, Color )
         }
 
 
-along : Axis2d -> List ( Float, Color ) -> LinearGradient
+along : Axis2d units coordinates -> List ( Quantity Float units, Color ) -> LinearGradient units coordinates
 along axis distanceStops =
     case distanceStops of
         [] ->
@@ -62,15 +61,18 @@ along axis distanceStops =
                 stops =
                     if startDistance == endDistance then
                         [ ( 0, endColor ) ]
+
                     else
                         let
                             delta =
-                                endDistance - startDistance
+                                endDistance |> Quantity.minus startDistance
                         in
                         distanceStops
                             |> List.map
                                 (\( distance, color ) ->
-                                    ( (distance - startDistance) / delta
+                                    ( Quantity.ratio
+                                        (distance |> Quantity.minus startDistance)
+                                        delta
                                     , color
                                     )
                                 )
@@ -106,7 +108,7 @@ stops (LinearGradient gradient) =
     gradient.stops
 
 
-relativeTo : Frame2d -> LinearGradient -> LinearGradient
+relativeTo : Frame2d units globalCoordinates localCoordinates -> LinearGradient units globalCoordinates -> LinearGradient units localCoordinates
 relativeTo frame (LinearGradient gradient) =
     LinearGradient
         { startPoint = Point2d.relativeTo frame gradient.startPoint
@@ -115,7 +117,7 @@ relativeTo frame (LinearGradient gradient) =
         }
 
 
-placeIn : Frame2d -> LinearGradient -> LinearGradient
+placeIn : Frame2d units globalCoordinates localCoordinates -> LinearGradient units localCoordinates -> LinearGradient units globalCoordinates
 placeIn frame (LinearGradient gradient) =
     LinearGradient
         { startPoint = Point2d.placeIn frame gradient.startPoint
@@ -124,7 +126,7 @@ placeIn frame (LinearGradient gradient) =
         }
 
 
-scaleAbout : Point2d -> Float -> LinearGradient -> LinearGradient
+scaleAbout : Point2d units coordinates -> Float -> LinearGradient units coordinates -> LinearGradient units coordinates
 scaleAbout centerPoint scale (LinearGradient gradient) =
     LinearGradient
         { startPoint = Point2d.scaleAbout centerPoint scale gradient.startPoint

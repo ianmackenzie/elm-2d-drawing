@@ -1,10 +1,9 @@
-module Drawing2d.Attribute
-    exposing
-        ( Attribute(..)
-        , FillStyle(..)
-        , apply
-        , map
-        )
+module Drawing2d.Attribute exposing
+    ( Attribute(..)
+    , FillStyle(..)
+    , apply
+    , map
+    )
 
 import Color exposing (Color)
 import Drawing2d.Border as Border exposing (BorderPosition)
@@ -16,29 +15,29 @@ import Drawing2d.LinearGradient as LinearGradient exposing (LinearGradient)
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
 import Html.Events
+import Html.Events.Extra.Mouse as Mouse
 import Json.Decode as Decode
-import Mouse
 import Svg
 import Svg.Attributes
 
 
-type FillStyle
+type FillStyle units coordinates
     = NoFill
     | FillColor Color
-    | LinearGradientFill LinearGradient
+    | LinearGradientFill (LinearGradient units coordinates)
 
 
-type Attribute msg
-    = FillStyle FillStyle
+type Attribute units coordinates msg
+    = FillStyle (FillStyle units coordinates)
     | StrokeColor Color
-    | StrokeWidth Float
-    | DotRadius Float
+    | StrokeWidth (Quantity Float units)
+    | DotRadius (Quantity Float units)
     | TextAnchor Text.Anchor
     | TextColor Color
     | FontSize Int
     | FontFamily (List String)
     | OnClick msg
-    | OnMouseDown (Mouse.Position -> msg)
+    | OnMouseDown (Mouse.Event -> msg)
     | BordersEnabled Bool
     | BorderPosition BorderPosition
 
@@ -47,10 +46,13 @@ normalizeFont : String -> String
 normalizeFont font =
     if font == Font.serif then
         font
+
     else if font == Font.sansSerif then
         font
+
     else if font == Font.monospace then
         font
+
     else
         "\"" ++ font ++ "\""
 
@@ -60,13 +62,8 @@ apply attribute context defs =
     case attribute of
         FillStyle (FillColor color) ->
             let
-                ( rgbString, alphaString ) =
-                    Color.strings color
-
                 newAttributes =
-                    [ Svg.Attributes.fill rgbString
-                    , Svg.Attributes.fillOpacity alphaString
-                    ]
+                    [ Svg.Attributes.fill (Color.toCssString color) ]
             in
             ( context, defs, newAttributes )
 
@@ -92,13 +89,8 @@ apply attribute context defs =
 
         StrokeColor color ->
             let
-                ( rgbString, alphaString ) =
-                    Color.strings color
-
                 newAttributes =
-                    [ Svg.Attributes.stroke rgbString
-                    , Svg.Attributes.strokeOpacity alphaString
-                    ]
+                    [ Svg.Attributes.stroke (Color.toCssString color) ]
             in
             ( context, defs, newAttributes )
 
@@ -139,11 +131,8 @@ apply attribute context defs =
 
         TextColor color ->
             let
-                textColor =
-                    Tuple.first (Color.strings color)
-
                 newAttributes =
-                    [ Svg.Attributes.color textColor ]
+                    [ Svg.Attributes.color (Color.toCssString color) ]
             in
             ( context, defs, newAttributes )
 
