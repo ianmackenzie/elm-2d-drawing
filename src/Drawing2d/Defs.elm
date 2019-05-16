@@ -1,10 +1,9 @@
-module Drawing2d.Defs
-    exposing
-        ( Defs
-        , addLinearGradient
-        , init
-        , toSvgElement
-        )
+module Drawing2d.Defs exposing
+    ( Defs
+    , addLinearGradient
+    , init
+    , toSvgElement
+    )
 
 import Color exposing (Color)
 import Drawing2d.Color as Color
@@ -14,27 +13,27 @@ import Svg exposing (Svg)
 import Svg.Attributes
 
 
-type Def
-    = LinearGradient LinearGradient
+type Def units coordinates
+    = LinearGradient (LinearGradient units coordinates)
 
 
-type Defs
+type Defs units coordinates
     = Defs
         { nextIndex : Int
-        , entries : List ( String, Def )
+        , entries : List ( String, Def units coordinates )
         }
 
 
-init : Defs
+init : Defs units coordinates
 init =
     Defs { nextIndex = 1, entries = [] }
 
 
-add : Def -> Defs -> ( String, Defs )
+add : Def units coordinates -> Defs units coordinates -> ( String, Defs units coordinates )
 add def (Defs defs) =
     let
         id =
-            "defs" ++ toString defs.nextIndex
+            "defs" ++ String.fromInt defs.nextIndex
 
         updatedDefs =
             Defs
@@ -46,21 +45,16 @@ add def (Defs defs) =
     ( id, updatedDefs )
 
 
-addLinearGradient : LinearGradient -> Defs -> ( String, Defs )
+addLinearGradient : LinearGradient units coordinates -> Defs units coordinates -> ( String, Defs units coordinates )
 addLinearGradient linearGradient =
     add (LinearGradient linearGradient)
 
 
 stopElement : ( Float, Color ) -> Svg msg
 stopElement ( offset, color ) =
-    let
-        ( colorString, opacityString ) =
-            Color.strings color
-    in
     Svg.stop
         [ Svg.Attributes.offset (toString offset)
-        , Svg.Attributes.stopColor colorString
-        , Svg.Attributes.stopOpacity opacityString
+        , Svg.Attributes.stopColor (Color.toCssString color)
         ]
         []
 
@@ -75,20 +69,20 @@ entryToElement ( id, def ) =
     case def of
         LinearGradient linearGradient ->
             let
-                ( x1, y1 ) =
+                ( Quantity x1, Quantity y1 ) =
                     Point2d.coordinates
                         (LinearGradient.startPoint linearGradient)
 
-                ( x2, y2 ) =
+                ( Quantity x2, Quantity y2 ) =
                     Point2d.coordinates
                         (LinearGradient.endPoint linearGradient)
             in
             Svg.linearGradient
                 [ Svg.Attributes.id id
-                , Svg.Attributes.x1 (toString x1)
-                , Svg.Attributes.y1 (toString y1)
-                , Svg.Attributes.x2 (toString x2)
-                , Svg.Attributes.y2 (toString y2)
+                , Svg.Attributes.x1 (String.fromFloat x1)
+                , Svg.Attributes.y1 (String.fromFloat y1)
+                , Svg.Attributes.x2 (String.fromFloat x2)
+                , Svg.Attributes.y2 (String.fromFloat y2)
                 , gradientUnitsAttribute
                 ]
                 (List.map stopElement (LinearGradient.stops linearGradient))
