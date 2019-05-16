@@ -1,76 +1,90 @@
-module Gradients exposing (..)
+module Gradients exposing (main)
 
-import AnimationFrame
+import Angle exposing (Angle)
+import AngularSpeed
 import Arc2d
 import Axis2d exposing (Axis2d)
 import BoundingBox2d exposing (BoundingBox2d)
+import Browser.Events
 import Circle2d
 import Color
+import Curve.ParameterValue as ParameterValue
 import Direction2d
 import Drawing2d
 import Drawing2d.Attributes as Attributes
-import Geometry.Parameter as Parameter
+import Duration exposing (Duration, milliseconds, seconds)
 import Html exposing (Html)
 import Html.Events
+import Pixels exposing (Pixels, pixels)
 import Point2d exposing (Point2d)
+import Quantity exposing (Quantity)
 import Rectangle2d exposing (Rectangle2d)
-import Time
+
+
+degrees =
+    Angle.degrees
+
+
+type Drawing
+    = Drawing
 
 
 type alias Model =
-    { angle : Float
+    { angle : Angle
     , running : Bool
     }
 
 
 type Msg
-    = Tick Float
+    = Tick Duration
     | Toggle
 
 
-rotationPerSecond : Float
-rotationPerSecond =
-    degrees 45
+angularSpeed : AngularSpeed
+angularSpeed =
+    degrees 45 |> Quantity.per (seconds 1)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
-        Tick time ->
-            ( { model | angle = model.angle + rotationPerSecond * Time.inSeconds time }
-            , Cmd.none
-            )
+        Tick duration ->
+            let
+                updatedAngle =
+                    model.angle |> Quantity.plus (duration |> Quantity.at angularSpeed)
+            in
+            ( { model | angle = updatedAngle }, Cmd.none )
 
         Toggle ->
             ( { model | running = not model.running }, Cmd.none )
 
 
-renderBounds : BoundingBox2d
+renderBounds : BoundingBox2d Pixels Drawing
 renderBounds =
     BoundingBox2d.fromExtrema
-        { minX = 0
-        , minY = 0
-        , maxX = 500
-        , maxY = 500
+        { minX = pixels 0
+        , minY = pixels 0
+        , maxX = pixels 500
+        , maxY = pixels 500
         }
 
 
-square : Rectangle2d
+square : Rectangle2d Pixels Drawing
 square =
     Rectangle2d.fromExtrema
-        { minX = 50
-        , minY = 50
-        , maxX = 450
-        , maxY = 450
+        { minX = pixels 50
+        , minY = pixels 50
+        , maxX = pixels 450
+        , maxY = pixels 450
         }
 
 
-centerPoint : Point2d
+centerPoint : Point2d Pixels Drawing
 centerPoint =
     Rectangle2d.centerPoint square
 
 
-diagonalAxis : Axis2d
+diagonalAxis : Axis2d Pixels Drawing
 diagonalAxis =
     Axis2d.through centerPoint (Direction2d.fromAngle (degrees 45))
 
@@ -103,16 +117,16 @@ example3 : Float -> Html Msg
 example3 angle =
     let
         arc =
-            Circle2d.toArc (Circle2d.withRadius 120 centerPoint)
+            Circle2d.toArc (Circle2d.withRadius (pixels 120) centerPoint)
 
         points =
-            Arc2d.pointsOn arc (Parameter.numSteps 12 |> List.drop 1)
+            Arc2d.pointsOn arc (ParameterValue.trailing 12)
     in
     Drawing2d.toHtml renderBounds
         []
         [ Drawing2d.rectangle square
         , Drawing2d.groupWith
-            [ diagonalGradientAttribute, Attributes.dotRadius 50 ]
+            [ diagonalGradientAttribute, Attributes.dotRadius (pixels 50) ]
             [ Drawing2d.dots points
                 |> Drawing2d.rotateAround centerPoint angle
             ]
@@ -130,7 +144,8 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.running then
-        AnimationFrame.diffs Tick
+        Browser.Events.onAnimationFrameDelta (milliseconds >> Tick)
+
     else
         Sub.none
 
@@ -138,7 +153,7 @@ subscriptions model =
 main : Program Never Model Msg
 main =
     Html.program
-        { init = ( { angle = 0, running = True }, Cmd.none )
+        { init = ( { angle = degrees 0, running = True }, Cmd.none )
         , update = update
         , view = view
         , subscriptions = subscriptions
