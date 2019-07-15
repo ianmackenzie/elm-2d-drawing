@@ -1,13 +1,18 @@
-module GradientExample exposing (..)
+module GradientExample exposing (main)
 
+import Angle
 import BoundingBox2d
+import Browser
 import Color
+import Common exposing (dot)
 import Drawing2d
 import Drawing2d.Attributes as Attributes
+import Drawing2d.Gradient as Gradient
 import Drawing2d.Text as Text
 import Html exposing (Html)
 import Html.Events
 import LineSegment2d
+import Pixels exposing (pixels)
 import Point2d
 import Rectangle2d
 
@@ -31,42 +36,40 @@ view model =
     let
         renderBounds =
             BoundingBox2d.fromExtrema
-                { minX = 0
-                , maxX = 800
-                , minY = 0
-                , maxY = 800
+                { minX = pixels 0
+                , maxX = pixels 800
+                , minY = pixels 0
+                , maxY = pixels 800
                 }
 
         lowerLeftCorner =
-            Point2d.fromCoordinates ( 100, 100 )
+            Point2d.pixels 100 100
 
         upperRightCorner =
-            Point2d.fromCoordinates ( 700, 700 )
+            Point2d.pixels 700 700
 
         gradientStartPoint =
-            Point2d.fromCoordinates ( 300, 300 )
+            Point2d.pixels 300 300
 
         gradientEndPoint =
-            Point2d.fromCoordinates ( 500, 500 )
+            Point2d.pixels 500 500
 
         gradientLine =
             LineSegment2d.from gradientStartPoint gradientEndPoint
 
         box =
-            Drawing2d.group
-                [ Drawing2d.rectangleWith
-                    [ Attributes.gradientFillFrom
-                        ( gradientStartPoint, Color.red )
-                        ( gradientEndPoint, Color.blue )
+            Drawing2d.group []
+                [ Drawing2d.rectangle
+                    [ Attributes.fillGradient <|
+                        Gradient.from
+                            ( gradientStartPoint, Color.red )
+                            ( gradientEndPoint, Color.blue )
                     ]
                     (Rectangle2d.from lowerLeftCorner upperRightCorner)
-                , Drawing2d.lineSegment gradientLine
-                , Drawing2d.dot gradientStartPoint
-                , Drawing2d.dot gradientEndPoint
-                , Drawing2d.textWith
-                    [ Attributes.textAnchor Text.topLeft
-                    , Attributes.fontSize 20
-                    ]
+                , Drawing2d.lineSegment [] gradientLine
+                , dot gradientStartPoint
+                , dot gradientEndPoint
+                , Drawing2d.text [ Attributes.textAnchor Text.topLeft ]
                     lowerLeftCorner
                     "lower left"
                 ]
@@ -75,21 +78,24 @@ view model =
             if model.transform then
                 box
                     |> Drawing2d.scaleAbout lowerLeftCorner 0.5
-                    |> Drawing2d.rotateAround lowerLeftCorner (degrees 30)
+                    |> Drawing2d.rotateAround lowerLeftCorner (Angle.degrees 30)
+
             else
                 box
     in
     Html.div []
-        [ Drawing2d.toHtml renderBounds [] [ rendered ]
+        [ Drawing2d.toHtml renderBounds
+            [ Attributes.fontSize (pixels 20) ]
+            [ rendered ]
         , Html.button [ Html.Events.onClick ToggleTransform ]
             [ Html.text "Toggle transform " ]
         ]
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.beginnerProgram
-        { model = { transform = False }
+    Browser.sandbox
+        { init = { transform = False }
         , update = update
         , view = view
         }

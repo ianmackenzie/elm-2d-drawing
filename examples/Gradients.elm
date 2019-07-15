@@ -1,20 +1,24 @@
 module Gradients exposing (main)
 
 import Angle exposing (Angle)
-import AngularSpeed
+import AngularSpeed exposing (AngularSpeed)
 import Arc2d
 import Axis2d exposing (Axis2d)
 import BoundingBox2d exposing (BoundingBox2d)
+import Browser
 import Browser.Events
 import Circle2d
 import Color
+import Common exposing (dot)
 import Curve.ParameterValue as ParameterValue
 import Direction2d
 import Drawing2d
 import Drawing2d.Attributes as Attributes
+import Drawing2d.Gradient as Gradient
 import Duration exposing (Duration, milliseconds, seconds)
 import Html exposing (Html)
 import Html.Events
+import Json.Decode exposing (Value)
 import Pixels exposing (Pixels, pixels)
 import Point2d exposing (Point2d)
 import Quantity exposing (Quantity)
@@ -89,56 +93,69 @@ diagonalAxis =
     Axis2d.through centerPoint (Direction2d.fromAngle (degrees 45))
 
 
-diagonalGradientAttribute : Drawing2d.Attribute msg
+diagonalGradientAttribute : Drawing2d.Attribute Pixels Drawing
 diagonalGradientAttribute =
-    Attributes.gradientFillAlong diagonalAxis
-        [ ( -101, Color.darkBlue )
-        , ( -100, Color.blue )
-        , ( 100, Color.green )
-        , ( 101, Color.darkGreen )
-        ]
+    Attributes.fillGradient <|
+        Gradient.along diagonalAxis
+            [ ( pixels -101, Color.darkBlue )
+            , ( pixels -100, Color.blue )
+            , ( pixels 100, Color.green )
+            , ( pixels 101, Color.darkGreen )
+            ]
 
 
 example1 : Html Msg
 example1 =
     Drawing2d.toHtml renderBounds
         []
-        [ Drawing2d.rectangleWith [ diagonalGradientAttribute ] square ]
+        [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
 
 
 example2 : Html Msg
 example2 =
     Drawing2d.toHtml renderBounds
         [ diagonalGradientAttribute ]
-        [ Drawing2d.rectangle square ]
+        [ Drawing2d.rectangle [] square ]
 
 
-example3 : Float -> Html Msg
+fillableCircle : Point2d Pixels coordinates -> Drawing2d.Element Pixels coordinates
+fillableCircle point =
+    Drawing2d.circle
+        [ Attributes.blackStroke
+        , Attributes.strokeWidth (pixels 1)
+        ]
+        (Circle2d.withRadius (pixels 64) point)
+
+
+example3 : Angle -> Html Msg
 example3 angle =
     let
         arc =
-            Circle2d.toArc (Circle2d.withRadius (pixels 120) centerPoint)
+            Circle2d.toArc (Circle2d.withRadius (pixels 150) centerPoint)
 
         points =
-            Arc2d.pointsOn arc (ParameterValue.trailing 12)
+            arc |> Arc2d.pointsAt (ParameterValue.trailing 12)
     in
     Drawing2d.toHtml renderBounds
         []
-        [ Drawing2d.rectangle square
-        , Drawing2d.groupWith
-            [ diagonalGradientAttribute, Attributes.dotRadius (pixels 50) ]
-            [ Drawing2d.dots points
+        [ Drawing2d.rectangle [] square
+        , Drawing2d.group [ diagonalGradientAttribute ]
+            [ Drawing2d.group [] (List.map fillableCircle points)
                 |> Drawing2d.rotateAround centerPoint angle
             ]
         ]
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    Html.div []
-        [ example1
-        , Html.div [ Html.Events.onClick Toggle ] [ example3 model.angle ]
+    { title = "Gradients"
+    , body =
+        [ Html.div []
+            [ example1
+            , Html.div [ Html.Events.onClick Toggle ] [ example3 model.angle ]
+            ]
         ]
+    }
 
 
 subscriptions : Model -> Sub Msg
@@ -150,10 +167,10 @@ subscriptions model =
         Sub.none
 
 
-main : Program Never Model Msg
+main : Program Value Model Msg
 main =
-    Html.program
-        { init = ( { angle = degrees 0, running = True }, Cmd.none )
+    Browser.document
+        { init = always ( { angle = Angle.degrees 0, running = True }, Cmd.none )
         , update = update
         , view = view
         , subscriptions = subscriptions

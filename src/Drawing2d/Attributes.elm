@@ -1,157 +1,182 @@
 module Drawing2d.Attributes exposing
-    ( blackFill
-    , blackStroke
-    , blackText
-    , borderPosition
-    , dotRadius
-    , fillColor
-    , fontFamily
-    , fontSize
-    , gradientFillAlong
-    , gradientFillFrom
-    , map
-    , noBorder
-    , noFill
-    , onClick
-    , onMouseDown
-    , strokeColor
-    , strokeWidth
-    , strokedBorder
-    , textAnchor
-    , textColor
-    , whiteFill
-    , whiteStroke
-    , whiteText
+    ( Attribute
+    , noFill, blackFill, whiteFill, fillColor, fillGradient
+    , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+    , noBorder, strokedBorder
+    , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
     )
+
+{-|
+
+@docs Attribute
+
+
+# Fill
+
+@docs noFill, blackFill, whiteFill, fillColor, fillGradient
+
+
+# Stroke
+
+@docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+
+
+# Borders
+
+@docs noBorder, strokedBorder
+
+
+# Text
+
+@docs fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
+
+-}
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
-import Drawing2d.Attribute as Attribute
-import Drawing2d.Border as Border exposing (BorderPosition)
-import Drawing2d.LinearGradient as LinearGradient
+import Drawing2d.Font as Font
+import Drawing2d.Gradient as Gradient exposing (Gradient)
 import Drawing2d.Text as Text
-import Html.Events.Extra.Mouse as Mouse
+import Drawing2d.TextAnchor as TextAnchor
+import Drawing2d.Types as Types exposing (Attribute(..), Fill(..), Stroke(..))
+import Html.Events
+import Pixels exposing (Pixels, inPixels)
 import Point2d exposing (Point2d)
+import Quantity exposing (Quantity(..))
+import Svg exposing (Svg)
+import Svg.Attributes
 
 
-type alias Attribute units coordinates msg =
-    Attribute.Attribute units coordinates msg
+type alias Attribute units coordinates =
+    Types.Attribute units coordinates
 
 
-dotRadius : Float -> Attribute msg
-dotRadius radius =
-    Attribute.DotRadius radius
-
-
-fillColor : Color -> Attribute msg
+fillColor : Color -> Attribute units coordinates
 fillColor color =
-    Attribute.FillStyle (Attribute.FillColor color)
+    FillStyle (FillColor (Color.toCssString color))
 
 
-noFill : Attribute msg
+noFill : Attribute units coordinates
 noFill =
-    Attribute.FillStyle Attribute.NoFill
+    FillStyle (FillColor "none")
 
 
-blackFill : Attribute msg
+blackFill : Attribute units coordinates
 blackFill =
-    fillColor Color.black
+    FillStyle (FillColor "black")
 
 
-whiteFill : Attribute msg
+whiteFill : Attribute units coordinates
 whiteFill =
-    fillColor Color.white
+    FillStyle (FillColor "white")
 
 
-gradientFillAlong : Axis2d -> List ( Float, Color ) -> Attribute msg
-gradientFillAlong axis distanceStops =
-    Attribute.FillStyle <|
-        Attribute.LinearGradientFill <|
-            LinearGradient.along axis distanceStops
+fillGradient : Gradient units coordinates -> Attribute units coordinates
+fillGradient gradient =
+    FillStyle (FillGradient gradient)
 
 
-gradientFillFrom : ( Point2d, Color ) -> ( Point2d, Color ) -> Attribute msg
-gradientFillFrom start end =
-    Attribute.FillStyle <|
-        Attribute.LinearGradientFill <|
-            LinearGradient.from start end
-
-
-strokeColor : Color -> Attribute msg
+strokeColor : Color -> Attribute units coordinates
 strokeColor color =
-    Attribute.StrokeColor color
+    StrokeStyle (StrokeColor (Color.toCssString color))
 
 
-noBorder : Attribute msg
-noBorder =
-    Attribute.BordersEnabled False
-
-
-strokedBorder : Attribute msg
-strokedBorder =
-    Attribute.BordersEnabled True
-
-
-borderPosition : BorderPosition -> Attribute msg
-borderPosition position =
-    Attribute.BorderPosition position
-
-
-blackStroke : Attribute msg
+blackStroke : Attribute units coordinates
 blackStroke =
-    strokeColor Color.black
+    StrokeStyle (StrokeColor "black")
 
 
-whiteStroke : Attribute msg
+whiteStroke : Attribute units coordinates
 whiteStroke =
-    strokeColor Color.white
+    StrokeStyle (StrokeColor "white")
 
 
-strokeWidth : Float -> Attribute msg
-strokeWidth width =
-    Attribute.StrokeWidth width
+strokeGradient : Gradient units coordinates -> Attribute units coordinates
+strokeGradient gradient =
+    StrokeStyle (StrokeGradient gradient)
 
 
-onClick : msg -> Attribute msg
-onClick message =
-    Attribute.OnClick message
+noBorder : Attribute units coordinates
+noBorder =
+    BorderVisibility False
 
 
-onMouseDown : (Mouse.Position -> msg) -> Attribute msg
-onMouseDown handler =
-    Attribute.OnMouseDown handler
+strokedBorder : Attribute units coordinates
+strokedBorder =
+    BorderVisibility True
 
 
-textAnchor : Text.Anchor -> Attribute msg
+strokeWidth : Quantity Float units -> Attribute units coordinates
+strokeWidth (Quantity size) =
+    StrokeWidth size
+
+
+textAnchor : Text.Anchor -> Attribute units coordinates
 textAnchor anchor =
-    Attribute.TextAnchor anchor
+    case anchor of
+        TextAnchor.TopLeft ->
+            TextAnchor { x = "start", y = "hanging" }
+
+        TextAnchor.TopCenter ->
+            TextAnchor { x = "middle", y = "hanging" }
+
+        TextAnchor.TopRight ->
+            TextAnchor { x = "end", y = "hanging" }
+
+        TextAnchor.CenterLeft ->
+            TextAnchor { x = "start", y = "middle" }
+
+        TextAnchor.Center ->
+            TextAnchor { x = "middle", y = "middle" }
+
+        TextAnchor.CenterRight ->
+            TextAnchor { x = "end", y = "middle" }
+
+        TextAnchor.BottomLeft ->
+            TextAnchor { x = "start", y = "alphabetic" }
+
+        TextAnchor.BottomCenter ->
+            TextAnchor { x = "middle", y = "alphabetic" }
+
+        TextAnchor.BottomRight ->
+            TextAnchor { x = "end", y = "alphabetic" }
 
 
-blackText : Attribute msg
+blackText : Attribute units coordinates
 blackText =
-    textColor Color.black
+    TextColor "black"
 
 
-whiteText : Attribute msg
+whiteText : Attribute units coordinates
 whiteText =
-    textColor Color.white
+    TextColor "white"
 
 
-textColor : Color -> Attribute msg
+textColor : Color -> Attribute units coordinates
 textColor color =
-    Attribute.TextColor color
+    TextColor (Color.toCssString color)
 
 
-fontSize : Int -> Attribute msg
-fontSize px =
-    Attribute.FontSize px
+fontSize : Quantity Float units -> Attribute units coordinates
+fontSize (Quantity size) =
+    FontSize size
 
 
-fontFamily : List String -> Attribute msg
+normalizeFont : String -> String
+normalizeFont font =
+    if font == Font.serif then
+        font
+
+    else if font == Font.sansSerif then
+        font
+
+    else if font == Font.monospace then
+        font
+
+    else
+        "\"" ++ font ++ "\""
+
+
+fontFamily : List String -> Attribute units coordinates
 fontFamily fonts =
-    Attribute.FontFamily fonts
-
-
-map : (a -> b) -> Attribute a -> Attribute b
-map =
-    Attribute.map
+    FontFamily (fonts |> List.map normalizeFont |> String.join ",")
