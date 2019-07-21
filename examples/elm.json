@@ -9,7 +9,8 @@
         "../../elm-interval/src",
         "../../elm-units-interval/src",
         "../../elm-triangular-mesh/src",
-        "../../elm-geometry-svg/src"
+        "../../elm-geometry-svg/src",
+        "../../elm-1d-parameter/src"
     ],
     "elm-version": "0.19.0",
     "dependencies": {
@@ -23,12 +24,16 @@
             "elm/svg": "1.0.1",
             "elm/time": "1.0.0",
             "elm/virtual-dom": "1.0.2",
-            "mpizenberg/elm-pointer-events": "4.0.1"
+            "elm-community/list-extra": "8.2.0",
+            "mpizenberg/elm-pointer-events": "4.0.1",
+            "noahzgordon/elm-color-extra": "1.0.2"
         },
         "indirect": {
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
-            "elm/url": "1.0.0"
+            "elm/regex": "1.0.0",
+            "elm/url": "1.0.0",
+            "fredcy/elm-parseint": "2.0.1"
         }
     },
     "test-dependencies": {
