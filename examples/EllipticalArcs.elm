@@ -4,7 +4,6 @@ import Angle exposing (Angle)
 import BoundingBox2d exposing (BoundingBox2d)
 import Color
 import Common exposing (dot)
-import Curve.ParameterValue as ParameterValue
 import Direction2d exposing (Direction2d)
 import Drawing2d
 import Drawing2d.Attributes as Attributes

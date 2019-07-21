@@ -29,58 +29,63 @@ main =
                 (Point2d.pixels 300 600)
                 (Point2d.pixels 500 0)
                 (Point2d.pixels 700 500)
-
-        parameterizedSpline =
-            spline
-                |> CubicSpline2d.arcLengthParameterized
-                    { maxError = pixels 0.5 }
-
-        splineLength =
-            CubicSpline2d.arcLength parameterizedSpline
-
-        imageUrl =
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Elm_logo.svg/200px-Elm_logo.svg.png"
-
-        imageWidth =
-            pixels 48
-
-        spacing =
-            pixels 8
-
-        stepSize =
-            imageWidth |> Quantity.plus spacing
-
-        numSteps =
-            floor (Quantity.ratio splineLength stepSize)
-
-        samples =
-            List.range 0 numSteps
-                |> List.map
-                    (\i ->
-                        Quantity.interpolateFrom
-                            zero
-                            splineLength
-                            (toFloat i / toFloat numSteps)
-                    )
-                |> List.filterMap
-                    (CubicSpline2d.sampleAlong parameterizedSpline)
-
-        toImage ( point, direction ) =
-            let
-                rectangle =
-                    Rectangle2d.centeredOn
-                        (Frame2d.withXDirection direction point)
-                        ( imageWidth, imageWidth )
-            in
-            Drawing2d.group []
-                [ Drawing2d.rectangle
-                    [ Attributes.whiteFill, Attributes.noBorder ]
-                    rectangle
-                , Drawing2d.image imageUrl rectangle
-                ]
     in
-    Drawing2d.toHtml renderBounds
-        []
-        [ Drawing2d.cubicSpline [] spline
-        , Drawing2d.group [] (List.map toImage samples)
-        ]
+    case CubicSpline2d.nondegenerate spline of
+        Ok nondegenerateSpline ->
+            let
+                parameterizedSpline =
+                    nondegenerateSpline
+                        |> CubicSpline2d.arcLengthParameterized
+                            { maxError = pixels 0.5 }
+
+                splineLength =
+                    CubicSpline2d.arcLength parameterizedSpline
+
+                imageUrl =
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Elm_logo.svg/200px-Elm_logo.svg.png"
+
+                imageWidth =
+                    pixels 48
+
+                spacing =
+                    pixels 8
+
+                stepSize =
+                    imageWidth |> Quantity.plus spacing
+
+                numSteps =
+                    floor (Quantity.ratio splineLength stepSize)
+
+                samples =
+                    List.range 0 numSteps
+                        |> List.map
+                            (\i ->
+                                Quantity.interpolateFrom
+                                    zero
+                                    splineLength
+                                    (toFloat i / toFloat numSteps)
+                            )
+                        |> List.map (CubicSpline2d.sampleAlong parameterizedSpline)
+
+                toImage ( point, direction ) =
+                    let
+                        rectangle =
+                            Rectangle2d.centeredOn
+                                (Frame2d.withXDirection direction point)
+                                ( imageWidth, imageWidth )
+                    in
+                    Drawing2d.group []
+                        [ Drawing2d.rectangle
+                            [ Attributes.whiteFill, Attributes.noBorder ]
+                            rectangle
+                        , Drawing2d.image imageUrl rectangle
+                        ]
+            in
+            Drawing2d.toHtml renderBounds
+                []
+                [ Drawing2d.cubicSpline [] spline
+                , Drawing2d.group [] (List.map toImage samples)
+                ]
+
+        Err _ ->
+            Html.text "Spline is degenerate"

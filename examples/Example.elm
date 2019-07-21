@@ -6,13 +6,13 @@ import Axis2d
 import BoundingBox2d
 import Color
 import Common exposing (dot)
-import Curve.ParameterValue as ParameterValue
 import Direction2d
 import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Text as Text
 import Html exposing (Html)
 import LineSegment2d
+import Parameter1d
 import Pixels exposing (pixels)
 import Point2d
 
@@ -47,7 +47,7 @@ main =
                 (Angle.degrees 90)
 
         arcPoints =
-            arc |> Arc2d.pointsAt (ParameterValue.steps 16)
+            Parameter1d.steps 16 (Arc2d.pointOn arc)
 
         text anchor position string =
             Drawing2d.group []

@@ -19,12 +19,12 @@ import Axis2d exposing (Axis2d)
 import BoundingBox2d exposing (BoundingBox2d)
 import Circle2d exposing (Circle2d)
 import CubicSpline2d exposing (CubicSpline2d)
-import Curve.ParameterValue as ParameterValue exposing (ParameterValue)
 import Direction2d exposing (Direction2d)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
 import LineSegment2d exposing (LineSegment2d)
+import Parameter1d
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
@@ -176,7 +176,7 @@ arc2d attributes arc =
             ]
 
         arcSegments =
-            List.map arcSegment (ParameterValue.trailing numSegments)
+            Parameter1d.trailing numSegments arcSegment
 
         pathComponents =
             moveCommand ++ List.concat arcSegments
@@ -249,7 +249,7 @@ ellipticalArc2d attributes arc =
             ]
 
         arcSegments =
-            List.map arcSegment (ParameterValue.trailing numSegments)
+            Parameter1d.trailing numSegments arcSegment
 
         pathComponents =
             moveCommand ++ List.concat arcSegments

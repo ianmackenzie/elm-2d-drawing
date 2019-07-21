@@ -10,7 +10,6 @@ import Browser.Events
 import Circle2d
 import Color
 import Common exposing (dot)
-import Curve.ParameterValue as ParameterValue
 import Direction2d
 import Drawing2d
 import Drawing2d.Attributes as Attributes
@@ -19,6 +18,7 @@ import Duration exposing (Duration, milliseconds, seconds)
 import Html exposing (Html)
 import Html.Events
 import Json.Decode exposing (Value)
+import Parameter1d
 import Pixels exposing (Pixels, pixels)
 import Point2d exposing (Point2d)
 import Quantity exposing (Quantity)
@@ -134,7 +134,7 @@ example3 angle =
             Circle2d.toArc (Circle2d.withRadius (pixels 150) centerPoint)
 
         points =
-            arc |> Arc2d.pointsAt (ParameterValue.trailing 12)
+            Parameter1d.trailing 12 (Arc2d.pointOn arc)
     in
     Drawing2d.toHtml renderBounds
         []

@@ -5,11 +5,11 @@ import BoundingBox2d
 import Circle2d
 import Color
 import Common exposing (dot)
-import Curve.ParameterValue as ParameterValue
 import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Font as Font
 import Html exposing (Html)
+import Parameter1d
 import Pixels exposing (pixels)
 import Point2d
 import Rectangle2d
@@ -50,7 +50,8 @@ main =
             in
             circle
                 |> Circle2d.toArc
-                |> Arc2d.pointsAt (ParameterValue.steps 32)
+                |> Arc2d.pointOn
+                |> Parameter1d.steps 32
                 |> List.map dot
         , Drawing2d.text []
             (Point2d.pixels 50 750)
