@@ -438,10 +438,10 @@ placementTransform frame =
             Point2d.unwrap (Frame2d.originPoint frame)
 
         i =
-            Direction2d.toRecord (Frame2d.xDirection frame)
+            Direction2d.unwrap (Frame2d.xDirection frame)
 
         j =
-            Direction2d.toRecord (Frame2d.yDirection frame)
+            Direction2d.unwrap (Frame2d.yDirection frame)
 
         matrixComponents =
             [ String.fromFloat i.x
