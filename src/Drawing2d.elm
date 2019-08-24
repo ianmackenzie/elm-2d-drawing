@@ -2,6 +2,8 @@ module Drawing2d exposing
     ( Attribute
     , Element
     , arc
+    , at
+    , at_
     , circle
     , cubicSpline
     , ellipse
@@ -54,7 +56,7 @@ import Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Polyline2d exposing (Polyline2d)
 import QuadraticSpline2d exposing (QuadraticSpline2d)
-import Quantity exposing (Quantity(..))
+import Quantity exposing (Quantity(..), Rate)
 import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg)
 import Svg.Attributes
@@ -521,7 +523,12 @@ placeIn frame (Element function) =
 
 
 scaleAbout : Point2d units coordinates -> Float -> Element units coordinates -> Element units coordinates
-scaleAbout point scale (Element function) =
+scaleAbout point scale element =
+    scaleImpl point scale element
+
+
+scaleImpl : Point2d units1 coordinates -> Float -> Element units1 coordinates -> Element units2 coordinates
+scaleImpl point scale (Element function) =
     let
         { x, y } =
             Point2d.unwrap point
@@ -633,6 +640,24 @@ rotateAround centerPoint angle element =
 mirrorAcross : Axis2d units coordinates -> Element units coordinates -> Element units coordinates
 mirrorAcross axis element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
+
+
+at : Quantity Float (Rate units2 units1) -> Element units1 coordinates -> Element units2 coordinates
+at rate element =
+    let
+        (Quantity scale) =
+            rate
+    in
+    scaleImpl Point2d.origin scale element
+
+
+at_ : Quantity Float (Rate units1 units2) -> Element units1 coordinates -> Element units2 coordinates
+at_ rate element =
+    let
+        (Quantity scale) =
+            rate
+    in
+    scaleImpl Point2d.origin (1 / scale) element
 
 
 
