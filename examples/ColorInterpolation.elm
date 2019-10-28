@@ -37,12 +37,12 @@ main =
                         x =
                             swatchSize |> Quantity.multiplyBy (toFloat i)
                     in
-                    Rectangle2d.centeredOn (Frame2d.atXY x zero)
+                    Rectangle2d.withAxes (Frame2d.atPoint (Point2d.xy x zero))
                         ( swatchSize, swatchSize )
                 )
 
         aggregate =
-            BoundingBox2d.aggregate
+            BoundingBox2d.hullN
                 (List.map Rectangle2d.boundingBox rectangles)
     in
     case aggregate of

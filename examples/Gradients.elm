@@ -75,11 +75,11 @@ renderBounds =
 
 square : Rectangle2d Pixels Drawing
 square =
-    Rectangle2d.fromExtrema
-        { minX = pixels 50
-        , minY = pixels 50
-        , maxX = pixels 450
-        , maxY = pixels 450
+    Rectangle2d.with
+        { x1 = pixels 50
+        , y1 = pixels 50
+        , x2 = pixels 450
+        , y2 = pixels 450
         }
 
 

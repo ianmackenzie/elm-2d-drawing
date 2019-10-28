@@ -41,7 +41,7 @@ main =
                 [ Attributes.fillGradient gradient
                 , Attributes.strokeWidth (pixels 4)
                 ]
-                (Triangle2d.fromVertices p1 p2 p3)
+                (Triangle2d.from p1 p2 p3)
             ]
 
         boundingBox =

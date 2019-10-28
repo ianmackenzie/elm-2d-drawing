@@ -70,7 +70,7 @@ main =
                 toImage ( point, direction ) =
                     let
                         rectangle =
-                            Rectangle2d.centeredOn
+                            Rectangle2d.withAxes
                                 (Frame2d.withXDirection direction point)
                                 ( imageWidth, imageWidth )
                     in

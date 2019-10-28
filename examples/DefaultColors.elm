@@ -29,18 +29,18 @@ main =
     Drawing2d.toHtml renderBounds
         [ Attributes.fontFamily [ Font.sansSerif ] ]
         [ Drawing2d.rectangle [] <|
-            Rectangle2d.fromExtrema
-                { minX = pixels 50
-                , minY = pixels 50
-                , maxX = pixels 150
-                , maxY = pixels 150
+            Rectangle2d.with
+                { x1 = pixels 50
+                , y1 = pixels 50
+                , x2 = pixels 150
+                , y2 = pixels 150
                 }
         , Drawing2d.rectangle [] <|
-            Rectangle2d.fromExtrema
-                { minX = pixels 100
-                , minY = pixels 100
-                , maxX = pixels 200
-                , maxY = pixels 200
+            Rectangle2d.with
+                { x1 = pixels 100
+                , y1 = pixels 100
+                , x2 = pixels 200
+                , y2 = pixels 200
                 }
         , Drawing2d.group [] <|
             let
