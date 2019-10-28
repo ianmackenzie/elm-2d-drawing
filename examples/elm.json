@@ -2,15 +2,7 @@
     "type": "application",
     "source-directories": [
         ".",
-        "../src",
-        "../../elm-geometry/src",
-        "../../elm-float-extra/src",
-        "../../elm-units/src",
-        "../../elm-interval/src",
-        "../../elm-units-interval/src",
-        "../../elm-triangular-mesh/src",
-        "../../elm-geometry-svg/src",
-        "../../elm-1d-parameter/src"
+        "../src"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
@@ -25,6 +17,10 @@
             "elm/time": "1.0.0",
             "elm/virtual-dom": "1.0.2",
             "elm-community/list-extra": "8.2.0",
+            "ianmackenzie/elm-1d-parameter": "1.0.1",
+            "ianmackenzie/elm-geometry": "2.0.0",
+            "ianmackenzie/elm-geometry-svg": "2.0.0",
+            "ianmackenzie/elm-units": "2.2.0",
             "mpizenberg/elm-pointer-events": "4.0.1",
             "noahzgordon/elm-color-extra": "1.0.2"
         },
@@ -33,7 +29,11 @@
             "elm/file": "1.0.5",
             "elm/regex": "1.0.0",
             "elm/url": "1.0.0",
-            "fredcy/elm-parseint": "2.0.1"
+            "fredcy/elm-parseint": "2.0.1",
+            "ianmackenzie/elm-float-extra": "1.1.0",
+            "ianmackenzie/elm-interval": "2.0.0",
+            "ianmackenzie/elm-triangular-mesh": "1.0.2",
+            "ianmackenzie/elm-units-interval": "1.0.0"
         }
     },
     "test-dependencies": {
