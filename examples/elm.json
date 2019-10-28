@@ -12,7 +12,7 @@
         "../../elm-geometry-svg/src",
         "../../elm-1d-parameter/src"
     ],
-    "elm-version": "0.19.0",
+    "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
             "Skinney/murmur3": "2.0.8",
