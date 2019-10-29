@@ -18,7 +18,7 @@ import Rectangle2d
 main : Html Never
 main =
     let
-        renderBounds =
+        viewBox =
             BoundingBox2d.fromExtrema
                 { minX = pixels 0
                 , maxX = pixels 800
@@ -26,7 +26,7 @@ main =
                 , maxY = pixels 800
                 }
     in
-    Drawing2d.toHtml renderBounds
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
         [ Attributes.fontFamily [ Font.sansSerif ] ]
         [ Drawing2d.rectangle [] <|
             Rectangle2d.with

@@ -34,7 +34,7 @@ update ToggleTransform model =
 view : Model -> Html Msg
 view model =
     let
-        renderBounds =
+        viewBox =
             BoundingBox2d.fromExtrema
                 { minX = pixels 0
                 , maxX = pixels 800
@@ -71,7 +71,7 @@ view model =
                 , dot gradientEndPoint
                 , Drawing2d.text [ Attributes.textAnchor Text.topLeft ]
                     lowerLeftCorner
-                    "lower left"
+                    "Click to toggle transform"
                 ]
 
         rendered =
@@ -83,12 +83,10 @@ view model =
             else
                 box
     in
-    Html.div []
-        [ Drawing2d.toHtml renderBounds
+    Html.div [ Html.Events.onClick ToggleTransform ]
+        [ Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
             [ Attributes.fontSize (pixels 20) ]
             [ rendered ]
-        , Html.button [ Html.Events.onClick ToggleTransform ]
-            [ Html.text "Toggle transform " ]
         ]
 
 

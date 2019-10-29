@@ -1,6 +1,7 @@
 module Drawing2d exposing
     ( Attribute
     , Element
+    , Size
     , arc
     , at
     , at_
@@ -9,6 +10,9 @@ module Drawing2d exposing
     , ellipse
     , ellipticalArc
     , empty
+    , fit
+    , fitWidth
+    , fixed
     , group
     , image
     , lineSegment
@@ -77,6 +81,12 @@ type Element units coordinates
         )
 
 
+type Size
+    = Fixed
+    | Fit
+    | FitWidth
+
+
 type alias Attribute units coordinates =
     Types.Attribute units coordinates
 
@@ -100,14 +110,20 @@ custom givenFunction =
         )
 
 
-toHtml : BoundingBox2d Pixels coordinates -> List (Attribute Pixels coordinates) -> List (Element Pixels coordinates) -> Html msg
-toHtml boundingBox attributes elements =
+toHtml :
+    { viewBox : BoundingBox2d Pixels coordinates
+    , size : Size
+    }
+    -> List (Attribute Pixels coordinates)
+    -> List (Element Pixels coordinates)
+    -> Html msg
+toHtml { viewBox, size } attributes elements =
     let
         ( width, height ) =
-            BoundingBox2d.dimensions boundingBox
+            BoundingBox2d.dimensions viewBox
 
         { minX, maxY } =
-            BoundingBox2d.extrema boundingBox
+            BoundingBox2d.extrema viewBox
 
         defaultAttributes =
             [ Attributes.blackStroke
@@ -129,22 +145,52 @@ toHtml boundingBox attributes elements =
                 , String.fromFloat (inPixels width)
                 , String.fromFloat (inPixels height)
                 ]
+
+        -- Based on https://css-tricks.com/scale-svg/
+        sizeAttributes =
+            case size of
+                Fit ->
+                    [ Svg.Attributes.width "100%"
+                    , Svg.Attributes.height "100%"
+                    ]
+
+                Fixed ->
+                    [ Svg.Attributes.width (String.fromFloat (inPixels width))
+                    , Svg.Attributes.height (String.fromFloat (inPixels height))
+                    ]
+
+                FitWidth ->
+                    let
+                        heightPercent =
+                            String.fromFloat (100 * Quantity.ratio height width)
+
+                        padding =
+                            "calc(" ++ heightPercent ++ "% - 1px)"
+                    in
+                    [ Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "height" "1px"
+                    , Html.Attributes.style "overflow" "visible"
+                    , Html.Attributes.style "padding-bottom" padding
+                    , Svg.Attributes.preserveAspectRatio "xMidYMin slice"
+                    ]
     in
-    Html.div
-        [ Html.Attributes.style "border" "0"
-        , Html.Attributes.style "padding" "0"
-        , Html.Attributes.style "margin" "0"
-        , Html.Attributes.style "display" "inline-block"
-        ]
-        [ Svg.svg
-            [ Svg.Attributes.width (String.fromFloat (inPixels width))
-            , Svg.Attributes.height (String.fromFloat (inPixels height))
-            , Svg.Attributes.viewBox viewBoxString
-            , Html.Attributes.style "display" "block"
-            ]
-            [ rootElement False 1 0 0 "" "" ]
-        ]
-        |> Html.map never
+    Svg.svg (Svg.Attributes.viewBox viewBoxString :: sizeAttributes)
+        [ rootElement False 1 0 0 "" "" |> Html.map never ]
+
+
+fit : Size
+fit =
+    Fit
+
+
+fitWidth : Size
+fitWidth =
+    FitWidth
+
+
+fixed : Size
+fixed =
+    Fixed
 
 
 empty : Element units coordinates

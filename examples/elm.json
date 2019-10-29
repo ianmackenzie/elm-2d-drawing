@@ -21,6 +21,7 @@
             "ianmackenzie/elm-geometry": "2.0.0",
             "ianmackenzie/elm-geometry-svg": "2.0.0",
             "ianmackenzie/elm-units": "2.2.0",
+            "mdgriffith/elm-ui": "1.1.5",
             "mpizenberg/elm-pointer-events": "4.0.1",
             "noahzgordon/elm-color-extra": "1.0.2"
         },

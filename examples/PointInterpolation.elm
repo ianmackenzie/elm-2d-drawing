@@ -13,7 +13,7 @@ import Quantity exposing (zero)
 main : Html msg
 main =
     let
-        renderBounds =
+        viewBox =
             BoundingBox2d.fromExtrema
                 { minX = zero
                 , maxX = pixels 300
@@ -30,4 +30,6 @@ main =
         circles =
             List.map (Circle2d.withRadius (pixels 3)) points
     in
-    Drawing2d.toHtml renderBounds [] (List.map (Drawing2d.circle []) circles)
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
+        []
+        (List.map (Drawing2d.circle []) circles)

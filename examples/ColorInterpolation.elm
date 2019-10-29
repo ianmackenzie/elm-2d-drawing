@@ -5,8 +5,11 @@ import Color
 import Color.Interpolate
 import Drawing2d
 import Drawing2d.Attributes as Attributes
+import Element
+import Element.Border
 import Frame2d
 import Html exposing (Html)
+import Html.Attributes
 import List.Extra
 import Parameter1d
 import Pixels exposing (pixels)
@@ -51,7 +54,7 @@ main =
 
         Just overallBounds ->
             let
-                renderBounds =
+                viewBox =
                     overallBounds
                         |> BoundingBox2d.expandBy (pixels 0.5)
 
@@ -64,4 +67,6 @@ main =
                         colors
                         rectangles
             in
-            Drawing2d.toHtml renderBounds [] elements
+            Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
+                []
+                elements

@@ -63,8 +63,8 @@ update message model =
             ( { model | running = not model.running }, Cmd.none )
 
 
-renderBounds : BoundingBox2d Pixels Drawing
-renderBounds =
+viewBox : BoundingBox2d Pixels Drawing
+viewBox =
     BoundingBox2d.fromExtrema
         { minX = pixels 0
         , minY = pixels 0
@@ -106,14 +106,14 @@ diagonalGradientAttribute =
 
 example1 : Html Msg
 example1 =
-    Drawing2d.toHtml renderBounds
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
         []
         [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
 
 
 example2 : Html Msg
 example2 =
-    Drawing2d.toHtml renderBounds
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
         [ diagonalGradientAttribute ]
         [ Drawing2d.rectangle [] square ]
 
@@ -136,7 +136,7 @@ example3 angle =
         points =
             Parameter1d.trailing 12 (Arc2d.pointOn arc)
     in
-    Drawing2d.toHtml renderBounds
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
         []
         [ Drawing2d.rectangle [] square
         , Drawing2d.group [ diagonalGradientAttribute ]

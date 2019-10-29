@@ -20,7 +20,7 @@ import Point2d
 main : Html Never
 main =
     let
-        renderBounds =
+        viewBox =
             BoundingBox2d.fromExtrema
                 { minX = pixels 0
                 , maxX = pixels 800
@@ -57,7 +57,7 @@ main =
                 , dot position
                 ]
     in
-    Drawing2d.toHtml renderBounds
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
         [ Attributes.fillColor Color.orange
         , Attributes.strokeColor Color.blue
         ]

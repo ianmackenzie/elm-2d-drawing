@@ -15,7 +15,7 @@ import Rectangle2d
 main : Html msg
 main =
     let
-        renderBounds =
+        viewBox =
             BoundingBox2d.fromExtrema
                 { minX = pixels 0
                 , minY = pixels 0
@@ -81,7 +81,7 @@ main =
                         , Drawing2d.image imageUrl rectangle
                         ]
             in
-            Drawing2d.toHtml renderBounds
+            Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
                 []
                 [ Drawing2d.cubicSpline [] spline
                 , Drawing2d.group [] (List.map toImage samples)

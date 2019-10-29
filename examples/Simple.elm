@@ -44,7 +44,7 @@ main =
                 (Triangle2d.from p1 p2 p3)
             ]
 
-        boundingBox =
+        viewBox =
             BoundingBox2d.fromExtrema
                 { minX = pixels 0
                 , minY = pixels 0
@@ -52,4 +52,4 @@ main =
                 , maxY = pixels 500
                 }
     in
-    Drawing2d.toHtml boundingBox [] elements
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] elements
