@@ -16,6 +16,7 @@ module Drawing2d exposing
     , group
     , image
     , lineSegment
+    , map
     , mirrorAcross
     , placeIn
     , polygon
@@ -46,7 +47,7 @@ import Drawing2d.Gradient as Gradient
 import Drawing2d.Stops as Stops
 import Drawing2d.Svg as Svg
 import Drawing2d.Text as Text
-import Drawing2d.Types as Types exposing (Attribute(..), Fill(..), Gradient(..), Stop, Stops(..), Stroke(..))
+import Drawing2d.Types as Types exposing (Attribute(..), ContainerProperties, Event, EventProperties, Fill(..), Gradient(..), Stop, Stops(..), Stroke(..))
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -64,12 +65,13 @@ import Quantity exposing (Quantity(..), Rate)
 import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg)
 import Svg.Attributes
+import Svg.Events
 import Triangle2d exposing (Triangle2d)
 import Vector2d exposing (Vector2d)
 import VirtualDom
 
 
-type Element units coordinates
+type Element units coordinates msg
     = Element
         (Bool -- borders visible
          -> Float -- pixel size in current units
@@ -77,7 +79,7 @@ type Element units coordinates
          -> Float -- font size in current units
          -> String -- encoded gradient fill in current units
          -> String -- encoded gradient stroke in current units
-         -> Svg Never
+         -> Svg (Event units coordinates msg)
         )
 
 
@@ -87,18 +89,18 @@ type Size
     | FitWidth
 
 
-type alias Attribute units coordinates =
-    Types.Attribute units coordinates
+type alias Attribute units coordinates msg =
+    Types.Attribute units coordinates msg
 
 
-leaf : Svg Never -> Element units coordinates
+leaf : Svg (Event units coordinates msg) -> Element units coordinates msg
 leaf svgElement =
     Element (\_ _ _ _ _ _ -> svgElement)
 
 
 {-| TODO pass 'screen' argument?
 -}
-custom : ((Float -> Quantity Float units) -> Element units coordinates) -> Element units coordinates
+custom : ((Float -> Quantity Float units) -> Element units coordinates msg) -> Element units coordinates msg
 custom givenFunction =
     Element
         (\bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke ->
@@ -110,12 +112,43 @@ custom givenFunction =
         )
 
 
+containerStaticCss : List (Html.Attribute msg)
+containerStaticCss =
+    [ Html.Attributes.style "position" "relative"
+    , Html.Attributes.style "padding-top" "0px"
+    , Html.Attributes.style "padding-right" "0px"
+    , Html.Attributes.style "padding-left" "0px"
+    ]
+
+
+svgCss : List (Html.Attribute msg)
+svgCss =
+    [ Html.Attributes.style "position" "absolute"
+    , Html.Attributes.style "height" "100%"
+    , Html.Attributes.style "width" "100%"
+    , Html.Attributes.style "left" "0"
+    , Html.Attributes.style "right" "0"
+    ]
+
+
+defaultAttributes : List (Attribute Pixels coordinates msg)
+defaultAttributes =
+    [ Attributes.blackStroke
+    , Attributes.strokeWidth (pixels 1)
+    , Attributes.whiteFill
+    , Attributes.strokedBorder
+    , Attributes.fontSize (pixels 20)
+    , Attributes.textColor Color.black
+    , Attributes.textAnchor Text.bottomLeft
+    ]
+
+
 toHtml :
     { viewBox : BoundingBox2d Pixels coordinates
     , size : Size
     }
-    -> List (Attribute Pixels coordinates)
-    -> List (Element Pixels coordinates)
+    -> List (Attribute Pixels coordinates msg)
+    -> List (Element Pixels coordinates msg)
     -> Html msg
 toHtml { viewBox, size } attributes elements =
     let
@@ -124,16 +157,6 @@ toHtml { viewBox, size } attributes elements =
 
         { minX, maxY } =
             BoundingBox2d.extrema viewBox
-
-        defaultAttributes =
-            [ Attributes.blackStroke
-            , Attributes.strokeWidth (pixels 1)
-            , Attributes.whiteFill
-            , Attributes.strokedBorder
-            , Attributes.fontSize (pixels 20)
-            , Attributes.textColor Color.black
-            , Attributes.textAnchor Text.bottomLeft
-            ]
 
         (Element rootElement) =
             group defaultAttributes [ group attributes elements ]
@@ -150,13 +173,20 @@ toHtml { viewBox, size } attributes elements =
         sizeAttributes =
             case size of
                 Fit ->
-                    [ Svg.Attributes.width "100%"
-                    , Svg.Attributes.height "100%"
+                    [ Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "height" "100%"
                     ]
 
                 Fixed ->
-                    [ Svg.Attributes.width (String.fromFloat (inPixels width))
-                    , Svg.Attributes.height (String.fromFloat (inPixels height))
+                    let
+                        widthString =
+                            String.fromFloat (inPixels width) ++ "px"
+
+                        heightString =
+                            String.fromFloat (inPixels height) ++ "px"
+                    in
+                    [ Html.Attributes.style "width" widthString
+                    , Html.Attributes.style "height" heightString
                     ]
 
                 FitWidth ->
@@ -171,11 +201,54 @@ toHtml { viewBox, size } attributes elements =
                     , Html.Attributes.style "height" "1px"
                     , Html.Attributes.style "overflow" "visible"
                     , Html.Attributes.style "padding-bottom" padding
-                    , Svg.Attributes.preserveAspectRatio "xMidYMin slice"
                     ]
     in
-    Svg.svg (Svg.Attributes.viewBox viewBoxString :: sizeAttributes)
-        [ rootElement False 1 0 0 "" "" |> Html.map never ]
+    Html.div (containerStaticCss ++ sizeAttributes)
+        [ Svg.svg (Svg.Attributes.viewBox viewBoxString :: svgCss)
+            [ rootElement False 1 0 0 "" ""
+                |> Svg.map (eventToMessage viewBox)
+            ]
+        ]
+
+
+eventToMessage : BoundingBox2d Pixels coordinates -> Event Pixels coordinates msg -> msg
+eventToMessage viewBox event =
+    let
+        ( drawingWidth, drawingHeight ) =
+            BoundingBox2d.dimensions viewBox
+
+        xScale =
+            event.properties.container.width / inPixels drawingWidth
+
+        yScale =
+            event.properties.container.height / inPixels drawingHeight
+
+        scale =
+            min xScale yScale |> Debug.log "scale"
+
+        containerMidX =
+            event.properties.container.width / 2
+
+        containerMidY =
+            event.properties.container.height / 2
+
+        containerDeltaX =
+            event.properties.x - containerMidX
+
+        containerDeltaY =
+            event.properties.y - containerMidY
+
+        drawingDeltaX =
+            pixels (containerDeltaX / scale)
+
+        drawingDeltaY =
+            pixels (-containerDeltaY / scale)
+
+        drawingPoint =
+            BoundingBox2d.centerPoint viewBox
+                |> Point2d.translateBy (Vector2d.xy drawingDeltaX drawingDeltaY)
+    in
+    event.toMessage drawingPoint
 
 
 fit : Size
@@ -193,16 +266,16 @@ fixed =
     Fixed
 
 
-empty : Element units coordinates
+empty : Element units coordinates msg
 empty =
     leaf (Svg.text "")
 
 
 drawCurve :
-    List (Attribute units coordinates)
-    -> (List (Svg.Attribute Never) -> a -> Svg Never)
+    List (Attribute units coordinates msg)
+    -> (List (Svg.Attribute (Event units coordinates msg)) -> a -> Svg (Event units coordinates msg))
     -> a
-    -> Element units coordinates
+    -> Element units coordinates msg
 drawCurve attributes toSvg curve =
     let
         attributeValues =
@@ -212,6 +285,7 @@ drawCurve attributes toSvg curve =
             []
                 |> addStrokeStyle attributeValues
                 |> addStrokeWidth attributeValues
+                |> addEventHandlers attributeValues
 
         svgAttributes =
             Svg.Attributes.fill "none" :: givenAttributes
@@ -237,17 +311,19 @@ drawCurve attributes toSvg curve =
 
 
 drawRegion :
-    List (Attribute units coordinates)
-    -> (List (Svg.Attribute Never) -> a -> Svg Never)
+    List (Attribute units coordinates msg)
+    -> (List (Svg.Attribute (Event units coordinates msg)) -> a -> Svg (Event units coordinates msg))
     -> a
-    -> Element units coordinates
+    -> Element units coordinates msg
 drawRegion attributes toSvg region =
     let
         attributeValues =
             collectAttributeValues attributes
 
         commonAttributes =
-            [] |> addFillStyle attributeValues
+            []
+                |> addFillStyle attributeValues
+                |> addEventHandlers attributeValues
 
         fillGradientElement =
             [] |> addFillGradient attributeValues
@@ -290,27 +366,27 @@ drawRegion attributes toSvg region =
                         ]
 
 
-lineSegment : List (Attribute units coordinates) -> LineSegment2d units coordinates -> Element units coordinates
+lineSegment : List (Attribute units coordinates msg) -> LineSegment2d units coordinates -> Element units coordinates msg
 lineSegment attributes givenSegment =
     drawCurve attributes Svg.lineSegment2d givenSegment
 
 
-triangle : List (Attribute units coordinates) -> Triangle2d units coordinates -> Element units coordinates
+triangle : List (Attribute units coordinates msg) -> Triangle2d units coordinates -> Element units coordinates msg
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
 
 
-render : Bool -> Float -> Float -> Float -> String -> String -> Element units coordinates -> Svg Never
+render : Bool -> Float -> Float -> Float -> String -> String -> Element units coordinates msg -> Svg (Event units coordinates msg)
 render bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke (Element function) =
     function bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke
 
 
-with : List (Attribute units coordinates) -> Element units coordinates -> Element units coordinates
+with : List (Attribute units coordinates msg) -> Element units coordinates msg -> Element units coordinates msg
 with attributes element =
     group attributes [ element ]
 
 
-group : List (Attribute units coordinates) -> List (Element units coordinates) -> Element units coordinates
+group : List (Attribute units coordinates msg) -> List (Element units coordinates msg) -> Element units coordinates msg
 group attributes childElements =
     let
         attributeValues =
@@ -375,6 +451,7 @@ group attributes childElements =
                         |> addStrokeWidth attributeValues
                         |> addTextAnchor attributeValues
                         |> addTextColor attributeValues
+                        |> addEventHandlers attributeValues
 
                 groupSvgElement =
                     Svg.g groupAttributes childSvgElements
@@ -390,52 +467,52 @@ group attributes childElements =
                         ]
 
 
-arc : List (Attribute units coordinates) -> Arc2d units coordinates -> Element units coordinates
+arc : List (Attribute units coordinates msg) -> Arc2d units coordinates -> Element units coordinates msg
 arc attributes givenArc =
     drawCurve attributes Svg.arc2d givenArc
 
 
-quadraticSpline : List (Attribute units coordinates) -> QuadraticSpline2d units coordinates -> Element units coordinates
+quadraticSpline : List (Attribute units coordinates msg) -> QuadraticSpline2d units coordinates -> Element units coordinates msg
 quadraticSpline attributes givenSpline =
     drawCurve attributes Svg.quadraticSpline2d givenSpline
 
 
-cubicSpline : List (Attribute units coordinates) -> CubicSpline2d units coordinates -> Element units coordinates
+cubicSpline : List (Attribute units coordinates msg) -> CubicSpline2d units coordinates -> Element units coordinates msg
 cubicSpline attributes givenSpline =
     drawCurve attributes Svg.cubicSpline2d givenSpline
 
 
-polyline : List (Attribute units coordinates) -> Polyline2d units coordinates -> Element units coordinates
+polyline : List (Attribute units coordinates msg) -> Polyline2d units coordinates -> Element units coordinates msg
 polyline attributes givenPolyline =
     drawCurve attributes Svg.polyline2d givenPolyline
 
 
-polygon : List (Attribute units coordinates) -> Polygon2d units coordinates -> Element units coordinates
+polygon : List (Attribute units coordinates msg) -> Polygon2d units coordinates -> Element units coordinates msg
 polygon attributes givenPolygon =
     drawRegion attributes Svg.polygon2d givenPolygon
 
 
-circle : List (Attribute units coordinates) -> Circle2d units coordinates -> Element units coordinates
+circle : List (Attribute units coordinates msg) -> Circle2d units coordinates -> Element units coordinates msg
 circle attributes givenCircle =
     drawRegion attributes Svg.circle2d givenCircle
 
 
-ellipticalArc : List (Attribute units coordinates) -> EllipticalArc2d units coordinates -> Element units coordinates
+ellipticalArc : List (Attribute units coordinates msg) -> EllipticalArc2d units coordinates -> Element units coordinates msg
 ellipticalArc attributes givenArc =
     drawCurve attributes Svg.ellipticalArc2d givenArc
 
 
-ellipse : List (Attribute units coordinates) -> Ellipse2d units coordinates -> Element units coordinates
+ellipse : List (Attribute units coordinates msg) -> Ellipse2d units coordinates -> Element units coordinates msg
 ellipse attributes givenEllipse =
     drawRegion attributes Svg.ellipse2d givenEllipse
 
 
-rectangle : List (Attribute units coordinates) -> Rectangle2d units coordinates -> Element units coordinates
+rectangle : List (Attribute units coordinates msg) -> Rectangle2d units coordinates -> Element units coordinates msg
 rectangle attributes givenRectangle =
     drawRegion attributes Svg.rectangle2d givenRectangle
 
 
-text : List (Attribute units coordinates) -> Point2d units coordinates -> String -> Element units coordinates
+text : List (Attribute units coordinates msg) -> Point2d units coordinates -> String -> Element units coordinates msg
 text attributes position string =
     let
         attributeValues =
@@ -454,6 +531,7 @@ text attributes position string =
                 |> addFontSize attributeValues
                 |> addTextAnchor attributeValues
                 |> addTextColor attributeValues
+                |> addEventHandlers attributeValues
 
         svgElement =
             Svg.text_ svgAttributes [ Svg.text string ]
@@ -461,14 +539,16 @@ text attributes position string =
     leaf svgElement
 
 
-image : String -> Rectangle2d units coordinates -> Element units coordinates
-image givenUrl givenRectangle =
+image : List (Attribute units coordinates msg) -> String -> Rectangle2d units coordinates -> Element units coordinates msg
+image attributes givenUrl givenRectangle =
     let
+        attributeValues =
+            collectAttributeValues attributes
+
         ( Quantity width, Quantity height ) =
             Rectangle2d.dimensions givenRectangle
-    in
-    leaf <|
-        Svg.image
+
+        svgAttributes =
             [ Svg.Attributes.xlinkHref givenUrl
             , Svg.Attributes.x (String.fromFloat (-width / 2))
             , Svg.Attributes.y (String.fromFloat (-height / 2))
@@ -476,10 +556,13 @@ image givenUrl givenRectangle =
             , Svg.Attributes.height (String.fromFloat height)
             , placementTransform (Rectangle2d.axes givenRectangle)
             ]
-            []
+                |> addEventHandlers attributeValues
+    in
+    leaf <|
+        Svg.image svgAttributes []
 
 
-placementTransform : Frame2d units coordinates defines -> Svg.Attribute msg
+placementTransform : Frame2d units globalCoordinates { defines : localCoordinates } -> Svg.Attribute (Event units globalCoordinates msg)
 placementTransform frame =
     let
         p =
@@ -506,48 +589,66 @@ placementTransform frame =
     Svg.Attributes.transform transform
 
 
+placeEventIn : Frame2d units globalCoordinates { defines : localCoordinates } -> Event units localCoordinates msg -> Event units globalCoordinates msg
+placeEventIn frame event =
+    { toMessage = Point2d.relativeTo frame >> event.toMessage
+    , properties = event.properties
+    }
+
+
+scaleEventImpl : Point2d units1 coordinates -> Float -> Event units1 coordinates msg -> Event units2 coordinates msg
+scaleEventImpl centerPoint scale event =
+    { toMessage =
+        Point2d.unwrap
+            >> Point2d.unsafe
+            >> Point2d.scaleAbout centerPoint (1 / scale)
+            >> event.toMessage
+    , properties = event.properties
+    }
+
+
 placeIn :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Element units localCoordinates
-    -> Element units globalCoordinates
+    -> Element units localCoordinates msg
+    -> Element units globalCoordinates msg
 placeIn frame (Element function) =
     Element
         (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
-                transformation =
+                toLocalGradient =
                     Gradient.relativeTo frame
 
-                transformedFillGradient =
+                localFillGradient =
                     decodeGradient currentFillGradient
-                        |> Maybe.map transformation
+                        |> Maybe.map toLocalGradient
 
-                transformedStrokeGradient =
+                localStrokeGradient =
                     decodeGradient currentStrokeGradient
-                        |> Maybe.map transformation
+                        |> Maybe.map toLocalGradient
 
                 updatedFillGradient =
-                    transformedFillGradient
+                    localFillGradient
                         |> Maybe.map encodeGradient
                         |> Maybe.withDefault ""
 
                 updatedStrokeGradient =
-                    transformedStrokeGradient
+                    localStrokeGradient
                         |> Maybe.map encodeGradient
                         |> Maybe.withDefault ""
 
-                svgAttributes =
-                    [ placementTransform frame ]
-                        |> addTransformedFillGradientReference
-                            transformedFillGradient
-                        |> addTransformedStrokeGradientReference
-                            transformedStrokeGradient
-
-                transformedGradientElements =
+                localGradientReferences =
                     []
-                        |> addGradientElement transformedFillGradient
-                        |> addGradientElement transformedStrokeGradient
+                        |> addTransformedFillGradientReference
+                            localFillGradient
+                        |> addTransformedStrokeGradientReference
+                            localStrokeGradient
 
-                childSvgElement =
+                localGradientElements =
+                    []
+                        |> addGradientElement localFillGradient
+                        |> addGradientElement localStrokeGradient
+
+                localSvgElement =
                     function
                         currentBordersVisible
                         currentPixelSize
@@ -555,25 +656,29 @@ placeIn frame (Element function) =
                         currentFontSize
                         updatedFillGradient
                         updatedStrokeGradient
-            in
-            case transformedGradientElements of
-                [] ->
-                    Svg.g svgAttributes [ childSvgElement ]
 
-                _ ->
-                    Svg.g svgAttributes
-                        [ Svg.defs [] transformedGradientElements
-                        , childSvgElement
-                        ]
+                localElement =
+                    case localGradientElements of
+                        [] ->
+                            localSvgElement
+
+                        _ ->
+                            Svg.g localGradientReferences
+                                [ Svg.defs [] localGradientElements
+                                , localSvgElement
+                                ]
+            in
+            Svg.g [ placementTransform frame ]
+                [ localElement |> Svg.map (placeEventIn frame) ]
         )
 
 
-scaleAbout : Point2d units coordinates -> Float -> Element units coordinates -> Element units coordinates
+scaleAbout : Point2d units coordinates -> Float -> Element units coordinates msg -> Element units coordinates msg
 scaleAbout point scale element =
     scaleImpl point scale element
 
 
-scaleImpl : Point2d units1 coordinates -> Float -> Element units1 coordinates -> Element units2 coordinates
+scaleImpl : Point2d units1 coordinates -> Float -> Element units1 coordinates msg -> Element units2 coordinates msg
 scaleImpl point scale (Element function) =
     let
         { x, y } =
@@ -649,46 +754,49 @@ scaleImpl point scale (Element function) =
                         updatedFontSize
                         updatedFillGradient
                         updatedStrokeGradient
-            in
-            case transformedGradientElements of
-                [] ->
-                    Svg.g svgAttributes [ childSvgElement ]
 
-                _ ->
-                    Svg.g svgAttributes
-                        [ Svg.defs [] transformedGradientElements
-                        , childSvgElement
-                        ]
+                groupElement =
+                    case transformedGradientElements of
+                        [] ->
+                            Svg.g svgAttributes [ childSvgElement ]
+
+                        _ ->
+                            Svg.g svgAttributes
+                                [ Svg.defs [] transformedGradientElements
+                                , childSvgElement
+                                ]
+            in
+            groupElement |> Svg.map (scaleEventImpl point scale)
         )
 
 
-relativeTo : Frame2d units globalCoordinates { defines : localCoordinates } -> Element units globalCoordinates -> Element units localCoordinates
+relativeTo : Frame2d units globalCoordinates { defines : localCoordinates } -> Element units globalCoordinates msg -> Element units localCoordinates msg
 relativeTo frame element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
 
 
-translateBy : Vector2d units coordinates -> Element units coordinates -> Element units coordinates
+translateBy : Vector2d units coordinates -> Element units coordinates msg -> Element units coordinates msg
 translateBy displacement element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
 
 
-translateIn : Direction2d coordinates -> Quantity Float units -> Element units coordinates -> Element units coordinates
+translateIn : Direction2d coordinates -> Quantity Float units -> Element units coordinates msg -> Element units coordinates msg
 translateIn direction distance element =
     element |> translateBy (Vector2d.withLength distance direction)
 
 
-rotateAround : Point2d units coordinates -> Angle -> Element units coordinates -> Element units coordinates
+rotateAround : Point2d units coordinates -> Angle -> Element units coordinates msg -> Element units coordinates msg
 rotateAround centerPoint angle element =
     element
         |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
 
 
-mirrorAcross : Axis2d units coordinates -> Element units coordinates -> Element units coordinates
+mirrorAcross : Axis2d units coordinates -> Element units coordinates msg -> Element units coordinates msg
 mirrorAcross axis element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
 
 
-at : Quantity Float (Rate units2 units1) -> Element units1 coordinates -> Element units2 coordinates
+at : Quantity Float (Rate units2 units1) -> Element units1 coordinates msg -> Element units2 coordinates msg
 at rate element =
     let
         (Quantity scale) =
@@ -697,13 +805,29 @@ at rate element =
     scaleImpl Point2d.origin scale element
 
 
-at_ : Quantity Float (Rate units1 units2) -> Element units1 coordinates -> Element units2 coordinates
+at_ : Quantity Float (Rate units1 units2) -> Element units1 coordinates msg -> Element units2 coordinates msg
 at_ rate element =
     let
         (Quantity scale) =
             rate
     in
     scaleImpl Point2d.origin (1 / scale) element
+
+
+map : (a -> b) -> Element units coordinates a -> Element units coordinates b
+map mapFunction (Element drawFunction) =
+    Element
+        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+            drawFunction currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient
+                |> Svg.map (mapEvent mapFunction)
+        )
+
+
+mapEvent : (a -> b) -> Event units coordinates a -> Event units coordinates b
+mapEvent mapFunction event =
+    { toMessage = event.toMessage >> mapFunction
+    , properties = event.properties
+    }
 
 
 
@@ -814,7 +938,7 @@ decodeGradient string =
             |> Result.withDefault Nothing
 
 
-addGradientElements : Gradient units coordinates -> List (Svg Never) -> List (Svg Never)
+addGradientElements : Gradient units coordinates -> List (Svg (Event units coordinates msg)) -> List (Svg (Event units coordinates msg))
 addGradientElements gradient svgElements =
     case gradient of
         LinearGradient linearGradient ->
@@ -892,7 +1016,7 @@ addGradientElements gradient svgElements =
                     gradientElement :: svgElements
 
 
-stopElement : Stop -> Svg Never
+stopElement : Stop -> Svg (Event units coordinates msg)
 stopElement { offset, color } =
     Svg.stop
         [ Svg.Attributes.offset offset
@@ -933,7 +1057,7 @@ transformEncoded gradient function =
 ----- ATTRIBUTES -----
 
 
-type alias AttributeValues units coordinates =
+type alias AttributeValues units coordinates msg =
     { fillStyle : Maybe (Fill units coordinates)
     , strokeStyle : Maybe (Stroke units coordinates)
     , fontSize : Maybe Float
@@ -942,10 +1066,13 @@ type alias AttributeValues units coordinates =
     , textColor : Maybe String
     , fontFamily : Maybe String
     , textAnchor : Maybe { x : String, y : String }
+    , onClick : Maybe (Point2d units coordinates -> msg)
+    , onMouseDown : Maybe (Point2d units coordinates -> msg)
+    , onMouseUp : Maybe (Point2d units coordinates -> msg)
     }
 
 
-setAttribute : Attribute units coordinates -> AttributeValues units coordinates -> AttributeValues units coordinates
+setAttribute : Attribute units coordinates msg -> AttributeValues units coordinates msg -> AttributeValues units coordinates msg
 setAttribute attribute attributeValues =
     case attribute of
         FillStyle fill ->
@@ -972,8 +1099,17 @@ setAttribute attribute attributeValues =
         TextAnchor position ->
             { attributeValues | textAnchor = Just position }
 
+        OnClick toMessage ->
+            { attributeValues | onClick = Just toMessage }
 
-initialAttributeValues : AttributeValues units coordinates
+        OnMouseDown toMessage ->
+            { attributeValues | onMouseDown = Just toMessage }
+
+        OnMouseUp toMessage ->
+            { attributeValues | onMouseUp = Just toMessage }
+
+
+initialAttributeValues : AttributeValues units coordinates msg
 initialAttributeValues =
     { fillStyle = Nothing
     , strokeStyle = Nothing
@@ -983,15 +1119,18 @@ initialAttributeValues =
     , textColor = Nothing
     , fontFamily = Nothing
     , textAnchor = Nothing
+    , onClick = Nothing
+    , onMouseDown = Nothing
+    , onMouseUp = Nothing
     }
 
 
-collectAttributeValues : List (Attribute units coordinates) -> AttributeValues units coordinates
+collectAttributeValues : List (Attribute units coordinates msg) -> AttributeValues units coordinates msg
 collectAttributeValues attributeList =
     List.foldr setAttribute initialAttributeValues attributeList
 
 
-addFillStyle : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addFillStyle : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addFillStyle attributeValues svgAttributes =
     case attributeValues.fillStyle of
         Nothing ->
@@ -1007,7 +1146,7 @@ addFillStyle attributeValues svgAttributes =
             Svg.Attributes.fill (gradientReference gradient) :: svgAttributes
 
 
-addStrokeStyle : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addStrokeStyle : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addStrokeStyle attributeValues svgAttributes =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -1020,7 +1159,7 @@ addStrokeStyle attributeValues svgAttributes =
             Svg.Attributes.stroke (gradientReference gradient) :: svgAttributes
 
 
-addFontSize : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addFontSize : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addFontSize attributeValues svgAttributes =
     case attributeValues.fontSize of
         Nothing ->
@@ -1030,7 +1169,7 @@ addFontSize attributeValues svgAttributes =
             Svg.Attributes.fontSize (String.fromFloat size) :: svgAttributes
 
 
-addStrokeWidth : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addStrokeWidth : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addStrokeWidth attributeValues svgAttributes =
     case attributeValues.strokeWidth of
         Nothing ->
@@ -1040,7 +1179,7 @@ addStrokeWidth attributeValues svgAttributes =
             Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
 
 
-addTextColor : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addTextColor : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addTextColor attributeValues svgAttributes =
     case attributeValues.textColor of
         Nothing ->
@@ -1050,7 +1189,7 @@ addTextColor attributeValues svgAttributes =
             Svg.Attributes.color string :: svgAttributes
 
 
-addFontFamily : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addFontFamily : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addFontFamily attributeValues svgAttributes =
     case attributeValues.fontFamily of
         Nothing ->
@@ -1060,7 +1199,7 @@ addFontFamily attributeValues svgAttributes =
             Svg.Attributes.fontFamily string :: svgAttributes
 
 
-addTextAnchor : AttributeValues units coordinates -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addTextAnchor : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addTextAnchor attributeValues svgAttributes =
     case attributeValues.textAnchor of
         Nothing ->
@@ -1072,7 +1211,65 @@ addTextAnchor attributeValues svgAttributes =
                 :: svgAttributes
 
 
-addStrokeGradient : AttributeValues units coordinates -> List (Svg Never) -> List (Svg Never)
+decodeContainerProperties : Decoder ContainerProperties
+decodeContainerProperties =
+    Decode.map2 ContainerProperties
+        (Decode.field "clientWidth" Decode.float)
+        (Decode.field "clientHeight" Decode.float)
+
+
+decodeEventProperties : Decoder EventProperties
+decodeEventProperties =
+    Decode.map3 EventProperties
+        (Decode.field "layerX" Decode.float |> Decode.map (Debug.log "layerX"))
+        (Decode.field "layerY" Decode.float |> Decode.map (Debug.log "layerY"))
+        (Decode.at [ "target", "ownerSVGElement" ] decodeContainerProperties)
+
+
+decodeEvent : (Point2d units coordinates -> msg) -> Decoder (Event units coordinates msg)
+decodeEvent toMessage =
+    Decode.map (Event toMessage) decodeEventProperties
+
+
+addEventHandlers : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
+addEventHandlers attributeValues svgAttributes =
+    svgAttributes
+        |> addOnClick attributeValues
+        |> addOnMouseDown attributeValues
+        |> addOnMouseUp attributeValues
+
+
+addOnClick : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
+addOnClick attributeValues svgAttributes =
+    case attributeValues.onClick of
+        Nothing ->
+            svgAttributes
+
+        Just toMessage ->
+            Svg.Events.on "click" (decodeEvent toMessage) :: svgAttributes
+
+
+addOnMouseDown : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
+addOnMouseDown attributeValues svgAttributes =
+    case attributeValues.onMouseDown of
+        Nothing ->
+            svgAttributes
+
+        Just toMessage ->
+            Svg.Events.on "mousedown" (decodeEvent toMessage) :: svgAttributes
+
+
+addOnMouseUp : AttributeValues units coordinates msg -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
+addOnMouseUp attributeValues svgAttributes =
+    case attributeValues.onMouseUp of
+        Nothing ->
+            svgAttributes
+
+        Just toMessage ->
+            Svg.Events.on "mouseup" (decodeEvent toMessage) :: svgAttributes
+
+
+addStrokeGradient : AttributeValues units coordinates msg -> List (Svg (Event units coordinates msg)) -> List (Svg (Event units coordinates msg))
 addStrokeGradient attributeValues svgElements =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -1085,7 +1282,7 @@ addStrokeGradient attributeValues svgElements =
             addGradientElements gradient svgElements
 
 
-addFillGradient : AttributeValues units coordinates -> List (Svg Never) -> List (Svg Never)
+addFillGradient : AttributeValues units coordinates msg -> List (Svg (Event units coordinates msg)) -> List (Svg (Event units coordinates msg))
 addFillGradient attributeValues svgElements =
     case attributeValues.fillStyle of
         Nothing ->
@@ -1101,7 +1298,7 @@ addFillGradient attributeValues svgElements =
             addGradientElements gradient svgElements
 
 
-addGradientElement : Maybe (Gradient units coordinates) -> List (Svg Never) -> List (Svg Never)
+addGradientElement : Maybe (Gradient units coordinates) -> List (Svg (Event units coordinates msg)) -> List (Svg (Event units coordinates msg))
 addGradientElement maybeGradient svgElements =
     case maybeGradient of
         Nothing ->
@@ -1111,7 +1308,7 @@ addGradientElement maybeGradient svgElements =
             addGradientElements gradient svgElements
 
 
-addTransformedFillGradientReference : Maybe (Gradient units coordinates) -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addTransformedFillGradientReference : Maybe (Gradient units gradientCoordinates) -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addTransformedFillGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->
@@ -1121,7 +1318,7 @@ addTransformedFillGradientReference maybeGradient svgAttributes =
             Svg.Attributes.fill (gradientReference gradient) :: svgAttributes
 
 
-addTransformedStrokeGradientReference : Maybe (Gradient units coordinates) -> List (Svg.Attribute Never) -> List (Svg.Attribute Never)
+addTransformedStrokeGradientReference : Maybe (Gradient units gradientCoordinates) -> List (Svg.Attribute (Event units coordinates msg)) -> List (Svg.Attribute (Event units coordinates msg))
 addTransformedStrokeGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->

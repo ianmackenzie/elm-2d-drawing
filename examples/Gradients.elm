@@ -93,7 +93,7 @@ diagonalAxis =
     Axis2d.through centerPoint (Direction2d.fromAngle (degrees 45))
 
 
-diagonalGradientAttribute : Drawing2d.Attribute Pixels Drawing
+diagonalGradientAttribute : Drawing2d.Attribute Pixels Drawing msg
 diagonalGradientAttribute =
     Attributes.fillGradient <|
         Gradient.along diagonalAxis
@@ -118,7 +118,7 @@ example2 =
         [ Drawing2d.rectangle [] square ]
 
 
-fillableCircle : Point2d Pixels coordinates -> Drawing2d.Element Pixels coordinates
+fillableCircle : Point2d Pixels coordinates -> Drawing2d.Element Pixels coordinates msg
 fillableCircle point =
     Drawing2d.circle
         [ Attributes.blackStroke

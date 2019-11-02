@@ -78,7 +78,7 @@ main =
                         [ Drawing2d.rectangle
                             [ Attributes.whiteFill, Attributes.noBorder ]
                             rectangle
-                        , Drawing2d.image imageUrl rectangle
+                        , Drawing2d.image [] imageUrl rectangle
                         ]
             in
             Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
