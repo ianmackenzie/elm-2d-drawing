@@ -1,8 +1,5 @@
 module Drawing2d.Types exposing
     ( Attribute(..)
-    , ContainerProperties
-    , Event
-    , EventProperties
     , Fill(..)
     , Gradient(..)
     , Stop
@@ -61,25 +58,5 @@ type Attribute units coordinates msg
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
-    | OnClick (Point2d units coordinates -> msg)
-    | OnMouseDown (Point2d units coordinates -> msg)
-    | OnMouseUp (Point2d units coordinates -> msg)
-
-
-type alias ContainerProperties =
-    { width : Float
-    , height : Float
-    }
-
-
-type alias EventProperties =
-    { x : Float
-    , y : Float
-    , container : ContainerProperties
-    }
-
-
-type alias Event units coordinates msg =
-    { toMessage : Point2d units coordinates -> msg
-    , properties : EventProperties
-    }
+    | OnClick msg
+    | OnMouseDown msg

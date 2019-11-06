@@ -4,7 +4,7 @@ import Angle
 import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Color
-import Drawing2d
+import Drawing2d exposing (DrawingCoordinates)
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
 import Drawing2d.Gradient as Gradient
@@ -22,7 +22,8 @@ type RectangleCoordinates
 
 
 type Msg
-    = Clicked Int (Point2d Pixels RectangleCoordinates)
+    = Clicked Int
+    | MouseUp (Point2d Pixels DrawingCoordinates)
 
 
 view : Html Msg
@@ -37,11 +38,7 @@ view =
                 }
 
         rectangle1 =
-            Drawing2d.rectangle
-                [ Events.onClick
-                    (Point2d.relativeTo (Rectangle2d.axes rectangle))
-                ]
-                rectangle
+            Drawing2d.rectangle [] rectangle
 
         centerPoint =
             Point2d.pixels 150 100
@@ -50,7 +47,7 @@ view =
             rectangle1
                 |> Drawing2d.rotateAround centerPoint (Angle.degrees 30)
                 |> Drawing2d.scaleAbout centerPoint (3 / 4)
-                |> Drawing2d.translateBy (Vector2d.pixels 400 100)
+                |> Drawing2d.translateBy (Vector2d.pixels 250 100)
 
         rectangle3 =
             rectangle2
@@ -66,25 +63,32 @@ view =
                 }
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
+        [ Drawing2d.onMouseUp MouseUp ]
         [ Attributes.strokeColor Color.black
         , Attributes.fillColor Color.white
         ]
-        [ rectangle1 |> Drawing2d.map (Clicked 1)
-        , rectangle2 |> Drawing2d.map (Clicked 2)
-        , rectangle3 |> Drawing2d.map (Clicked 3)
+        [ rectangle1 |> Drawing2d.with [ Events.onClick (Clicked 1) ]
+        , rectangle2 |> Drawing2d.with [ Events.onClick (Clicked 2) ]
+        , rectangle3 |> Drawing2d.with [ Events.onClick (Clicked 3) ]
         ]
 
 
 update : Msg -> () -> ( (), Cmd Msg )
-update (Clicked id position) () =
-    let
-        { x, y } =
-            Point2d.toPixels position
+update message () =
+    case message of
+        Clicked id ->
+            let
+                _ =
+                    Debug.log "Clicked" id
+            in
+            ( (), Cmd.none )
 
-        _ =
-            Debug.log "Click" ("id = " ++ String.fromInt id ++ ", x = " ++ String.fromFloat x ++ ", y = " ++ String.fromFloat y)
-    in
-    ( (), Cmd.none )
+        MouseUp point ->
+            let
+                _ =
+                    Debug.log "Mouse up" (Point2d.toPixels point)
+            in
+            ( (), Cmd.none )
 
 
 main : Program () () Msg
