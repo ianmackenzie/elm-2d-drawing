@@ -286,9 +286,20 @@ type alias MouseEvent =
     }
 
 
+decodeBoundingClientRect : Decoder DOM.Rectangle
+decodeBoundingClientRect =
+    DOM.boundingClientRect
+
+
 decodeContainer : Decoder DOM.Rectangle
 decodeContainer =
-    Decode.at [ "currentTarget", "parentNode" ] DOM.boundingClientRect
+    Decode.field "target" <|
+        Decode.oneOf
+            [ Decode.at [ "ownerSVGElement", "parentNode" ]
+                decodeBoundingClientRect
+            , Decode.at [ "parentNode" ]
+                decodeBoundingClientRect
+            ]
 
 
 decodeMouseEvent : Decoder MouseEvent
