@@ -22,8 +22,7 @@ type RectangleCoordinates
 
 
 type Msg
-    = Clicked Int
-    | MouseUp (Point2d Pixels DrawingCoordinates)
+    = Clicked Int (Point2d Pixels DrawingCoordinates)
 
 
 view : Html Msg
@@ -63,7 +62,7 @@ view =
                 }
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        [ Drawing2d.onMouseUp MouseUp ]
+        []
         [ Attributes.strokeColor Color.black
         , Attributes.fillColor Color.white
         ]
@@ -75,20 +74,11 @@ view =
 
 update : Msg -> () -> ( (), Cmd Msg )
 update message () =
-    case message of
-        Clicked id ->
-            let
-                _ =
-                    Debug.log "Clicked" id
-            in
-            ( (), Cmd.none )
-
-        MouseUp point ->
-            let
-                _ =
-                    Debug.log "Mouse up" (Point2d.toPixels point)
-            in
-            ( (), Cmd.none )
+    let
+        _ =
+            Debug.log "Message" message
+    in
+    ( (), Cmd.none )
 
 
 main : Program () () Msg

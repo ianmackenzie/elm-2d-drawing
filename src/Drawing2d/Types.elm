@@ -1,5 +1,6 @@
 module Drawing2d.Types exposing
     ( Attribute(..)
+    , DrawingCoordinates
     , Fill(..)
     , Gradient(..)
     , Stop
@@ -9,7 +10,13 @@ module Drawing2d.Types exposing
 
 import Circle2d exposing (Circle2d)
 import Color exposing (Color)
+import Json.Decode exposing (Decoder)
+import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
+
+
+type DrawingCoordinates
+    = DrawingCoordinates
 
 
 type Gradient units coordinates
@@ -58,5 +65,5 @@ type Attribute units coordinates msg
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
-    | OnClick msg
-    | OnMouseDown msg
+    | OnClick (Point2d Pixels DrawingCoordinates -> msg)
+    | OnMouseDown (Point2d Pixels DrawingCoordinates -> Decoder (Point2d Pixels DrawingCoordinates) -> msg)
