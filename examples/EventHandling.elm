@@ -22,7 +22,9 @@ type RectangleCoordinates
 
 
 type Msg
-    = Clicked Int (Point2d Pixels DrawingCoordinates)
+    = LeftClick Int (Point2d Pixels DrawingCoordinates)
+    | LeftMouseUp Int (Point2d Pixels DrawingCoordinates)
+    | RightClick Int (Point2d Pixels DrawingCoordinates)
 
 
 view : Html Msg
@@ -66,9 +68,9 @@ view =
         [ Attributes.strokeColor Color.black
         , Attributes.fillColor Color.white
         ]
-        [ rectangle1 |> Drawing2d.with [ Events.onClick (Clicked 1) ]
-        , rectangle2 |> Drawing2d.with [ Events.onClick (Clicked 2) ]
-        , rectangle3 |> Drawing2d.with [ Events.onClick (Clicked 3) ]
+        [ rectangle1 |> Drawing2d.with [ Events.onLeftClick (LeftClick 1), Events.onLeftMouseUp (LeftMouseUp 1), Events.onRightMouseUp (RightClick 1) ]
+        , rectangle2 |> Drawing2d.with [ Events.onLeftClick (LeftClick 2), Events.onLeftMouseUp (LeftMouseUp 2), Events.onRightMouseUp (RightClick 2) ]
+        , rectangle3 |> Drawing2d.with [ Events.onLeftClick (LeftClick 3), Events.onLeftMouseUp (LeftMouseUp 3), Events.onRightMouseUp (RightClick 3) ]
         ]
 
 

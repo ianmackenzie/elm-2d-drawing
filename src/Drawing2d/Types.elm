@@ -1,11 +1,14 @@
 module Drawing2d.Types exposing
     ( Attribute(..)
+    , ClickHandler
+    , DownHandler
     , DrawingCoordinates
     , Fill(..)
     , Gradient(..)
     , Stop
     , Stops(..)
     , Stroke(..)
+    , UpHandler
     )
 
 import Circle2d exposing (Circle2d)
@@ -56,6 +59,18 @@ type Stroke units coordinates
     | StrokeGradient (Gradient units coordinates)
 
 
+type alias ClickHandler msg =
+    Point2d Pixels DrawingCoordinates -> msg
+
+
+type alias DownHandler msg =
+    Point2d Pixels DrawingCoordinates -> Decoder (Point2d Pixels DrawingCoordinates) -> msg
+
+
+type alias UpHandler msg =
+    Point2d Pixels DrawingCoordinates -> msg
+
+
 type Attribute units coordinates msg
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
@@ -65,5 +80,10 @@ type Attribute units coordinates msg
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
-    | OnClick (Point2d Pixels DrawingCoordinates -> msg)
-    | OnMouseDown (Point2d Pixels DrawingCoordinates -> Decoder (Point2d Pixels DrawingCoordinates) -> msg)
+    | OnLeftClick (ClickHandler msg)
+    | OnLeftMouseDown (DownHandler msg)
+    | OnMiddleMouseDown (DownHandler msg)
+    | OnRightMouseDown (DownHandler msg)
+    | OnLeftMouseUp (UpHandler msg)
+    | OnMiddleMouseUp (UpHandler msg)
+    | OnRightMouseUp (UpHandler msg)
