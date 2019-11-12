@@ -47,71 +47,71 @@ import Svg exposing (Svg)
 import Svg.Attributes
 
 
-type alias Attribute units coordinates msg =
-    Types.Attribute units coordinates msg
+type alias Attribute units coordinates drawingCoordinates msg =
+    Types.Attribute units coordinates drawingCoordinates msg
 
 
-fillColor : Color -> Attribute units coordinates msg
+fillColor : Color -> Attribute units coordinates drawingCoordinates msg
 fillColor color =
     FillStyle (FillColor (Color.toCssString color))
 
 
-noFill : Attribute units coordinates msg
+noFill : Attribute units coordinates drawingCoordinates msg
 noFill =
     FillStyle (FillColor "none")
 
 
-blackFill : Attribute units coordinates msg
+blackFill : Attribute units coordinates drawingCoordinates msg
 blackFill =
     FillStyle (FillColor "black")
 
 
-whiteFill : Attribute units coordinates msg
+whiteFill : Attribute units coordinates drawingCoordinates msg
 whiteFill =
     FillStyle (FillColor "white")
 
 
-fillGradient : Gradient units coordinates -> Attribute units coordinates msg
+fillGradient : Gradient units coordinates -> Attribute units coordinates drawingCoordinates msg
 fillGradient gradient =
     FillStyle (FillGradient gradient)
 
 
-strokeColor : Color -> Attribute units coordinates msg
+strokeColor : Color -> Attribute units coordinates drawingCoordinates msg
 strokeColor color =
     StrokeStyle (StrokeColor (Color.toCssString color))
 
 
-blackStroke : Attribute units coordinates msg
+blackStroke : Attribute units coordinates drawingCoordinates msg
 blackStroke =
     StrokeStyle (StrokeColor "black")
 
 
-whiteStroke : Attribute units coordinates msg
+whiteStroke : Attribute units coordinates drawingCoordinates msg
 whiteStroke =
     StrokeStyle (StrokeColor "white")
 
 
-strokeGradient : Gradient units coordinates -> Attribute units coordinates msg
+strokeGradient : Gradient units coordinates -> Attribute units coordinates drawingCoordinates msg
 strokeGradient gradient =
     StrokeStyle (StrokeGradient gradient)
 
 
-noBorder : Attribute units coordinates msg
+noBorder : Attribute units coordinates drawingCoordinates msg
 noBorder =
     BorderVisibility False
 
 
-strokedBorder : Attribute units coordinates msg
+strokedBorder : Attribute units coordinates drawingCoordinates msg
 strokedBorder =
     BorderVisibility True
 
 
-strokeWidth : Quantity Float units -> Attribute units coordinates msg
+strokeWidth : Quantity Float units -> Attribute units coordinates drawingCoordinates msg
 strokeWidth (Quantity size) =
     StrokeWidth size
 
 
-textAnchor : Text.Anchor -> Attribute units coordinates msg
+textAnchor : Text.Anchor -> Attribute units coordinates drawingCoordinates msg
 textAnchor anchor =
     case anchor of
         TextAnchor.TopLeft ->
@@ -142,22 +142,22 @@ textAnchor anchor =
             TextAnchor { x = "end", y = "alphabetic" }
 
 
-blackText : Attribute units coordinates msg
+blackText : Attribute units coordinates drawingCoordinates msg
 blackText =
     TextColor "black"
 
 
-whiteText : Attribute units coordinates msg
+whiteText : Attribute units coordinates drawingCoordinates msg
 whiteText =
     TextColor "white"
 
 
-textColor : Color -> Attribute units coordinates msg
+textColor : Color -> Attribute units coordinates drawingCoordinates msg
 textColor color =
     TextColor (Color.toCssString color)
 
 
-fontSize : Quantity Float units -> Attribute units coordinates msg
+fontSize : Quantity Float units -> Attribute units coordinates drawingCoordinates msg
 fontSize (Quantity size) =
     FontSize size
 
@@ -177,6 +177,6 @@ normalizeFont font =
         "\"" ++ font ++ "\""
 
 
-fontFamily : List String -> Attribute units coordinates msg
+fontFamily : List String -> Attribute units coordinates drawingCoordinates msg
 fontFamily fonts =
     FontFamily (fonts |> List.map normalizeFont |> String.join ",")

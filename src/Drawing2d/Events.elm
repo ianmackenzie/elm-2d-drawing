@@ -4,51 +4,53 @@ module Drawing2d.Events exposing
     , onLeftMouseUp
     , onMiddleMouseDown
     , onMiddleMouseUp
+    , onRightClick
     , onRightMouseDown
     , onRightMouseUp
     )
 
 import Drawing2d.Attributes exposing (Attribute)
-import Drawing2d.Types as Types exposing (ClickHandler, DownHandler, UpHandler)
+import Drawing2d.Types as Types exposing (MouseInteraction)
 import Json.Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 
 
-type alias DrawingCoordinates =
-    Types.DrawingCoordinates
+onLeftClick : Decoder (Point2d Pixels drawingCoordinates -> msg) -> Attribute units coordinates drawingCoordinates msg
+onLeftClick decoder =
+    Types.OnLeftClick decoder
 
 
-onLeftClick : ClickHandler msg -> Attribute units coordinates msg
-onLeftClick toMessage =
-    Types.OnLeftClick toMessage
+onRightClick : Decoder (Point2d Pixels drawingCoordinates -> msg) -> Attribute units coordinates drawingCoordinates msg
+onRightClick decoder =
+    Types.OnRightClick decoder
 
 
-onLeftMouseDown : DownHandler msg -> Attribute units coordinates msg
-onLeftMouseDown toMessage =
-    Types.OnLeftMouseDown toMessage
+onLeftMouseDown : Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg) -> Attribute units coordinates drawingCoordinates msg
+onLeftMouseDown decoder =
+    Types.OnLeftMouseDown decoder
 
 
-onMiddleMouseDown : DownHandler msg -> Attribute units coordinates msg
-onMiddleMouseDown toMessage =
-    Types.OnMiddleMouseDown toMessage
+onMiddleMouseDown : Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg) -> Attribute units coordinates drawingCoordinates msg
+onMiddleMouseDown decoder =
+    Types.OnMiddleMouseDown decoder
 
 
-onRightMouseDown : DownHandler msg -> Attribute units coordinates msg
-onRightMouseDown toMessage =
-    Types.OnRightMouseDown toMessage
+onRightMouseDown : Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg) -> Attribute units coordinates drawingCoordinates msg
+onRightMouseDown decoder =
+    Types.OnRightMouseDown decoder
 
 
-onLeftMouseUp : UpHandler msg -> Attribute units coordinates msg
-onLeftMouseUp toMessage =
-    Types.OnLeftMouseUp toMessage
+onLeftMouseUp : Decoder msg -> Attribute units coordinates drawingCoordinates msg
+onLeftMouseUp decoder =
+    Types.OnLeftMouseUp decoder
 
 
-onMiddleMouseUp : UpHandler msg -> Attribute units coordinates msg
-onMiddleMouseUp toMessage =
-    Types.OnMiddleMouseUp toMessage
+onMiddleMouseUp : Decoder msg -> Attribute units coordinates drawingCoordinates msg
+onMiddleMouseUp decoder =
+    Types.OnMiddleMouseUp decoder
 
 
-onRightMouseUp : UpHandler msg -> Attribute units coordinates msg
-onRightMouseUp toMessage =
-    Types.OnRightMouseUp toMessage
+onRightMouseUp : Decoder msg -> Attribute units coordinates drawingCoordinates msg
+onRightMouseUp decoder =
+    Types.OnRightMouseUp decoder

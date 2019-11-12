@@ -1,6 +1,5 @@
 module Drawing2d exposing
     ( Attribute
-    , DrawingCoordinates
     , Element
     , Size
     , arc
@@ -19,11 +18,6 @@ module Drawing2d exposing
     , lineSegment
     , map
     , mirrorAcross
-    , onLeftClick
-    , onLeftMouseDown
-    , onLeftMouseUp
-    , onRightMouseDown
-    , onRightMouseUp
     , placeIn
     , polygon
     , polyline
@@ -37,7 +31,6 @@ module Drawing2d exposing
     , translateBy
     , translateIn
     , triangle
-    , with
     )
 
 import Angle exposing (Angle)
@@ -48,13 +41,15 @@ import Circle2d exposing (Circle2d)
 import Color exposing (Color)
 import CubicSpline2d exposing (CubicSpline2d)
 import DOM
+import Dict exposing (Dict)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Gradient as Gradient
 import Drawing2d.Stops as Stops
 import Drawing2d.Svg as Svg
 import Drawing2d.Text as Text
-import Drawing2d.Types as Types exposing (Attribute(..), ClickHandler, DownHandler, Fill(..), Gradient(..), Stop, Stops(..), Stroke(..), UpHandler)
+import Drawing2d.Types as Types exposing (Attribute(..), ClickDecoder, Fill(..), Gradient(..), MouseDownDecoder, MouseEvent, MouseInteraction(..), Stop, Stops(..), Stroke(..))
+import Drawing2d.Utils exposing (decodeMouseEvent, drawingScale, toDrawingPoint, wrongButton)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -78,7 +73,15 @@ import Vector2d exposing (Vector2d)
 import VirtualDom
 
 
-type Element units coordinates msg
+
+---------- TYPES ----------
+
+
+type Event drawingCoordinates msg
+    = Event (BoundingBox2d Pixels drawingCoordinates -> msg)
+
+
+type Element units coordinates drawingCoordinates msg
     = Element
         (Bool -- borders visible
          -> Float -- pixel size in current units
@@ -86,11 +89,7 @@ type Element units coordinates msg
          -> Float -- font size in current units
          -> String -- encoded gradient fill in current units
          -> String -- encoded gradient stroke in current units
-         -> Float -- viewBox minX
-         -> Float -- viewBox maxX
-         -> Float -- viewBox minY
-         -> Float -- viewBox maxY
-         -> Svg msg
+         -> Svg (Event drawingCoordinates msg)
         )
 
 
@@ -100,36 +99,61 @@ type Size
     | FitWidth
 
 
-type alias DrawingCoordinates =
-    Types.DrawingCoordinates
+type alias Attribute units coordinates drawingCoordinates msg =
+    Types.Attribute units coordinates drawingCoordinates msg
 
 
-type DrawingAttribute msg
-    = OnDrawingLeftClick (ClickHandler msg)
-    | OnDrawingMouseDown Int (DownHandler msg)
-    | OnDrawingMouseUp Int (UpHandler msg)
+type alias AttributeValues units coordinates drawingCoordinates msg =
+    { fillStyle : Maybe (Fill units coordinates)
+    , strokeStyle : Maybe (Stroke units coordinates)
+    , fontSize : Maybe Float
+    , strokeWidth : Maybe Float
+    , borderVisibility : Maybe Bool
+    , textColor : Maybe String
+    , fontFamily : Maybe String
+    , textAnchor : Maybe { x : String, y : String }
+    , onLeftClick : Maybe (ClickDecoder drawingCoordinates msg)
+    , onRightClick : Maybe (ClickDecoder drawingCoordinates msg)
+    , onLeftMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
+    , onMiddleMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
+    , onRightMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
+    , onLeftMouseUp : Maybe (Decoder msg)
+    , onMiddleMouseUp : Maybe (Decoder msg)
+    , onRightMouseUp : Maybe (Decoder msg)
+    }
 
 
-type alias Attribute units coordinates msg =
-    Types.Attribute units coordinates msg
+type alias Renderer a drawingCoordinates msg =
+    List (Svg.Attribute (Event drawingCoordinates msg)) -> a -> Svg (Event drawingCoordinates msg)
 
 
-type alias ViewBox =
-    BoundingBox2d Pixels DrawingCoordinates
+type alias MouseInteraction drawingCoordinates =
+    Types.MouseInteraction drawingCoordinates
 
 
-{-| TODO pass 'screen' argument?
--}
-custom : ((Float -> Quantity Float units) -> Element units coordinates msg) -> Element units coordinates msg
-custom givenFunction =
-    Element
-        (\bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke ->
-            let
-                (Element renderFunction) =
-                    givenFunction (\numPixels -> Quantity (numPixels * pixelSize))
-            in
-            renderFunction bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke
-        )
+
+---------- CONSTANTS ----------
+
+
+emptyAttributeValues : AttributeValues units coordinates drawingCoordinates msg
+emptyAttributeValues =
+    { fillStyle = Nothing
+    , strokeStyle = Nothing
+    , fontSize = Nothing
+    , strokeWidth = Nothing
+    , borderVisibility = Nothing
+    , textColor = Nothing
+    , fontFamily = Nothing
+    , textAnchor = Nothing
+    , onLeftClick = Nothing
+    , onRightClick = Nothing
+    , onLeftMouseDown = Nothing
+    , onMiddleMouseDown = Nothing
+    , onRightMouseDown = Nothing
+    , onLeftMouseUp = Nothing
+    , onMiddleMouseUp = Nothing
+    , onRightMouseUp = Nothing
+    }
 
 
 containerStaticCss : List (Html.Attribute msg)
@@ -152,8 +176,8 @@ svgStaticCss =
     ]
 
 
-defaultShapeAttributes : List (Attribute Pixels DrawingCoordinates msg)
-defaultShapeAttributes =
+defaultAttributes : List (Attribute Pixels coordinates drawingCoordinates msg)
+defaultAttributes =
     [ Attributes.blackStroke
     , Attributes.strokeWidth (pixels 1)
     , Attributes.whiteFill
@@ -164,57 +188,32 @@ defaultShapeAttributes =
     ]
 
 
-onLeftClick : (Point2d Pixels DrawingCoordinates -> msg) -> DrawingAttribute msg
-onLeftClick =
-    OnDrawingLeftClick
 
-
-onLeftMouseDown : (Point2d Pixels DrawingCoordinates -> Decoder (Point2d Pixels DrawingCoordinates) -> msg) -> DrawingAttribute msg
-onLeftMouseDown =
-    OnDrawingMouseDown leftButton
-
-
-onRightMouseDown : (Point2d Pixels DrawingCoordinates -> Decoder (Point2d Pixels DrawingCoordinates) -> msg) -> DrawingAttribute msg
-onRightMouseDown =
-    OnDrawingMouseDown rightButton
-
-
-onLeftMouseUp : (Point2d Pixels DrawingCoordinates -> msg) -> DrawingAttribute msg
-onLeftMouseUp =
-    OnDrawingMouseUp leftButton
-
-
-onRightMouseUp : (Point2d Pixels DrawingCoordinates -> msg) -> DrawingAttribute msg
-onRightMouseUp =
-    OnDrawingMouseUp rightButton
+---------- FUNCTIONS ----------
 
 
 toHtml :
-    { viewBox : ViewBox
+    { viewBox : BoundingBox2d Pixels drawingCoordinates
     , size : Size
     }
-    -> List (DrawingAttribute msg)
-    -> List (Attribute Pixels DrawingCoordinates msg)
-    -> List (Element Pixels DrawingCoordinates msg)
+    -> List (Attribute Pixels drawingCoordinates drawingCoordinates msg)
+    -> List (Element Pixels drawingCoordinates drawingCoordinates msg)
     -> Html msg
-toHtml { viewBox, size } drawingAttributes shapeAttributes elements =
+toHtml { viewBox, size } attributes elements =
     let
-        ( width, height ) =
+        ( viewBoxWidth, viewBoxHeight ) =
             BoundingBox2d.dimensions viewBox
 
         { minX, maxX, minY, maxY } =
             BoundingBox2d.extrema viewBox
-
-        (Element rootElement) =
-            group defaultShapeAttributes [ group shapeAttributes elements ]
 
         viewBoxAttribute =
             Svg.Attributes.viewBox <|
                 String.join " "
                     [ String.fromFloat (inPixels minX)
                     , String.fromFloat -(inPixels maxY)
-                    , String.fromFloat (inPixels width)
-                    , String.fromFloat (inPixels height)
+                    , String.fromFloat (inPixels viewBoxWidth)
+                    , String.fromFloat (inPixels viewBoxHeight)
                     ]
 
         -- Based on https://css-tricks.com/scale-svg/
@@ -228,10 +227,10 @@ toHtml { viewBox, size } drawingAttributes shapeAttributes elements =
                 Fixed ->
                     let
                         widthString =
-                            String.fromFloat (inPixels width) ++ "px"
+                            String.fromFloat (inPixels viewBoxWidth) ++ "px"
 
                         heightString =
-                            String.fromFloat (inPixels height) ++ "px"
+                            String.fromFloat (inPixels viewBoxHeight) ++ "px"
                     in
                     [ Html.Attributes.style "width" widthString
                     , Html.Attributes.style "height" heightString
@@ -239,228 +238,107 @@ toHtml { viewBox, size } drawingAttributes shapeAttributes elements =
 
                 FitWidth ->
                     let
-                        heightPercent =
-                            String.fromFloat (100 * Quantity.ratio height width)
+                        dummyHeight =
+                            "1px"
 
-                        padding =
-                            "calc(" ++ heightPercent ++ "% - 1px)"
+                        heightAsPercentOfWidth =
+                            String.fromFloat (100 * Quantity.ratio viewBoxHeight viewBoxWidth)
+                                ++ "%"
+
+                        bottomPadding =
+                            "calc(" ++ heightAsPercentOfWidth ++ " - " ++ dummyHeight ++ ")"
                     in
                     [ Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "height" "1px"
+                    , Html.Attributes.style "height" dummyHeight
+                    , Html.Attributes.style "padding-bottom" bottomPadding
                     , Html.Attributes.style "overflow" "visible"
-                    , Html.Attributes.style "padding-bottom" padding
                     ]
 
-        topLevelAttributes =
-            viewBoxAttribute
-                :: List.map (topLevelAttribute viewBox) drawingAttributes
+        rootAttributeValues =
+            emptyAttributeValues
+                |> assignAttributes defaultAttributes
+                |> assignAttributes attributes
+
+        (Element svgElement) =
+            groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues elements
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ Svg.svg (topLevelAttributes ++ svgStaticCss)
-            [ rootElement
-                False
-                1
-                0
-                0
-                ""
-                ""
-                (inPixels minX)
-                (inPixels maxX)
-                (inPixels minY)
-                (inPixels maxY)
-            ]
-        ]
+        [ svgElement False 1 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]
 
 
-topLevelAttribute : ViewBox -> DrawingAttribute msg -> Svg.Attribute msg
-topLevelAttribute viewBox drawingAttribute =
-    case drawingAttribute of
-        OnDrawingLeftClick toMessage ->
-            Svg.Events.on "click" (handleMouseClick viewBox toMessage)
-
-        OnDrawingMouseDown whichButton toMessage ->
-            Svg.Events.on "mousedown" (handleMouseDown whichButton viewBox toMessage)
-
-        OnDrawingMouseUp whichButton toMessage ->
-            svgOnMouseUp whichButton viewBox toMessage
+wrapClick : MouseEvent -> (Point2d Pixels drawingCoordinates -> msg) -> Event drawingCoordinates msg
+wrapClick mouseEvent userCallback =
+    Event (\viewBox -> userCallback (toDrawingPoint viewBox mouseEvent))
 
 
-type alias MouseEvent =
-    { container : DOM.Rectangle
-    , clientX : Float
-    , clientY : Float
-    , pageX : Float
-    , pageY : Float
-    , button : Int
-    }
+handleClick : ClickDecoder drawingCoordinates msg -> Decoder (Event drawingCoordinates msg)
+handleClick givenDecoder =
+    Decode.map2 wrapClick decodeMouseEvent givenDecoder
 
 
-decodeBoundingClientRect : Decoder DOM.Rectangle
-decodeBoundingClientRect =
-    DOM.boundingClientRect
+preventDefaultAndStopPropagation :
+    Decoder msg
+    -> Decoder { message : msg, preventDefault : Bool, stopPropagation : Bool }
+preventDefaultAndStopPropagation =
+    Decode.map (\message -> { message = message, preventDefault = True, stopPropagation = True })
 
 
-decodeContainer : Decoder DOM.Rectangle
-decodeContainer =
-    Decode.field "target" <|
-        Decode.oneOf
-            [ Decode.at [ "ownerSVGElement", "parentNode" ]
-                decodeBoundingClientRect
-            , Decode.at [ "parentNode" ]
-                decodeBoundingClientRect
-            ]
+wrapMouseDown :
+    MouseEvent
+    -> (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Event drawingCoordinates msg
+wrapMouseDown mouseEvent userCallback =
+    Event
+        (\viewBox ->
+            let
+                drawingPoint =
+                    toDrawingPoint viewBox mouseEvent
+
+                mouseInteraction =
+                    MouseInteraction
+                        { initialEvent = mouseEvent
+                        , viewBox = viewBox
+                        , drawingScale = drawingScale viewBox mouseEvent.container
+                        , initialPoint = drawingPoint
+                        }
+            in
+            userCallback drawingPoint mouseInteraction
+        )
 
 
-decodeMouseEvent : Decoder MouseEvent
-decodeMouseEvent =
-    Decode.map6 MouseEvent
-        decodeContainer
-        (Decode.field "clientX" Decode.float)
-        (Decode.field "clientY" Decode.float)
-        (Decode.field "pageX" Decode.float)
-        (Decode.field "pageY" Decode.float)
-        (Decode.field "button" Decode.int)
-
-
-drawingScale : ViewBox -> DOM.Rectangle -> Float
-drawingScale viewBox container =
-    let
-        ( drawingWidth, drawingHeight ) =
-            BoundingBox2d.dimensions viewBox
-
-        xScale =
-            container.width / inPixels drawingWidth
-
-        yScale =
-            container.height / inPixels drawingHeight
-    in
-    min xScale yScale
-
-
-toDrawingPoint : ViewBox -> MouseEvent -> Point2d Pixels DrawingCoordinates
-toDrawingPoint viewBox event =
-    let
-        scale =
-            drawingScale viewBox event.container
-
-        containerMidX =
-            event.container.left + event.container.width / 2
-
-        containerMidY =
-            event.container.top + event.container.height / 2
-
-        containerDeltaX =
-            event.clientX - containerMidX
-
-        containerDeltaY =
-            event.clientY - containerMidY
-
-        drawingDeltaX =
-            pixels (containerDeltaX / scale)
-
-        drawingDeltaY =
-            pixels (-containerDeltaY / scale)
-    in
-    BoundingBox2d.centerPoint viewBox
-        |> Point2d.translateBy (Vector2d.xy drawingDeltaX drawingDeltaY)
-
-
-futurePointDecoder : Int -> MouseEvent -> Point2d Pixels DrawingCoordinates -> Float -> Decoder (Point2d Pixels DrawingCoordinates)
-futurePointDecoder whichButton initialMouseEvent initialPoint scale =
-    Decode.field "type" Decode.string
+handleMouseDown :
+    Dict Int (MouseDownDecoder drawingCoordinates msg)
+    -> Decoder (Event drawingCoordinates msg)
+handleMouseDown decodersByButton =
+    decodeMouseEvent
         |> Decode.andThen
-            (\eventType ->
-                if eventType == "mouseup" then
-                    -- For mouse up events, only succeed decoding (fire a
-                    -- message) if the button released is the one that was
-                    -- initially pressed down; this makes using this decoder
-                    -- more reliable when used with mouse up events to end a
-                    -- drag operation or similar
-                    Decode.field "button" Decode.int
-                        |> Decode.andThen
-                            (\button ->
-                                if button == whichButton then
-                                    decodeFuturePosition initialMouseEvent initialPoint scale
+            (\mouseEvent ->
+                case Dict.get mouseEvent.button decodersByButton of
+                    Just registeredDecoder ->
+                        Decode.map (wrapMouseDown mouseEvent) registeredDecoder
 
-                                else
-                                    wrongButton
-                            )
-
-                else
-                    -- For all other events such as move events, just always
-                    -- succeed (move events don't have a reliable 'button'
-                    -- field anyways, and the 'buttons' field is not supported
-                    -- cross browser - besides, people should be ending any
-                    -- move subscriptions by listening to mouse up events)
-                    decodeFuturePosition initialMouseEvent initialPoint scale
+                    Nothing ->
+                        wrongButton
             )
 
 
-decodeFuturePosition : MouseEvent -> Point2d Pixels DrawingCoordinates -> Float -> Decoder (Point2d Pixels DrawingCoordinates)
-decodeFuturePosition initialMouseEvent initialPoint scale =
-    Decode.map2
-        (\pageX pageY ->
-            let
-                displacement =
-                    Vector2d.pixels
-                        ((pageX - initialMouseEvent.pageX) / scale)
-                        ((initialMouseEvent.pageY - pageY) / scale)
-            in
-            initialPoint |> Point2d.translateBy displacement
-        )
-        (Decode.field "pageX" Decode.float)
-        (Decode.field "pageY" Decode.float)
+wrapMessage : msg -> Event drawingCoordinates msg
+wrapMessage message =
+    Event (always message)
 
 
-handleMouseDown : Int -> ViewBox -> DownHandler msg -> Decoder msg
-handleMouseDown whichButton viewBox toMessage =
+handleMouseUp : Dict Int (Decoder msg) -> Decoder (Event drawingCoordinates msg)
+handleMouseUp decodersByButton =
     decodeMouseEvent
-        |> Decode.andThen (processMouseDown whichButton viewBox toMessage)
+        |> Decode.andThen
+            (\mouseEvent ->
+                case Dict.get mouseEvent.button decodersByButton of
+                    Just givenDecoder ->
+                        Decode.map wrapMessage givenDecoder
 
-
-wrongButton : Decoder msg
-wrongButton =
-    Decode.fail "Ignoring non-matching button"
-
-
-processMouseDown : Int -> ViewBox -> DownHandler msg -> MouseEvent -> Decoder msg
-processMouseDown whichButton viewBox toMessage mouseEvent =
-    if Debug.log "mouseEvent.button" mouseEvent.button == Debug.log "whichButton" whichButton then
-        let
-            point =
-                toDrawingPoint viewBox mouseEvent
-
-            scale =
-                drawingScale viewBox mouseEvent.container
-        in
-        Decode.succeed (toMessage point (futurePointDecoder whichButton mouseEvent point scale))
-
-    else
-        wrongButton
-
-
-processMouseUp : Int -> ViewBox -> UpHandler msg -> MouseEvent -> Decoder msg
-processMouseUp whichButton viewBox toMessage mouseEvent =
-    if mouseEvent.button == whichButton then
-        Decode.succeed (toMessage (toDrawingPoint viewBox mouseEvent))
-
-    else
-        wrongButton
-
-
-handleMouseUp : Int -> ViewBox -> UpHandler msg -> Decoder { message : msg, preventDefault : Bool, stopPropagation : Bool }
-handleMouseUp whichButton viewBox toMessage =
-    decodeMouseEvent
-        |> Decode.andThen (processMouseUp whichButton viewBox toMessage)
-        |> Decode.map
-            (\message -> { message = message, preventDefault = True, stopPropagation = True })
-
-
-handleMouseClick : ViewBox -> ClickHandler msg -> Decoder msg
-handleMouseClick viewBox toMessage =
-    decodeMouseEvent
-        |> Decode.map (toDrawingPoint viewBox)
-        |> Decode.map toMessage
+                    Nothing ->
+                        wrongButton
+            )
 
 
 fit : Size
@@ -478,80 +356,67 @@ fixed =
     Fixed
 
 
-empty : Element units coordinates msg
+empty : Element units coordinates drawingCoordinates msg
 empty =
-    Element (\_ _ _ _ _ _ _ _ _ _ -> Svg.text "")
+    Element (\_ _ _ _ _ _ -> Svg.text "")
 
 
 drawCurve :
-    List (Attribute units coordinates msg)
-    -> (List (Svg.Attribute msg) -> a -> Svg msg)
-    -> a
-    -> Element units coordinates msg
-drawCurve attributes toSvg curve =
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Renderer curve drawingCoordinates msg
+    -> curve
+    -> Element units coordinates drawingCoordinates msg
+drawCurve attributes renderer curve =
     let
         attributeValues =
             collectAttributeValues attributes
     in
     Element <|
-        \_ _ _ _ _ _ viewMinX viewMaxX viewMinY viewMaxY ->
+        \_ _ _ _ _ _ ->
             let
                 givenAttributes =
                     []
                         |> addStrokeStyle attributeValues
                         |> addStrokeWidth attributeValues
-                        |> addEventHandlers
-                            viewMinX
-                            viewMaxX
-                            viewMinY
-                            viewMaxY
-                            attributeValues
+                        |> addEventHandlers attributeValues
 
                 svgAttributes =
                     Svg.Attributes.fill "none" :: givenAttributes
 
                 curveElement =
-                    toSvg svgAttributes curve
+                    renderer svgAttributes curve
 
                 gradientElements =
-                    [] |> addStrokeGradient attributeValues
+                    addStrokeGradient attributeValues []
             in
             case gradientElements of
                 [] ->
                     curveElement
 
                 _ ->
-                    Svg.g []
-                        [ Svg.defs [] gradientElements
-                        , curveElement
-                        ]
+                    Svg.g [] (curveElement :: gradientElements)
 
 
 drawRegion :
-    List (Attribute units coordinates msg)
-    -> (List (Svg.Attribute msg) -> a -> Svg msg)
-    -> a
-    -> Element units coordinates msg
-drawRegion attributes toSvg region =
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Renderer region drawingCoordinates msg
+    -> region
+    -> Element units coordinates drawingCoordinates msg
+drawRegion attributes renderer region =
     let
         attributeValues =
             collectAttributeValues attributes
     in
     Element <|
-        \currentBordersVisible _ _ _ _ _ viewMinX viewMaxX viewMinY viewMaxY ->
+        \currentBordersVisible _ _ _ _ _ ->
             let
                 commonAttributes =
                     []
                         |> addFillStyle attributeValues
-                        |> addEventHandlers
-                            viewMinX
-                            viewMaxX
-                            viewMinY
-                            viewMaxY
-                            attributeValues
+                        |> addEventHandlers attributeValues
 
                 fillGradientElement =
-                    [] |> addFillGradient attributeValues
+                    addFillGradient attributeValues []
 
                 bordersVisible =
                     attributeValues.borderVisibility
@@ -567,7 +432,7 @@ drawRegion attributes toSvg region =
                         Svg.Attributes.stroke "none" :: commonAttributes
 
                 regionElement =
-                    toSvg svgAttributes region
+                    renderer svgAttributes region
 
                 gradientElements =
                     if bordersVisible then
@@ -582,40 +447,55 @@ drawRegion attributes toSvg region =
                     regionElement
 
                 _ ->
-                    Svg.g []
-                        [ Svg.defs [] gradientElements
-                        , regionElement
-                        ]
+                    Svg.g [] (regionElement :: gradientElements)
 
 
-lineSegment : List (Attribute units coordinates msg) -> LineSegment2d units coordinates -> Element units coordinates msg
+lineSegment :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> LineSegment2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 lineSegment attributes givenSegment =
     drawCurve attributes Svg.lineSegment2d givenSegment
 
 
-triangle : List (Attribute units coordinates msg) -> Triangle2d units coordinates -> Element units coordinates msg
+triangle :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Triangle2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
 
 
-render : Bool -> Float -> Float -> Float -> String -> String -> Float -> Float -> Float -> Float -> Element units coordinates msg -> Svg msg
-render bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke viewMinX viewMaxX viewMinY viewMaxY (Element function) =
-    function bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke viewMinX viewMaxX viewMinY viewMaxY
+render :
+    Bool
+    -> Float
+    -> Float
+    -> Float
+    -> String
+    -> String
+    -> Element units coordinates drawingCoordinates msg
+    -> Svg (Event drawingCoordinates msg)
+render bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke (Element function) =
+    function bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke
 
 
-with : List (Attribute units coordinates msg) -> Element units coordinates msg -> Element units coordinates msg
-with attributes element =
-    group attributes [ element ]
-
-
-group : List (Attribute units coordinates msg) -> List (Element units coordinates msg) -> Element units coordinates msg
+group :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> List (Element units coordinates drawingCoordinates msg)
+    -> Element units coordinates drawingCoordinates msg
 group attributes childElements =
-    let
-        attributeValues =
-            collectAttributeValues attributes
-    in
+    groupLike "g" [] (collectAttributeValues attributes) childElements
+
+
+groupLike :
+    String
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> AttributeValues units coordinates drawingCoordinates msg
+    -> List (Element units coordinates drawingCoordinates msg)
+    -> Element units coordinates drawingCoordinates msg
+groupLike tag extraSvgAttributes attributeValues childElements =
     Element <|
-        \currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient viewMinX viewMaxX viewMinY viewMaxY ->
+        \currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 updatedBordersVisible =
                     attributeValues.borderVisibility
@@ -664,10 +544,6 @@ group attributes childElements =
                                 updatedFontSize
                                 updatedFillGradient
                                 updatedStrokeGradient
-                                viewMinX
-                                viewMaxX
-                                viewMinY
-                                viewMaxY
                             )
 
                 gradientElements =
@@ -684,73 +560,90 @@ group attributes childElements =
                         |> addStrokeWidth attributeValues
                         |> addTextAnchor attributeValues
                         |> addTextColor attributeValues
-                        |> addEventHandlers
-                            viewMinY
-                            viewMaxX
-                            viewMinY
-                            viewMaxY
-                            attributeValues
-
-                groupSvgElement =
-                    Svg.g groupAttributes childSvgElements
+                        |> addEventHandlers attributeValues
             in
-            case gradientElements of
-                [] ->
-                    groupSvgElement
-
-                _ ->
-                    Svg.g []
-                        [ Svg.defs [] gradientElements
-                        , groupSvgElement
-                        ]
+            Svg.node tag
+                (groupAttributes ++ extraSvgAttributes)
+                (gradientElements ++ childSvgElements)
 
 
-arc : List (Attribute units coordinates msg) -> Arc2d units coordinates -> Element units coordinates msg
+arc :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Arc2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 arc attributes givenArc =
     drawCurve attributes Svg.arc2d givenArc
 
 
-quadraticSpline : List (Attribute units coordinates msg) -> QuadraticSpline2d units coordinates -> Element units coordinates msg
+quadraticSpline :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> QuadraticSpline2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 quadraticSpline attributes givenSpline =
     drawCurve attributes Svg.quadraticSpline2d givenSpline
 
 
-cubicSpline : List (Attribute units coordinates msg) -> CubicSpline2d units coordinates -> Element units coordinates msg
+cubicSpline :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> CubicSpline2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 cubicSpline attributes givenSpline =
     drawCurve attributes Svg.cubicSpline2d givenSpline
 
 
-polyline : List (Attribute units coordinates msg) -> Polyline2d units coordinates -> Element units coordinates msg
+polyline :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Polyline2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 polyline attributes givenPolyline =
     drawCurve attributes Svg.polyline2d givenPolyline
 
 
-polygon : List (Attribute units coordinates msg) -> Polygon2d units coordinates -> Element units coordinates msg
+polygon :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Polygon2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 polygon attributes givenPolygon =
     drawRegion attributes Svg.polygon2d givenPolygon
 
 
-circle : List (Attribute units coordinates msg) -> Circle2d units coordinates -> Element units coordinates msg
+circle :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Circle2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 circle attributes givenCircle =
     drawRegion attributes Svg.circle2d givenCircle
 
 
-ellipticalArc : List (Attribute units coordinates msg) -> EllipticalArc2d units coordinates -> Element units coordinates msg
+ellipticalArc :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> EllipticalArc2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 ellipticalArc attributes givenArc =
     drawCurve attributes Svg.ellipticalArc2d givenArc
 
 
-ellipse : List (Attribute units coordinates msg) -> Ellipse2d units coordinates -> Element units coordinates msg
+ellipse :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Ellipse2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 ellipse attributes givenEllipse =
     drawRegion attributes Svg.ellipse2d givenEllipse
 
 
-rectangle : List (Attribute units coordinates msg) -> Rectangle2d units coordinates -> Element units coordinates msg
+rectangle :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Rectangle2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 rectangle attributes givenRectangle =
     drawRegion attributes Svg.rectangle2d givenRectangle
 
 
-text : List (Attribute units coordinates msg) -> Point2d units coordinates -> String -> Element units coordinates msg
+text :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Point2d units coordinates
+    -> String
+    -> Element units coordinates drawingCoordinates msg
 text attributes position string =
     let
         attributeValues =
@@ -760,7 +653,7 @@ text attributes position string =
             Point2d.unwrap position
     in
     Element <|
-        \_ _ _ _ _ _ viewMinX viewMaxX viewMinY viewMaxY ->
+        \_ _ _ _ _ _ ->
             let
                 svgAttributes =
                     [ Svg.Attributes.x (String.fromFloat x)
@@ -772,17 +665,16 @@ text attributes position string =
                         |> addFontSize attributeValues
                         |> addTextAnchor attributeValues
                         |> addTextColor attributeValues
-                        |> addEventHandlers
-                            viewMinX
-                            viewMaxX
-                            viewMinY
-                            viewMaxY
-                            attributeValues
+                        |> addEventHandlers attributeValues
             in
             Svg.text_ svgAttributes [ Svg.text string ]
 
 
-image : List (Attribute units coordinates msg) -> String -> Rectangle2d units coordinates -> Element units coordinates msg
+image :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> String
+    -> Rectangle2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
 image attributes givenUrl givenRectangle =
     let
         attributeValues =
@@ -792,7 +684,7 @@ image attributes givenUrl givenRectangle =
             Rectangle2d.dimensions givenRectangle
     in
     Element <|
-        \_ _ _ _ _ _ viewMinX viewMaxX viewMinY viewMaxY ->
+        \_ _ _ _ _ _ ->
             let
                 svgAttributes =
                     [ Svg.Attributes.xlinkHref givenUrl
@@ -802,17 +694,12 @@ image attributes givenUrl givenRectangle =
                     , Svg.Attributes.height (String.fromFloat height)
                     , placementTransform (Rectangle2d.axes givenRectangle)
                     ]
-                        |> addEventHandlers
-                            viewMinX
-                            viewMaxX
-                            viewMinY
-                            viewMaxY
-                            attributeValues
+                        |> addEventHandlers attributeValues
             in
             Svg.image svgAttributes []
 
 
-placementTransform : Frame2d units coordinates defines -> Svg.Attribute msg
+placementTransform : Frame2d units coordinates defines -> Svg.Attribute a
 placementTransform frame =
     let
         p =
@@ -841,11 +728,11 @@ placementTransform frame =
 
 placeIn :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Element units localCoordinates msg
-    -> Element units globalCoordinates msg
+    -> Element units localCoordinates drawingCoordinates msg
+    -> Element units globalCoordinates drawingCoordinates msg
 placeIn frame (Element function) =
     Element
-        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient viewMinX viewMaxX viewMinY viewMaxY ->
+        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 toLocalGradient =
                     Gradient.relativeTo frame
@@ -888,10 +775,6 @@ placeIn frame (Element function) =
                         currentFontSize
                         updatedFillGradient
                         updatedStrokeGradient
-                        viewMinX
-                        viewMaxX
-                        viewMinY
-                        viewMaxY
 
                 localElement =
                     case localGradientElements of
@@ -899,21 +782,26 @@ placeIn frame (Element function) =
                             localSvgElement
 
                         _ ->
-                            Svg.g localGradientReferences
-                                [ Svg.defs [] localGradientElements
-                                , localSvgElement
-                                ]
+                            Svg.g localGradientReferences (localSvgElement :: localGradientElements)
             in
             Svg.g [ placementTransform frame ] [ localElement ]
         )
 
 
-scaleAbout : Point2d units coordinates -> Float -> Element units coordinates msg -> Element units coordinates msg
+scaleAbout :
+    Point2d units coordinates
+    -> Float
+    -> Element units coordinates drawingCoordinates msg
+    -> Element units coordinates drawingCoordinates msg
 scaleAbout point scale element =
     scaleImpl point scale element
 
 
-scaleImpl : Point2d units1 coordinates -> Float -> Element units1 coordinates msg -> Element units2 coordinates msg
+scaleImpl :
+    Point2d units1 coordinates
+    -> Float
+    -> Element units1 coordinates drawingCoordinates msg
+    -> Element units2 coordinates drawingCoordinates msg
 scaleImpl point scale (Element function) =
     let
         { x, y } =
@@ -932,7 +820,7 @@ scaleImpl point scale (Element function) =
             "matrix(" ++ String.join " " matrixComponents ++ ")"
     in
     Element
-        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient viewMinX viewMaxX viewMinY viewMaxY ->
+        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 transformation =
                     Gradient.scaleAbout point (1 / scale)
@@ -989,10 +877,6 @@ scaleImpl point scale (Element function) =
                         updatedFontSize
                         updatedFillGradient
                         updatedStrokeGradient
-                        viewMinX
-                        viewMaxX
-                        viewMinY
-                        viewMaxY
 
                 groupElement =
                     case transformedGradientElements of
@@ -1000,64 +884,83 @@ scaleImpl point scale (Element function) =
                             Svg.g svgAttributes [ childSvgElement ]
 
                         _ ->
-                            Svg.g svgAttributes
-                                [ Svg.defs [] transformedGradientElements
-                                , childSvgElement
-                                ]
+                            Svg.g svgAttributes (childSvgElement :: transformedGradientElements)
             in
             groupElement
         )
 
 
-relativeTo : Frame2d units globalCoordinates { defines : localCoordinates } -> Element units globalCoordinates msg -> Element units localCoordinates msg
+relativeTo :
+    Frame2d units globalCoordinates { defines : localCoordinates }
+    -> Element units globalCoordinates drawingCoordinates msg
+    -> Element units localCoordinates drawingCoordinates msg
 relativeTo frame element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
 
 
-translateBy : Vector2d units coordinates -> Element units coordinates msg -> Element units coordinates msg
+translateBy :
+    Vector2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
+    -> Element units coordinates drawingCoordinates msg
 translateBy displacement element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
 
 
-translateIn : Direction2d coordinates -> Quantity Float units -> Element units coordinates msg -> Element units coordinates msg
+translateIn :
+    Direction2d coordinates
+    -> Quantity Float units
+    -> Element units coordinates drawingCoordinates msg
+    -> Element units coordinates drawingCoordinates msg
 translateIn direction distance element =
     element |> translateBy (Vector2d.withLength distance direction)
 
 
-rotateAround : Point2d units coordinates -> Angle -> Element units coordinates msg -> Element units coordinates msg
+rotateAround :
+    Point2d units coordinates
+    -> Angle
+    -> Element units coordinates drawingCoordinates msg
+    -> Element units coordinates drawingCoordinates msg
 rotateAround centerPoint angle element =
-    element
-        |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
+    element |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
 
 
-mirrorAcross : Axis2d units coordinates -> Element units coordinates msg -> Element units coordinates msg
+mirrorAcross :
+    Axis2d units coordinates
+    -> Element units coordinates drawingCoordinates msg
+    -> Element units coordinates drawingCoordinates msg
 mirrorAcross axis element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
 
 
-at : Quantity Float (Rate units2 units1) -> Element units1 coordinates msg -> Element units2 coordinates msg
-at rate element =
-    let
-        (Quantity scale) =
-            rate
-    in
+at :
+    Quantity Float (Rate units2 units1)
+    -> Element units1 coordinates drawingCoordinates msg
+    -> Element units2 coordinates drawingCoordinates msg
+at (Quantity scale) element =
     scaleImpl Point2d.origin scale element
 
 
-at_ : Quantity Float (Rate units1 units2) -> Element units1 coordinates msg -> Element units2 coordinates msg
-at_ rate element =
-    let
-        (Quantity scale) =
-            rate
-    in
+at_ :
+    Quantity Float (Rate units1 units2)
+    -> Element units1 coordinates drawingCoordinates msg
+    -> Element units2 coordinates drawingCoordinates msg
+at_ (Quantity scale) element =
     scaleImpl Point2d.origin (1 / scale) element
 
 
-map : (a -> b) -> Element units coordinates a -> Element units coordinates b
+mapEvent : (a -> b) -> Event drawingCoordinates a -> Event drawingCoordinates b
+mapEvent function (Event callback) =
+    Event (callback >> function)
+
+
+map :
+    (a -> b)
+    -> Element units coordinates drawingCoordinates a
+    -> Element units coordinates drawingCoordinates b
 map mapFunction (Element drawFunction) =
     Element
-        (\arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 ->
-            Svg.map mapFunction (drawFunction arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10)
+        (\arg1 arg2 arg3 arg4 arg5 arg6 ->
+            Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
         )
 
 
@@ -1138,7 +1041,13 @@ gradientDecoder =
         )
 
 
-rebuildLinearGradient : Float -> Float -> Float -> Float -> String -> Gradient units coordinates
+rebuildLinearGradient :
+    Float
+    -> Float
+    -> Float
+    -> Float
+    -> String
+    -> Gradient units coordinates
 rebuildLinearGradient x1 y1 x2 y2 stopsId =
     LinearGradient
         { id = ""
@@ -1148,13 +1057,19 @@ rebuildLinearGradient x1 y1 x2 y2 stopsId =
         }
 
 
-rebuildRadialGradient : Float -> Float -> Float -> Float -> Float -> String -> Gradient units coordinates
+rebuildRadialGradient :
+    Float
+    -> Float
+    -> Float
+    -> Float
+    -> Float
+    -> String
+    -> Gradient units coordinates
 rebuildRadialGradient fx fy cx cy r stopsId =
     RadialGradient
         { id = ""
         , start = Point2d.unsafe { x = fx, y = fy }
-        , end =
-            Circle2d.withRadius (Quantity r) (Point2d.unsafe { x = cx, y = cy })
+        , end = Circle2d.withRadius (Quantity r) (Point2d.unsafe { x = cx, y = cy })
         , stops = StopsReference stopsId
         }
 
@@ -1165,11 +1080,13 @@ decodeGradient string =
         Nothing
 
     else
-        Decode.decodeString gradientDecoder string
-            |> Result.withDefault Nothing
+        Decode.decodeString gradientDecoder string |> Result.withDefault Nothing
 
 
-addGradientElements : Gradient units coordinates -> List (Svg msg) -> List (Svg msg)
+addGradientElements :
+    Gradient units coordinates
+    -> List (Svg (Event drawingCoordinates msg))
+    -> List (Svg (Event drawingCoordinates msg))
 addGradientElements gradient svgElements =
     case gradient of
         LinearGradient linearGradient ->
@@ -1247,7 +1164,7 @@ addGradientElements gradient svgElements =
                     gradientElement :: svgElements
 
 
-stopElement : Stop -> Svg msg
+stopElement : Stop -> Svg (Event drawingCoordinates msg)
 stopElement { offset, color } =
     Svg.stop
         [ Svg.Attributes.offset offset
@@ -1288,26 +1205,10 @@ transformEncoded gradient function =
 ----- ATTRIBUTES -----
 
 
-type alias AttributeValues units coordinates msg =
-    { fillStyle : Maybe (Fill units coordinates)
-    , strokeStyle : Maybe (Stroke units coordinates)
-    , fontSize : Maybe Float
-    , strokeWidth : Maybe Float
-    , borderVisibility : Maybe Bool
-    , textColor : Maybe String
-    , fontFamily : Maybe String
-    , textAnchor : Maybe { x : String, y : String }
-    , onLeftClick : Maybe (ClickHandler msg)
-    , onLeftMouseDown : Maybe (DownHandler msg)
-    , onMiddleMouseDown : Maybe (DownHandler msg)
-    , onRightMouseDown : Maybe (DownHandler msg)
-    , onLeftMouseUp : Maybe (UpHandler msg)
-    , onMiddleMouseUp : Maybe (UpHandler msg)
-    , onRightMouseUp : Maybe (UpHandler msg)
-    }
-
-
-setAttribute : Attribute units coordinates msg -> AttributeValues units coordinates msg -> AttributeValues units coordinates msg
+setAttribute :
+    Attribute units coordinates drawingCoordinates msg
+    -> AttributeValues units coordinates drawingCoordinates msg
+    -> AttributeValues units coordinates drawingCoordinates msg
 setAttribute attribute attributeValues =
     case attribute of
         FillStyle fill ->
@@ -1334,54 +1235,50 @@ setAttribute attribute attributeValues =
         TextAnchor position ->
             { attributeValues | textAnchor = Just position }
 
-        OnLeftClick toMessage ->
-            { attributeValues | onLeftClick = Just toMessage }
+        OnLeftClick decoder ->
+            { attributeValues | onLeftClick = Just decoder }
 
-        OnLeftMouseDown toMessage ->
-            { attributeValues | onLeftMouseDown = Just toMessage }
+        OnRightClick decoder ->
+            { attributeValues | onRightClick = Just decoder }
 
-        OnMiddleMouseDown toMessage ->
-            { attributeValues | onMiddleMouseDown = Just toMessage }
+        OnLeftMouseDown decoder ->
+            { attributeValues | onLeftMouseDown = Just decoder }
 
-        OnRightMouseDown toMessage ->
-            { attributeValues | onRightMouseDown = Just toMessage }
+        OnMiddleMouseDown decoder ->
+            { attributeValues | onMiddleMouseDown = Just decoder }
 
-        OnLeftMouseUp toMessage ->
-            { attributeValues | onLeftMouseUp = Just toMessage }
+        OnRightMouseDown decoder ->
+            { attributeValues | onRightMouseDown = Just decoder }
 
-        OnMiddleMouseUp toMessage ->
-            { attributeValues | onMiddleMouseUp = Just toMessage }
+        OnLeftMouseUp decoder ->
+            { attributeValues | onLeftMouseUp = Just decoder }
 
-        OnRightMouseUp toMessage ->
-            { attributeValues | onRightMouseUp = Just toMessage }
+        OnMiddleMouseUp decoder ->
+            { attributeValues | onMiddleMouseUp = Just decoder }
 
-
-initialAttributeValues : AttributeValues units coordinates msg
-initialAttributeValues =
-    { fillStyle = Nothing
-    , strokeStyle = Nothing
-    , fontSize = Nothing
-    , strokeWidth = Nothing
-    , borderVisibility = Nothing
-    , textColor = Nothing
-    , fontFamily = Nothing
-    , textAnchor = Nothing
-    , onLeftClick = Nothing
-    , onLeftMouseDown = Nothing
-    , onMiddleMouseDown = Nothing
-    , onRightMouseDown = Nothing
-    , onLeftMouseUp = Nothing
-    , onMiddleMouseUp = Nothing
-    , onRightMouseUp = Nothing
-    }
+        OnRightMouseUp decoder ->
+            { attributeValues | onRightMouseUp = Just decoder }
 
 
-collectAttributeValues : List (Attribute units coordinates msg) -> AttributeValues units coordinates msg
+collectAttributeValues :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> AttributeValues units coordinates drawingCoordinates msg
 collectAttributeValues attributeList =
-    List.foldr setAttribute initialAttributeValues attributeList
+    assignAttributes attributeList emptyAttributeValues
 
 
-addFillStyle : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+assignAttributes :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> AttributeValues units coordinates drawingCoordinates msg
+    -> AttributeValues units coordinates drawingCoordinates msg
+assignAttributes attributeList attributeValues =
+    List.foldr setAttribute attributeValues attributeList
+
+
+addFillStyle :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addFillStyle attributeValues svgAttributes =
     case attributeValues.fillStyle of
         Nothing ->
@@ -1397,7 +1294,10 @@ addFillStyle attributeValues svgAttributes =
             Svg.Attributes.fill (gradientReference gradient) :: svgAttributes
 
 
-addStrokeStyle : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addStrokeStyle :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addStrokeStyle attributeValues svgAttributes =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -1410,7 +1310,10 @@ addStrokeStyle attributeValues svgAttributes =
             Svg.Attributes.stroke (gradientReference gradient) :: svgAttributes
 
 
-addFontSize : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addFontSize :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addFontSize attributeValues svgAttributes =
     case attributeValues.fontSize of
         Nothing ->
@@ -1420,7 +1323,10 @@ addFontSize attributeValues svgAttributes =
             Svg.Attributes.fontSize (String.fromFloat size) :: svgAttributes
 
 
-addStrokeWidth : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addStrokeWidth :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addStrokeWidth attributeValues svgAttributes =
     case attributeValues.strokeWidth of
         Nothing ->
@@ -1430,7 +1336,10 @@ addStrokeWidth attributeValues svgAttributes =
             Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
 
 
-addTextColor : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addTextColor :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addTextColor attributeValues svgAttributes =
     case attributeValues.textColor of
         Nothing ->
@@ -1440,7 +1349,10 @@ addTextColor attributeValues svgAttributes =
             Svg.Attributes.color string :: svgAttributes
 
 
-addFontFamily : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addFontFamily :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addFontFamily attributeValues svgAttributes =
     case attributeValues.fontFamily of
         Nothing ->
@@ -1450,7 +1362,10 @@ addFontFamily attributeValues svgAttributes =
             Svg.Attributes.fontFamily string :: svgAttributes
 
 
-addTextAnchor : AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addTextAnchor :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addTextAnchor attributeValues svgAttributes =
     case attributeValues.textAnchor of
         Nothing ->
@@ -1477,103 +1392,104 @@ rightButton =
     2
 
 
-addEventHandlers : Float -> Float -> Float -> Float -> AttributeValues units coordinates msg -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
-addEventHandlers viewMinX viewMaxX viewMinY viewMaxY attributeValues svgAttributes =
+addEventHandlers :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addEventHandlers attributeValues svgAttributes =
     svgAttributes
-        |> addOnLeftClick viewMinX viewMaxX viewMinY viewMaxY attributeValues.onLeftClick
-        |> addOnMouseDown leftButton viewMinX viewMaxX viewMinY viewMaxY attributeValues.onLeftMouseDown
-        |> addOnMouseDown middleButton viewMinX viewMaxX viewMinY viewMaxY attributeValues.onMiddleMouseDown
-        |> addOnMouseDown rightButton viewMinX viewMaxX viewMinY viewMaxY attributeValues.onRightMouseDown
-        |> addOnMouseUp leftButton viewMinX viewMaxX viewMinY viewMaxY attributeValues.onLeftMouseUp
-        |> addOnMouseUp middleButton viewMinX viewMaxX viewMinY viewMaxY attributeValues.onMiddleMouseUp
-        |> addOnMouseUp rightButton viewMinX viewMaxX viewMinY viewMaxY attributeValues.onRightMouseUp
+        |> addOnLeftClick attributeValues.onLeftClick
+        |> addOnRightClick attributeValues.onRightClick
+        |> addOnMouseDown attributeValues
+        |> addOnMouseUp attributeValues
 
 
-addOnLeftClick : Float -> Float -> Float -> Float -> Maybe (ClickHandler msg) -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
-addOnLeftClick viewMinX viewMaxX viewMinY viewMaxY registeredHandler svgAttributes =
-    case registeredHandler of
+on :
+    String
+    -> Decoder (Event drawingCoordinates msg)
+    -> Svg.Attribute (Event drawingCoordinates msg)
+on eventName decoder =
+    Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
+
+
+addOnLeftClick :
+    Maybe (ClickDecoder drawingCoordinates msg)
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnLeftClick registeredDecoder svgAttributes =
+    case registeredDecoder of
         Nothing ->
             svgAttributes
 
-        Just toMessage ->
-            let
-                viewBox =
-                    BoundingBox2d.fromExtrema
-                        { minX = pixels viewMinX
-                        , maxX = pixels viewMaxX
-                        , minY = pixels viewMinY
-                        , maxY = pixels viewMaxY
-                        }
-
-                clickHandler =
-                    Svg.Events.on "click" (handleMouseClick viewBox toMessage)
-            in
-            clickHandler :: svgAttributes
+        Just decoder ->
+            on "click" (handleClick decoder) :: svgAttributes
 
 
-addOnMouseDown : Int -> Float -> Float -> Float -> Float -> Maybe (DownHandler msg) -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
-addOnMouseDown whichButton viewMinX viewMaxX viewMinY viewMaxY registeredHandler svgAttributes =
-    case registeredHandler of
+addOnRightClick :
+    Maybe (ClickDecoder drawingCoordinates msg)
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnRightClick registeredDecoder svgAttributes =
+    case registeredDecoder of
         Nothing ->
             svgAttributes
 
-        Just toMessage ->
-            let
-                viewBox =
-                    BoundingBox2d.fromExtrema
-                        { minX = pixels viewMinX
-                        , maxX = pixels viewMaxX
-                        , minY = pixels viewMinY
-                        , maxY = pixels viewMaxY
-                        }
-            in
-            Svg.Events.on "mousedown" (handleMouseDown whichButton viewBox toMessage)
-                :: svgAttributes
+        Just decoder ->
+            on "contextmenu" (handleClick decoder) :: svgAttributes
 
 
-addOnMouseUp : Int -> Float -> Float -> Float -> Float -> Maybe (UpHandler msg) -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
-addOnMouseUp whichButton viewMinX viewMaxX viewMinY viewMaxY registeredHandler svgAttributes =
-    case registeredHandler of
+registerDecoder : Int -> Maybe a -> Dict Int a -> Dict Int a
+registerDecoder whichButton maybeDecoder dict =
+    case maybeDecoder of
+        Just decoder ->
+            dict |> Dict.insert whichButton decoder
+
         Nothing ->
-            svgAttributes
-
-        Just toMessage ->
-            let
-                viewBox =
-                    BoundingBox2d.fromExtrema
-                        { minX = pixels viewMinX
-                        , maxX = pixels viewMaxX
-                        , minY = pixels viewMinY
-                        , maxY = pixels viewMaxY
-                        }
-            in
-            svgOnMouseUp whichButton viewBox toMessage :: svgAttributes
+            dict
 
 
-svgOnMouseUp : Int -> ViewBox -> UpHandler msg -> Svg.Attribute msg
-svgOnMouseUp whichButton viewBox toMessage =
+addOnMouseDown :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnMouseDown attributeValues svgAttributes =
     let
-        -- This is a bit of a hack to allow context menus to be
-        -- suppressed on right mouse clicks; preventing default on a
-        -- right button 'mouseup' event doesn't seem to prevent a
-        -- context menu from being created, and releasing the right
-        -- mouse button over a specific element reliably seems to
-        -- trigger the 'contextmenu' event (even if, for example, the
-        -- right mouse button is pressed elsewhere and then the cursor
-        -- is moved over the element) so it seems safe to treat the two
-        -- as largely interchangeable other than the effect on context
-        -- menu creation
-        whichEvent =
-            if whichButton == rightButton then
-                "contextmenu"
-
-            else
-                "mouseup"
+        decodersByButton =
+            Dict.empty
+                |> registerDecoder leftButton attributeValues.onLeftMouseDown
+                |> registerDecoder rightButton attributeValues.onRightMouseDown
+                |> registerDecoder middleButton attributeValues.onMiddleMouseDown
     in
-    Svg.Events.custom whichEvent (handleMouseUp whichButton viewBox toMessage)
+    if Dict.isEmpty decodersByButton then
+        svgAttributes
+
+    else
+        on "mousedown" (handleMouseDown decodersByButton) :: svgAttributes
 
 
-addStrokeGradient : AttributeValues units coordinates msg -> List (Svg msg) -> List (Svg msg)
+addOnMouseUp :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnMouseUp attributeValues svgAttributes =
+    let
+        decodersByButton =
+            Dict.empty
+                |> registerDecoder leftButton attributeValues.onLeftMouseUp
+                |> registerDecoder rightButton attributeValues.onRightMouseUp
+                |> registerDecoder middleButton attributeValues.onMiddleMouseUp
+    in
+    if Dict.isEmpty decodersByButton then
+        svgAttributes
+
+    else
+        on "mouseup" (handleMouseUp decodersByButton) :: svgAttributes
+
+
+addStrokeGradient :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg (Event drawingCoordinates msg))
+    -> List (Svg (Event drawingCoordinates msg))
 addStrokeGradient attributeValues svgElements =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -1586,7 +1502,10 @@ addStrokeGradient attributeValues svgElements =
             addGradientElements gradient svgElements
 
 
-addFillGradient : AttributeValues units coordinates msg -> List (Svg msg) -> List (Svg msg)
+addFillGradient :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg (Event drawingCoordinates msg))
+    -> List (Svg (Event drawingCoordinates msg))
 addFillGradient attributeValues svgElements =
     case attributeValues.fillStyle of
         Nothing ->
@@ -1602,7 +1521,10 @@ addFillGradient attributeValues svgElements =
             addGradientElements gradient svgElements
 
 
-addGradientElement : Maybe (Gradient units coordinates) -> List (Svg msg) -> List (Svg msg)
+addGradientElement :
+    Maybe (Gradient units coordinates)
+    -> List (Svg (Event drawingCoordinates msg))
+    -> List (Svg (Event drawingCoordinates msg))
 addGradientElement maybeGradient svgElements =
     case maybeGradient of
         Nothing ->
@@ -1612,7 +1534,10 @@ addGradientElement maybeGradient svgElements =
             addGradientElements gradient svgElements
 
 
-addTransformedFillGradientReference : Maybe (Gradient units gradientCoordinates) -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addTransformedFillGradientReference :
+    Maybe (Gradient units gradientCoordinates)
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addTransformedFillGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->
@@ -1622,7 +1547,10 @@ addTransformedFillGradientReference maybeGradient svgAttributes =
             Svg.Attributes.fill (gradientReference gradient) :: svgAttributes
 
 
-addTransformedStrokeGradientReference : Maybe (Gradient units gradientCoordinates) -> List (Svg.Attribute msg) -> List (Svg.Attribute msg)
+addTransformedStrokeGradientReference :
+    Maybe (Gradient units gradientCoordinates)
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
 addTransformedStrokeGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->

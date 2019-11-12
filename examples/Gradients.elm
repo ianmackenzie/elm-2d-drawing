@@ -29,8 +29,8 @@ degrees =
     Angle.degrees
 
 
-type Drawing
-    = Drawing
+type DrawingCoordinates
+    = DrawingCoordinates
 
 
 type alias Model =
@@ -63,7 +63,7 @@ update message model =
             ( { model | running = not model.running }, Cmd.none )
 
 
-viewBox : BoundingBox2d Pixels Drawing
+viewBox : BoundingBox2d Pixels DrawingCoordinates
 viewBox =
     BoundingBox2d.fromExtrema
         { minX = pixels 0
@@ -73,7 +73,7 @@ viewBox =
         }
 
 
-square : Rectangle2d Pixels Drawing
+square : Rectangle2d Pixels DrawingCoordinates
 square =
     Rectangle2d.with
         { x1 = pixels 50
@@ -83,17 +83,17 @@ square =
         }
 
 
-centerPoint : Point2d Pixels Drawing
+centerPoint : Point2d Pixels DrawingCoordinates
 centerPoint =
     Rectangle2d.centerPoint square
 
 
-diagonalAxis : Axis2d Pixels Drawing
+diagonalAxis : Axis2d Pixels DrawingCoordinates
 diagonalAxis =
     Axis2d.through centerPoint (Direction2d.fromAngle (degrees 45))
 
 
-diagonalGradientAttribute : Drawing2d.Attribute Pixels Drawing msg
+diagonalGradientAttribute : Drawing2d.Attribute Pixels DrawingCoordinates DrawingCoordinates msg
 diagonalGradientAttribute =
     Attributes.fillGradient <|
         Gradient.along diagonalAxis
@@ -118,7 +118,7 @@ example2 =
         [ Drawing2d.rectangle [] square ]
 
 
-fillableCircle : Point2d Pixels coordinates -> Drawing2d.Element Pixels coordinates msg
+fillableCircle : Point2d Pixels coordinates -> Drawing2d.Element Pixels coordinates drawingCoordinates msg
 fillableCircle point =
     Drawing2d.circle
         [ Attributes.blackStroke
