@@ -69,13 +69,13 @@ toColor lineColor =
 
 
 drawPolyline :
-    ( LineColor, Polyline2d units coordinates )
-    -> Drawing2d.Element units coordinates drawingCoordinates msg
+    ( LineColor, Polyline2d Pixels DrawingCoordinates )
+    -> Drawing2d.Element DrawingCoordinates Msg
 drawPolyline ( lineColor, polyline ) =
     Drawing2d.polyline [ Attributes.strokeColor (toColor lineColor) ] polyline
 
 
-rightClickHandler : Int -> Drawing2d.Attribute units coordinates drawingCoordinates Msg
+rightClickHandler : Int -> Drawing2d.Attribute DrawingCoordinates Msg
 rightClickHandler id =
     Events.onRightClick (Decode.succeed (always (LineRightClick id)))
 

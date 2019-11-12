@@ -32,7 +32,7 @@ type Msg
     | RightMouseDown Int (Point2d Pixels DrawingCoordinates)
 
 
-eventHandlers : Int -> List (Drawing2d.Attribute units coordinates DrawingCoordinates Msg)
+eventHandlers : Int -> List (Drawing2d.Attribute DrawingCoordinates Msg)
 eventHandlers id =
     [ Events.onLeftClick (Decode.succeed (LeftClick id))
     , Events.onRightClick (Decode.succeed (RightClick id))

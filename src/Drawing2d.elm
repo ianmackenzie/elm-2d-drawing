@@ -1,6 +1,8 @@
 module Drawing2d exposing
     ( Attribute
+    , AttributeIn
     , Element
+    , ElementIn
     , Size
     , add
     , arc
@@ -49,7 +51,7 @@ import Drawing2d.Gradient as Gradient
 import Drawing2d.Stops as Stops
 import Drawing2d.Svg as Svg
 import Drawing2d.Text as Text
-import Drawing2d.Types as Types exposing (Attribute(..), ClickDecoder, Fill(..), Gradient(..), MouseDownDecoder, MouseEvent, MouseInteraction(..), Stop, Stops(..), Stroke(..))
+import Drawing2d.Types as Types exposing (AttributeIn(..), ClickDecoder, Fill(..), Gradient(..), MouseDownDecoder, MouseEvent, MouseInteraction(..), Stop, Stops(..), Stroke(..))
 import Drawing2d.Utils exposing (decodeMouseEvent, drawingScale, toDrawingPoint, wrongButton)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
@@ -82,7 +84,7 @@ type Event drawingCoordinates msg
     = Event (BoundingBox2d Pixels drawingCoordinates -> msg)
 
 
-type Element units coordinates drawingCoordinates msg
+type ElementIn units coordinates drawingCoordinates msg
     = Element
         (Bool -- borders visible
          -> Float -- pixel size in current units
@@ -94,14 +96,22 @@ type Element units coordinates drawingCoordinates msg
         )
 
 
+type alias Element drawingCoordinates msg =
+    ElementIn Pixels drawingCoordinates drawingCoordinates msg
+
+
 type Size
     = Fixed
     | Fit
     | FitWidth
 
 
-type alias Attribute units coordinates drawingCoordinates msg =
-    Types.Attribute units coordinates drawingCoordinates msg
+type alias AttributeIn units coordinates drawingCoordinates msg =
+    Types.AttributeIn units coordinates drawingCoordinates msg
+
+
+type alias Attribute drawingCoordinates msg =
+    AttributeIn Pixels drawingCoordinates drawingCoordinates msg
 
 
 type alias AttributeValues units coordinates drawingCoordinates msg =
@@ -173,7 +183,7 @@ svgStaticCss =
     ]
 
 
-defaultAttributes : List (Attribute Pixels coordinates drawingCoordinates msg)
+defaultAttributes : List (Attribute drawingCoordinates msg)
 defaultAttributes =
     [ Attributes.blackStroke
     , Attributes.strokeWidth (pixels 1)
@@ -193,8 +203,8 @@ toHtml :
     { viewBox : BoundingBox2d Pixels drawingCoordinates
     , size : Size
     }
-    -> List (Attribute Pixels drawingCoordinates drawingCoordinates msg)
-    -> List (Element Pixels drawingCoordinates drawingCoordinates msg)
+    -> List (Attribute drawingCoordinates msg)
+    -> List (Element drawingCoordinates msg)
     -> Html msg
 toHtml { viewBox, size } attributes elements =
     let
@@ -353,16 +363,16 @@ fixed =
     Fixed
 
 
-empty : Element units coordinates drawingCoordinates msg
+empty : ElementIn units coordinates drawingCoordinates msg
 empty =
     Element (\_ _ _ _ _ _ -> Svg.text "")
 
 
 drawCurve :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Renderer curve drawingCoordinates msg
     -> curve
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 drawCurve attributes renderer curve =
     let
         attributeValues =
@@ -395,10 +405,10 @@ drawCurve attributes renderer curve =
 
 
 drawRegion :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Renderer region drawingCoordinates msg
     -> region
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 drawRegion attributes renderer region =
     let
         attributeValues =
@@ -448,17 +458,17 @@ drawRegion attributes renderer region =
 
 
 lineSegment :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> LineSegment2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 lineSegment attributes givenSegment =
     drawCurve attributes Svg.lineSegment2d givenSegment
 
 
 triangle :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Triangle2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
 
@@ -470,16 +480,16 @@ render :
     -> Float
     -> String
     -> String
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
     -> Svg (Event drawingCoordinates msg)
 render bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke (Element function) =
     function bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke
 
 
 group :
-    List (Attribute units coordinates drawingCoordinates msg)
-    -> List (Element units coordinates drawingCoordinates msg)
-    -> Element units coordinates drawingCoordinates msg
+    List (AttributeIn units coordinates drawingCoordinates msg)
+    -> List (ElementIn units coordinates drawingCoordinates msg)
+    -> ElementIn units coordinates drawingCoordinates msg
 group attributes childElements =
     groupLike "g" [] (collectAttributeValues attributes) childElements
 
@@ -488,8 +498,8 @@ groupLike :
     String
     -> List (Svg.Attribute (Event drawingCoordinates msg))
     -> AttributeValues units coordinates drawingCoordinates msg
-    -> List (Element units coordinates drawingCoordinates msg)
-    -> Element units coordinates drawingCoordinates msg
+    -> List (ElementIn units coordinates drawingCoordinates msg)
+    -> ElementIn units coordinates drawingCoordinates msg
 groupLike tag extraSvgAttributes attributeValues childElements =
     Element <|
         \currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
@@ -565,90 +575,90 @@ groupLike tag extraSvgAttributes attributeValues childElements =
 
 
 add :
-    List (Attribute units coordinates drawingCoordinates msg)
-    -> Element units coordinates drawingCoordinates msg
-    -> Element units coordinates drawingCoordinates msg
+    List (AttributeIn units coordinates drawingCoordinates msg)
+    -> ElementIn units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 add attributes element =
     group attributes [ element ]
 
 
 arc :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Arc2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 arc attributes givenArc =
     drawCurve attributes Svg.arc2d givenArc
 
 
 quadraticSpline :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> QuadraticSpline2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 quadraticSpline attributes givenSpline =
     drawCurve attributes Svg.quadraticSpline2d givenSpline
 
 
 cubicSpline :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> CubicSpline2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 cubicSpline attributes givenSpline =
     drawCurve attributes Svg.cubicSpline2d givenSpline
 
 
 polyline :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Polyline2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 polyline attributes givenPolyline =
     drawCurve attributes Svg.polyline2d givenPolyline
 
 
 polygon :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Polygon2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 polygon attributes givenPolygon =
     drawRegion attributes Svg.polygon2d givenPolygon
 
 
 circle :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Circle2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 circle attributes givenCircle =
     drawRegion attributes Svg.circle2d givenCircle
 
 
 ellipticalArc :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> EllipticalArc2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 ellipticalArc attributes givenArc =
     drawCurve attributes Svg.ellipticalArc2d givenArc
 
 
 ellipse :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Ellipse2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 ellipse attributes givenEllipse =
     drawRegion attributes Svg.ellipse2d givenEllipse
 
 
 rectangle :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Rectangle2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 rectangle attributes givenRectangle =
     drawRegion attributes Svg.rectangle2d givenRectangle
 
 
 text :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> Point2d units coordinates
     -> String
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 text attributes position string =
     let
         attributeValues =
@@ -676,10 +686,10 @@ text attributes position string =
 
 
 image :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> String
     -> Rectangle2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 image attributes givenUrl givenRectangle =
     let
         attributeValues =
@@ -733,8 +743,8 @@ placementTransform frame =
 
 placeIn :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Element units localCoordinates drawingCoordinates msg
-    -> Element units globalCoordinates drawingCoordinates msg
+    -> ElementIn units localCoordinates drawingCoordinates msg
+    -> ElementIn units globalCoordinates drawingCoordinates msg
 placeIn frame (Element function) =
     Element
         (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
@@ -796,8 +806,8 @@ placeIn frame (Element function) =
 scaleAbout :
     Point2d units coordinates
     -> Float
-    -> Element units coordinates drawingCoordinates msg
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 scaleAbout point scale element =
     scaleImpl point scale element
 
@@ -805,8 +815,8 @@ scaleAbout point scale element =
 scaleImpl :
     Point2d units1 coordinates
     -> Float
-    -> Element units1 coordinates drawingCoordinates msg
-    -> Element units2 coordinates drawingCoordinates msg
+    -> ElementIn units1 coordinates drawingCoordinates msg
+    -> ElementIn units2 coordinates drawingCoordinates msg
 scaleImpl point scale (Element function) =
     let
         { x, y } =
@@ -897,16 +907,16 @@ scaleImpl point scale (Element function) =
 
 relativeTo :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Element units globalCoordinates drawingCoordinates msg
-    -> Element units localCoordinates drawingCoordinates msg
+    -> ElementIn units globalCoordinates drawingCoordinates msg
+    -> ElementIn units localCoordinates drawingCoordinates msg
 relativeTo frame element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
 
 
 translateBy :
     Vector2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 translateBy displacement element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
 
@@ -914,8 +924,8 @@ translateBy displacement element =
 translateIn :
     Direction2d coordinates
     -> Quantity Float units
-    -> Element units coordinates drawingCoordinates msg
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 translateIn direction distance element =
     element |> translateBy (Vector2d.withLength distance direction)
 
@@ -923,32 +933,32 @@ translateIn direction distance element =
 rotateAround :
     Point2d units coordinates
     -> Angle
-    -> Element units coordinates drawingCoordinates msg
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 rotateAround centerPoint angle element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
 
 
 mirrorAcross :
     Axis2d units coordinates
-    -> Element units coordinates drawingCoordinates msg
-    -> Element units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
+    -> ElementIn units coordinates drawingCoordinates msg
 mirrorAcross axis element =
     element |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
 
 
 at :
     Quantity Float (Rate units2 units1)
-    -> Element units1 coordinates drawingCoordinates msg
-    -> Element units2 coordinates drawingCoordinates msg
+    -> ElementIn units1 coordinates drawingCoordinates msg
+    -> ElementIn units2 coordinates drawingCoordinates msg
 at (Quantity scale) element =
     scaleImpl Point2d.origin scale element
 
 
 at_ :
     Quantity Float (Rate units1 units2)
-    -> Element units1 coordinates drawingCoordinates msg
-    -> Element units2 coordinates drawingCoordinates msg
+    -> ElementIn units1 coordinates drawingCoordinates msg
+    -> ElementIn units2 coordinates drawingCoordinates msg
 at_ (Quantity scale) element =
     scaleImpl Point2d.origin (1 / scale) element
 
@@ -960,8 +970,8 @@ mapEvent function (Event callback) =
 
 map :
     (a -> b)
-    -> Element units coordinates drawingCoordinates a
-    -> Element units coordinates drawingCoordinates b
+    -> ElementIn units coordinates drawingCoordinates a
+    -> ElementIn units coordinates drawingCoordinates b
 map mapFunction (Element drawFunction) =
     Element
         (\arg1 arg2 arg3 arg4 arg5 arg6 ->
@@ -1211,7 +1221,7 @@ transformEncoded gradient function =
 
 
 setAttribute :
-    Attribute units coordinates drawingCoordinates msg
+    AttributeIn units coordinates drawingCoordinates msg
     -> AttributeValues units coordinates drawingCoordinates msg
     -> AttributeValues units coordinates drawingCoordinates msg
 setAttribute attribute attributeValues =
@@ -1266,14 +1276,14 @@ setAttribute attribute attributeValues =
 
 
 collectAttributeValues :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> AttributeValues units coordinates drawingCoordinates msg
 collectAttributeValues attributeList =
     assignAttributes attributeList emptyAttributeValues
 
 
 assignAttributes :
-    List (Attribute units coordinates drawingCoordinates msg)
+    List (AttributeIn units coordinates drawingCoordinates msg)
     -> AttributeValues units coordinates drawingCoordinates msg
     -> AttributeValues units coordinates drawingCoordinates msg
 assignAttributes attributeList attributeValues =

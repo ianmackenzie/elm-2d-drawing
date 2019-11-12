@@ -1,5 +1,5 @@
 module Drawing2d.Types exposing
-    ( Attribute(..)
+    ( AttributeIn(..)
     , ClickDecoder
     , Fill(..)
     , Gradient(..)
@@ -65,7 +65,7 @@ type alias MouseDownDecoder drawingCoordinates msg =
     Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
 
 
-type Attribute units coordinates drawingCoordinates msg
+type AttributeIn units coordinates drawingCoordinates msg
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
     | FontSize Float
