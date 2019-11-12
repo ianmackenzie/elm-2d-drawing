@@ -5,10 +5,12 @@ import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Browser.Events
 import Color exposing (Color)
-import Drawing2d exposing (DrawingCoordinates)
+import Dict exposing (Dict)
+import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
 import Drawing2d.Gradient as Gradient
+import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Element
 import Element.Border
 import Html exposing (Html)
@@ -22,36 +24,60 @@ import Triangle2d
 import Vector2d
 
 
-type MouseButton
-    = LeftButton
-    | RightButton
+type DrawingCoordinates
+    = DrawingCoordinates
+
+
+type LineColor
+    = Blue
+    | Green
 
 
 type Msg
-    = MouseDown MouseButton (Point2d Pixels DrawingCoordinates) (Decoder (Point2d Pixels DrawingCoordinates))
+    = StartDrawing LineColor (Point2d Pixels DrawingCoordinates) (MouseInteraction DrawingCoordinates)
     | MouseMove (Point2d Pixels DrawingCoordinates)
-    | MouseUp MouseButton (Point2d Pixels DrawingCoordinates)
+    | MouseUp
+    | DrawingRightClick
+    | LineRightClick Int
 
 
 type DrawState
     = Drawing
-        { activeButton : MouseButton
+        { lineColor : LineColor
         , lastPoint : Point2d Pixels DrawingCoordinates
         , accumulatedPoints : List (Point2d Pixels DrawingCoordinates)
-        , pointDecoder : Decoder (Point2d Pixels DrawingCoordinates)
+        , mouseInteraction : MouseInteraction DrawingCoordinates
         }
     | NotDrawing
 
 
 type alias Model =
     { drawState : DrawState
-    , lines : List ( Color, Polyline2d Pixels DrawingCoordinates )
+    , nextLineId : Int
+    , linesById : Dict Int ( LineColor, Polyline2d Pixels DrawingCoordinates )
     }
 
 
-drawPolyline : ( Color, Polyline2d Pixels DrawingCoordinates ) -> Drawing2d.Element Pixels DrawingCoordinates msg
-drawPolyline ( color, polyline ) =
-    Drawing2d.polyline [ Attributes.strokeColor color ] polyline
+toColor : LineColor -> Color
+toColor lineColor =
+    case lineColor of
+        Blue ->
+            Color.blue
+
+        Green ->
+            Color.green
+
+
+drawPolyline :
+    ( LineColor, Polyline2d units coordinates )
+    -> Drawing2d.Element units coordinates drawingCoordinates msg
+drawPolyline ( lineColor, polyline ) =
+    Drawing2d.polyline [ Attributes.strokeColor (toColor lineColor) ] polyline
+
+
+rightClickHandler : Int -> Drawing2d.Attribute units coordinates drawingCoordinates Msg
+rightClickHandler id =
+    Events.onRightClick (Decode.succeed (always (LineRightClick id)))
 
 
 view : Model -> Html Msg
@@ -65,16 +91,24 @@ view model =
                 , maxY = pixels 400
                 }
 
-        allLines =
+        activeLine =
             case model.drawState of
-                Drawing { activeButton, accumulatedPoints } ->
-                    ( lineColor activeButton
-                    , Polyline2d.fromVertices accumulatedPoints
-                    )
-                        :: model.lines
+                Drawing { lineColor, accumulatedPoints } ->
+                    drawPolyline ( lineColor, Polyline2d.fromVertices accumulatedPoints )
 
                 NotDrawing ->
-                    model.lines
+                    Drawing2d.empty
+
+        existingLines =
+            Dict.toList model.linesById
+                |> List.map
+                    (\( id, ( color, polyline ) ) ->
+                        drawPolyline ( color, polyline )
+                            |> Drawing2d.add [ rightClickHandler id ]
+                    )
+
+        allLines =
+            activeLine :: existingLines
     in
     Element.layout [ Element.width Element.fill ] <|
         Element.el [ Element.padding 20 ] <|
@@ -89,30 +123,29 @@ view model =
                         { viewBox = viewBox
                         , size = Drawing2d.fit
                         }
-                        [ Drawing2d.onLeftMouseDown (MouseDown LeftButton)
-                        , Drawing2d.onRightMouseDown (MouseDown RightButton)
-                        , Drawing2d.onLeftMouseUp (MouseUp LeftButton)
-                        , Drawing2d.onRightMouseUp (MouseUp RightButton)
+                        [ Events.onLeftMouseDown (Decode.succeed (StartDrawing Blue))
+                        , Events.onRightMouseDown (Decode.succeed (StartDrawing Green))
+                        , Events.onRightClick (Decode.succeed (always DrawingRightClick))
+                        , Attributes.strokeWidth (pixels 5)
                         ]
-                        []
-                        (List.map drawPolyline allLines)
+                        allLines
                 )
 
 
-lineColor : MouseButton -> Color
-lineColor button =
-    case button of
-        LeftButton ->
-            Color.blue
+toggleColor : LineColor -> LineColor
+toggleColor lineColor =
+    case lineColor of
+        Blue ->
+            Green
 
-        RightButton ->
-            Color.green
+        Green ->
+            Blue
 
 
 update : Msg -> Model -> Model
 update message model =
-    case message |> Debug.log "message" of
-        MouseDown whichButton point decoder ->
+    case message of
+        StartDrawing lineColor point mouseInteraction ->
             case model.drawState of
                 Drawing _ ->
                     model
@@ -121,10 +154,10 @@ update message model =
                     { model
                         | drawState =
                             Drawing
-                                { activeButton = whichButton
+                                { lineColor = lineColor
                                 , lastPoint = point
                                 , accumulatedPoints = [ point ]
-                                , pointDecoder = decoder
+                                , mouseInteraction = mouseInteraction
                                 }
                     }
 
@@ -134,44 +167,57 @@ update message model =
                     { model
                         | drawState =
                             Drawing
-                                { activeButton = currentDraw.activeButton
+                                { lineColor = currentDraw.lineColor
                                 , lastPoint = point
                                 , accumulatedPoints = point :: currentDraw.accumulatedPoints
-                                , pointDecoder = currentDraw.pointDecoder
+                                , mouseInteraction = currentDraw.mouseInteraction
                                 }
                     }
 
                 NotDrawing ->
                     model
 
-        MouseUp whichButton point ->
+        MouseUp ->
             case model.drawState of
-                Drawing { activeButton, accumulatedPoints } ->
-                    if whichButton == activeButton then
-                        { model
-                            | lines =
-                                ( lineColor activeButton
-                                , Polyline2d.fromVertices accumulatedPoints
-                                )
-                                    :: model.lines
-                            , drawState = NotDrawing
-                        }
-
-                    else
-                        model
+                Drawing { lineColor, accumulatedPoints } ->
+                    { model
+                        | linesById =
+                            model.linesById
+                                |> Dict.insert model.nextLineId
+                                    ( lineColor, Polyline2d.fromVertices accumulatedPoints )
+                        , nextLineId = model.nextLineId + 1
+                        , drawState = NotDrawing
+                    }
 
                 NotDrawing ->
                     model
+
+        DrawingRightClick ->
+            model
+
+        LineRightClick id ->
+            { model
+                | linesById =
+                    model.linesById
+                        |> Dict.update id
+                            (\entry ->
+                                case entry of
+                                    Just ( lineColor, polyline ) ->
+                                        Just ( toggleColor lineColor, polyline )
+
+                                    Nothing ->
+                                        Nothing
+                            )
+            }
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.drawState of
-        Drawing { activeButton, pointDecoder } ->
+        Drawing { lineColor, mouseInteraction } ->
             Sub.batch
-                [ Browser.Events.onMouseMove (Decode.map MouseMove pointDecoder)
-                , Browser.Events.onMouseUp
-                    (Decode.map (MouseUp activeButton) pointDecoder)
+                [ MouseInteraction.onMove mouseInteraction (Decode.succeed MouseMove)
+                , MouseInteraction.onEnd mouseInteraction (Decode.succeed MouseUp)
                 ]
 
         NotDrawing ->
@@ -181,7 +227,14 @@ subscriptions model =
 main : Program () Model Msg
 main =
     Browser.document
-        { init = always ( { drawState = NotDrawing, lines = [] }, Cmd.none )
+        { init =
+            always
+                ( { drawState = NotDrawing
+                  , linesById = Dict.empty
+                  , nextLineId = 1
+                  }
+                , Cmd.none
+                )
         , update = \message model -> ( update message model, Cmd.none )
         , view =
             \model ->
