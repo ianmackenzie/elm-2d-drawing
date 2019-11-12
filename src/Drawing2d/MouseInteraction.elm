@@ -1,15 +1,20 @@
 module Drawing2d.MouseInteraction exposing
-    ( onEnd
+    ( MouseInteraction
+    , onEnd
     , onMove
     )
 
 import Browser.Events
-import Drawing2d.Types exposing (MouseEvent, MouseInteraction(..))
-import Drawing2d.Utils exposing (decodeMouseEvent, wrongButton, decodePageX, decodePageY)
+import Drawing2d.Types as Types exposing (MouseEvent)
+import Drawing2d.Utils exposing (decodeMouseEvent, decodePageX, decodePageY, wrongButton)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Vector2d
+
+
+type alias MouseInteraction drawingCoordinates =
+    Types.MouseInteraction drawingCoordinates
 
 
 toDisplacedPoint :
@@ -28,6 +33,7 @@ toDisplacedPoint initialEvent drawingScale initialPoint pageX pageY =
     in
     initialPoint |> Point2d.translateBy displacement
 
+
 decodeDisplacedPoint :
     { initialEvent | pageX : Float, pageY : Float }
     -> Float
@@ -41,7 +47,7 @@ mouseMoveDecoder :
     MouseInteraction drawingCoordinates
     -> Decoder (Point2d Pixels drawingCoordinates -> msg)
     -> Decoder msg
-mouseMoveDecoder (MouseInteraction mouseInteraction) givenDecoder =
+mouseMoveDecoder (Types.MouseInteraction mouseInteraction) givenDecoder =
     let
         { initialEvent, drawingScale, initialPoint } =
             mouseInteraction
@@ -58,7 +64,7 @@ onMove mouseInteraction givenDecoder =
 
 
 decodeMouseUp : MouseInteraction drawingCoordinates -> Decoder msg -> Decoder msg
-decodeMouseUp (MouseInteraction mouseInteraction) givenDecoder =
+decodeMouseUp (Types.MouseInteraction mouseInteraction) givenDecoder =
     Decode.field "button" Decode.int
         |> Decode.andThen
             (\button ->
