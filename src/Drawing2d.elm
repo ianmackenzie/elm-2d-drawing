@@ -127,10 +127,6 @@ type alias Renderer a drawingCoordinates msg =
     List (Svg.Attribute (Event drawingCoordinates msg)) -> a -> Svg (Event drawingCoordinates msg)
 
 
-type alias MouseInteraction drawingCoordinates =
-    Types.MouseInteraction drawingCoordinates
-
-
 
 ---------- CONSTANTS ----------
 
