@@ -4,11 +4,13 @@ import Angle
 import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Color
-import Drawing2d exposing (DrawingCoordinates)
+import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
 import Drawing2d.Gradient as Gradient
+import Drawing2d.MouseInteraction exposing (MouseInteraction)
 import Html exposing (Html)
+import Json.Decode as Decode
 import LineSegment2d
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d exposing (Point2d)
@@ -17,14 +19,28 @@ import Triangle2d
 import Vector2d
 
 
-type RectangleCoordinates
-    = RectangleCoordinates
+type DrawingCoordinates
+    = DrawingCoordinates
 
 
 type Msg
     = LeftClick Int (Point2d Pixels DrawingCoordinates)
-    | LeftMouseUp Int (Point2d Pixels DrawingCoordinates)
     | RightClick Int (Point2d Pixels DrawingCoordinates)
+    | LeftMouseUp Int
+    | RightMouseUp Int
+    | LeftMouseDown Int (Point2d Pixels DrawingCoordinates)
+    | RightMouseDown Int (Point2d Pixels DrawingCoordinates)
+
+
+eventHandlers : Int -> List (Drawing2d.Attribute units coordinates DrawingCoordinates Msg)
+eventHandlers id =
+    [ Events.onLeftClick (Decode.succeed (LeftClick id))
+    , Events.onRightClick (Decode.succeed (RightClick id))
+    , Events.onLeftMouseUp (Decode.succeed (LeftMouseUp id))
+    , Events.onRightMouseUp (Decode.succeed (RightMouseUp id))
+    , Events.onLeftMouseDown (Decode.succeed (\point interaction -> LeftMouseDown id point))
+    , Events.onRightMouseDown (Decode.succeed (\point interaction -> RightMouseDown id point))
+    ]
 
 
 view : Html Msg
@@ -64,13 +80,12 @@ view =
                 }
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        []
         [ Attributes.strokeColor Color.black
         , Attributes.fillColor Color.white
         ]
-        [ rectangle1 |> Drawing2d.with [ Events.onLeftClick (LeftClick 1), Events.onLeftMouseUp (LeftMouseUp 1), Events.onRightMouseUp (RightClick 1) ]
-        , rectangle2 |> Drawing2d.with [ Events.onLeftClick (LeftClick 2), Events.onLeftMouseUp (LeftMouseUp 2), Events.onRightMouseUp (RightClick 2) ]
-        , rectangle3 |> Drawing2d.with [ Events.onLeftClick (LeftClick 3), Events.onLeftMouseUp (LeftMouseUp 3), Events.onRightMouseUp (RightClick 3) ]
+        [ rectangle1 |> Drawing2d.add (eventHandlers 1)
+        , rectangle2 |> Drawing2d.add (eventHandlers 2)
+        , rectangle3 |> Drawing2d.add (eventHandlers 3)
         ]
 
 
