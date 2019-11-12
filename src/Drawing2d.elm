@@ -2,6 +2,7 @@ module Drawing2d exposing
     ( Attribute
     , Element
     , Size
+    , add
     , arc
     , at
     , at_
@@ -561,6 +562,14 @@ groupLike tag extraSvgAttributes attributeValues childElements =
             Svg.node tag
                 (groupAttributes ++ extraSvgAttributes)
                 (gradientElements ++ childSvgElements)
+
+
+add :
+    List (Attribute units coordinates drawingCoordinates msg)
+    -> Element units coordinates drawingCoordinates msg
+    -> Element units coordinates drawingCoordinates msg
+add attributes element =
+    group attributes [ element ]
 
 
 arc :
