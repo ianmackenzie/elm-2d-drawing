@@ -77,7 +77,7 @@ drawPolyline ( lineColor, polyline ) =
 
 rightClickHandler : Int -> Drawing2d.Attribute DrawingCoordinates Msg
 rightClickHandler id =
-    Events.onRightClick (Decode.succeed (always (LineRightClick id)))
+    Events.onRightClick (always (LineRightClick id))
 
 
 view : Model -> Html Msg
@@ -123,9 +123,9 @@ view model =
                         { viewBox = viewBox
                         , size = Drawing2d.fit
                         }
-                        [ Events.onLeftMouseDown (Decode.succeed (StartDrawing Blue))
-                        , Events.onRightMouseDown (Decode.succeed (StartDrawing Green))
-                        , Events.onRightClick (Decode.succeed (always DrawingRightClick))
+                        [ Events.onLeftMouseDown (StartDrawing Blue)
+                        , Events.onRightMouseDown (StartDrawing Green)
+                        , Events.onRightClick (always DrawingRightClick)
                         , Attributes.strokeWidth (pixels 5)
                         ]
                         allLines

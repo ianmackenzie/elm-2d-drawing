@@ -34,12 +34,12 @@ type Msg
 
 eventHandlers : Int -> List (Drawing2d.Attribute DrawingCoordinates Msg)
 eventHandlers id =
-    [ Events.onLeftClick (Decode.succeed (LeftClick id))
-    , Events.onRightClick (Decode.succeed (RightClick id))
-    , Events.onLeftMouseUp (Decode.succeed (LeftMouseUp id))
-    , Events.onRightMouseUp (Decode.succeed (RightMouseUp id))
-    , Events.onLeftMouseDown (Decode.succeed (\point interaction -> LeftMouseDown id point))
-    , Events.onRightMouseDown (Decode.succeed (\point interaction -> RightMouseDown id point))
+    [ Events.onLeftClick (LeftClick id)
+    , Events.onRightClick (RightClick id)
+    , Events.onLeftMouseUp (LeftMouseUp id)
+    , Events.onRightMouseUp (RightMouseUp id)
+    , Events.onLeftMouseDown (\point interaction -> LeftMouseDown id point)
+    , Events.onRightMouseDown (\point interaction -> RightMouseDown id point)
     ]
 
 
