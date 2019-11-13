@@ -83,9 +83,9 @@ view =
         [ Attributes.strokeColor Color.black
         , Attributes.fillColor Color.white
         ]
-        [ rectangle1 |> Drawing2d.add (eventHandlers 1)
-        , rectangle2 |> Drawing2d.add (eventHandlers 2)
-        , rectangle3 |> Drawing2d.add (eventHandlers 3)
+        [ rectangle1 |> Drawing2d.addAttributes (eventHandlers 1)
+        , rectangle2 |> Drawing2d.addAttributes (eventHandlers 2)
+        , rectangle3 |> Drawing2d.addAttributes (eventHandlers 3)
         ]
 
 
