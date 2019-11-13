@@ -69,10 +69,11 @@ toColor lineColor =
 
 
 drawPolyline :
-    ( LineColor, Polyline2d Pixels DrawingCoordinates )
+    List (Drawing2d.Attribute DrawingCoordinates Msg)
+    -> ( LineColor, Polyline2d Pixels DrawingCoordinates )
     -> Drawing2d.Element DrawingCoordinates Msg
-drawPolyline ( lineColor, polyline ) =
-    Drawing2d.polyline [ Attributes.strokeColor (toColor lineColor) ] polyline
+drawPolyline attributes ( lineColor, polyline ) =
+    Drawing2d.polyline (Attributes.strokeColor (toColor lineColor) :: attributes) polyline
 
 
 rightClickHandler : Int -> Drawing2d.Attribute DrawingCoordinates Msg
@@ -94,18 +95,14 @@ view model =
         activeLine =
             case model.drawState of
                 Drawing { lineColor, accumulatedPoints } ->
-                    drawPolyline ( lineColor, Polyline2d.fromVertices accumulatedPoints )
+                    drawPolyline [] ( lineColor, Polyline2d.fromVertices accumulatedPoints )
 
                 NotDrawing ->
                     Drawing2d.empty
 
         existingLines =
             Dict.toList model.linesById
-                |> List.map
-                    (\( id, ( color, polyline ) ) ->
-                        drawPolyline ( color, polyline )
-                            |> Drawing2d.add [ rightClickHandler id ]
-                    )
+                |> List.map (\( id, line ) -> drawPolyline [ rightClickHandler id ] line)
 
         allLines =
             activeLine :: existingLines
