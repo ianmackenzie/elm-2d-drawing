@@ -51,7 +51,23 @@ import Drawing2d.Gradient as Gradient
 import Drawing2d.Stops as Stops
 import Drawing2d.Svg as Svg
 import Drawing2d.Text as Text
-import Drawing2d.Types as Types exposing (AttributeIn(..), ClickDecoder, Fill(..), Gradient(..), MouseDownDecoder, MouseEvent, MouseInteraction(..), Stop, Stops(..), Stroke(..))
+import Drawing2d.Types as Types
+    exposing
+        ( AttributeIn(..)
+        , ClickDecoder
+        , Fill(..)
+        , Gradient(..)
+        , MouseDownDecoder
+        , MouseEvent
+        , MouseInteraction(..)
+        , SingleTouchInteraction(..)
+        , SingleTouchMoveDecoder
+        , SingleTouchStartDecoder
+        , Stop
+        , Stops(..)
+        , Stroke(..)
+        , TouchEndDecoder
+        )
 import Drawing2d.Utils exposing (decodeMouseEvent, drawingScale, toDrawingPoint, wrongButton)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
@@ -131,6 +147,9 @@ type alias AttributeValues units coordinates drawingCoordinates msg =
     , onLeftMouseUp : Maybe (Decoder msg)
     , onMiddleMouseUp : Maybe (Decoder msg)
     , onRightMouseUp : Maybe (Decoder msg)
+    , onSingleTouchStart : Maybe (SingleTouchStartDecoder drawingCoordinates msg)
+    , onSingleTouchMove : Maybe ( SingleTouchMoveDecoder drawingCoordinates msg, SingleTouchInteraction drawingCoordinates )
+    , onSingleTouchEnd : Maybe ( TouchEndDecoder msg, SingleTouchInteraction drawingCoordinates )
     }
 
 
@@ -160,6 +179,9 @@ emptyAttributeValues =
     , onLeftMouseUp = Nothing
     , onMiddleMouseUp = Nothing
     , onRightMouseUp = Nothing
+    , onSingleTouchStart = Nothing
+    , onSingleTouchMove = Nothing
+    , onSingleTouchEnd = Nothing
     }
 
 
@@ -1273,6 +1295,15 @@ setAttribute attribute attributeValues =
 
         OnRightMouseUp decoder ->
             { attributeValues | onRightMouseUp = Just decoder }
+
+        OnSingleTouchStart decoder ->
+            { attributeValues | onSingleTouchStart = Just decoder }
+
+        OnSingleTouchMove decoder interaction ->
+            { attributeValues | onSingleTouchMove = Just ( decoder, interaction ) }
+
+        OnSingleTouchEnd decoder interaction ->
+            { attributeValues | onSingleTouchEnd = Just ( decoder, interaction ) }
 
 
 collectAttributeValues :
