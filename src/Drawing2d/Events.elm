@@ -7,6 +7,7 @@ module Drawing2d.Events exposing
     , decodeRightClick
     , decodeRightMouseDown
     , decodeRightMouseUp
+    , decodeSingleTouchStart
     , onLeftClick
     , onLeftMouseDown
     , onLeftMouseUp
@@ -15,10 +16,11 @@ module Drawing2d.Events exposing
     , onRightClick
     , onRightMouseDown
     , onRightMouseUp
+    , onSingleTouchStart
     )
 
 import Drawing2d.Attributes exposing (AttributeIn)
-import Drawing2d.Types as Types exposing (MouseInteraction)
+import Drawing2d.Types as Types exposing (MouseInteraction, SingleTouchInteraction)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
@@ -64,6 +66,11 @@ onMiddleMouseUp message =
     decodeMiddleMouseUp (Decode.succeed message)
 
 
+onSingleTouchStart : (Point2d Pixels drawingCoordinates -> SingleTouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
+onSingleTouchStart callback =
+    decodeSingleTouchStart (Decode.succeed callback)
+
+
 decodeLeftClick : Decoder (Point2d Pixels drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeLeftClick decoder =
     Types.OnLeftClick decoder
@@ -102,3 +109,8 @@ decodeMiddleMouseUp decoder =
 decodeRightMouseUp : Decoder msg -> AttributeIn units coordinates drawingCoordinates msg
 decodeRightMouseUp decoder =
     Types.OnRightMouseUp decoder
+
+
+decodeSingleTouchStart : Decoder (Point2d Pixels drawingCoordinates -> SingleTouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
+decodeSingleTouchStart decoder =
+    Types.OnSingleTouchStart decoder

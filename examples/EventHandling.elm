@@ -9,6 +9,8 @@ import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
 import Drawing2d.Gradient as Gradient
 import Drawing2d.MouseInteraction exposing (MouseInteraction)
+import Drawing2d.SingleTouchInteraction as SingleTouchInteraction exposing (SingleTouchInteraction)
+import Duration exposing (Duration)
 import Html exposing (Html)
 import Json.Decode as Decode
 import LineSegment2d
@@ -23,6 +25,12 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
+type alias Model =
+    { messages : List String
+    , touchInteraction : Maybe (SingleTouchInteraction DrawingCoordinates)
+    }
+
+
 type Msg
     = LeftClick Int (Point2d Pixels DrawingCoordinates)
     | RightClick Int (Point2d Pixels DrawingCoordinates)
@@ -30,21 +38,41 @@ type Msg
     | RightMouseUp Int
     | LeftMouseDown Int (Point2d Pixels DrawingCoordinates)
     | RightMouseDown Int (Point2d Pixels DrawingCoordinates)
+    | SingleTouchStart Int (Point2d Pixels DrawingCoordinates) (SingleTouchInteraction DrawingCoordinates)
+    | SingleTouchEnd Int Duration
+    | SingleTouchMove Int (Point2d Pixels DrawingCoordinates)
 
 
-eventHandlers : Int -> List (Drawing2d.Attribute DrawingCoordinates Msg)
-eventHandlers id =
-    [ Events.onLeftClick (LeftClick id)
-    , Events.onRightClick (RightClick id)
-    , Events.onLeftMouseUp (LeftMouseUp id)
-    , Events.onRightMouseUp (RightMouseUp id)
-    , Events.onLeftMouseDown (\point interaction -> LeftMouseDown id point)
-    , Events.onRightMouseDown (\point interaction -> RightMouseDown id point)
-    ]
+eventHandlers : Int -> Model -> List (Drawing2d.Attribute DrawingCoordinates Msg)
+eventHandlers id model =
+    let
+        constantHandlers =
+            [ Events.onLeftClick (LeftClick id)
+            , Events.onRightClick (RightClick id)
+            , Events.onLeftMouseUp (LeftMouseUp id)
+            , Events.onRightMouseUp (RightMouseUp id)
+            , Events.onLeftMouseDown (\point interaction -> LeftMouseDown id point)
+            , Events.onRightMouseDown (\point interaction -> RightMouseDown id point)
+            , Events.onSingleTouchStart (SingleTouchStart id)
+            ]
+    in
+    case model.touchInteraction of
+        Just interaction ->
+            let
+                touchMoveHandler =
+                    interaction |> SingleTouchInteraction.onMove (SingleTouchMove id)
+
+                touchEndHandler =
+                    interaction |> SingleTouchInteraction.onEnd (SingleTouchEnd id)
+            in
+            touchMoveHandler :: touchEndHandler :: constantHandlers
+
+        Nothing ->
+            constantHandlers
 
 
-view : Html Msg
-view =
+view : Model -> Html Msg
+view model =
     let
         rectangle =
             Rectangle2d.with
@@ -78,35 +106,51 @@ view =
                 , maxX = pixels 800
                 , maxY = pixels 400
                 }
+
+        messageLine message =
+            Html.div [] [ Html.text message ]
     in
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        [ Attributes.strokeColor Color.black
-        , Attributes.fillColor Color.white
-        ]
-        [ rectangle1 |> Drawing2d.addAttributes (eventHandlers 1)
-        , rectangle2 |> Drawing2d.addAttributes (eventHandlers 2)
-        , rectangle3 |> Drawing2d.addAttributes (eventHandlers 3)
+    Html.div []
+        [ Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
+            [ Attributes.strokeColor Color.black
+            , Attributes.fillColor Color.white
+            ]
+            [ rectangle1 |> Drawing2d.addAttributes (eventHandlers 1 model)
+            , rectangle2 |> Drawing2d.addAttributes (eventHandlers 2 model)
+            , rectangle3 |> Drawing2d.addAttributes (eventHandlers 3 model)
+            ]
+        , Html.div [] (List.map messageLine model.messages)
         ]
 
 
-update : Msg -> () -> ( (), Cmd Msg )
-update message () =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update message model =
     let
-        _ =
-            Debug.log "Message" message
+        updatedModel =
+            case message of
+                SingleTouchStart id point interaction ->
+                    { model | touchInteraction = Just interaction }
+
+                SingleTouchEnd id duration ->
+                    { model | touchInteraction = Nothing }
+
+                _ ->
+                    model
     in
-    ( (), Cmd.none )
+    ( { updatedModel | messages = model.messages ++ [ Debug.toString message ] }
+    , Cmd.none
+    )
 
 
-main : Program () () Msg
+main : Program () Model Msg
 main =
     Browser.document
-        { init = always ( (), Cmd.none )
+        { init = always ( { messages = [], touchInteraction = Nothing }, Cmd.none )
         , update = update
         , view =
-            always
+            \model ->
                 { title = "EventHandling"
-                , body = [ view ]
+                , body = [ view model ]
                 }
         , subscriptions = always Sub.none
         }

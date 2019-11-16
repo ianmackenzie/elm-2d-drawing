@@ -51,6 +51,9 @@ import Drawing2d.Gradient as Gradient
 import Drawing2d.Stops as Stops
 import Drawing2d.Svg as Svg
 import Drawing2d.Text as Text
+import Drawing2d.TouchEndEvent as TouchEndEvent
+import Drawing2d.TouchMoveEvent as TouchMoveEvent
+import Drawing2d.TouchStartEvent as TouchStartEvent
 import Drawing2d.Types as Types
     exposing
         ( AttributeIn(..)
@@ -58,8 +61,8 @@ import Drawing2d.Types as Types
         , Fill(..)
         , Gradient(..)
         , MouseDownDecoder
-        , MouseEvent
         , MouseInteraction(..)
+        , MouseStartEvent
         , SingleTouchInteraction(..)
         , SingleTouchMoveDecoder
         , SingleTouchStartDecoder
@@ -67,8 +70,25 @@ import Drawing2d.Types as Types
         , Stops(..)
         , Stroke(..)
         , TouchEndDecoder
+        , TouchEndEvent
+        , TouchMove
+        , TouchMoveEvent
+        , TouchStart
+        , TouchStartEvent
         )
-import Drawing2d.Utils exposing (decodeMouseEvent, drawingScale, toDrawingPoint, wrongButton)
+import Drawing2d.Utils
+    exposing
+        ( computeDrawingScale
+        , debugDecoder
+        , decodeButton
+        , decodeMouseStartEvent
+        , decodeTouchEndEvent
+        , decodeTouchMoveEvent
+        , decodeTouchStartEvent
+        , toDisplacedPoint
+        , toDrawingPoint
+        , wrongButton
+        )
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -295,14 +315,14 @@ toHtml { viewBox, size } attributes elements =
         [ svgElement False 1 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]
 
 
-wrapClick : MouseEvent -> (Point2d Pixels drawingCoordinates -> msg) -> Event drawingCoordinates msg
+wrapClick : MouseStartEvent -> (Point2d Pixels drawingCoordinates -> msg) -> Event drawingCoordinates msg
 wrapClick mouseEvent userCallback =
-    Event (\viewBox -> userCallback (toDrawingPoint viewBox mouseEvent))
+    Event (\viewBox -> userCallback (toDrawingPoint viewBox mouseEvent.container mouseEvent))
 
 
 handleClick : ClickDecoder drawingCoordinates msg -> Decoder (Event drawingCoordinates msg)
 handleClick givenDecoder =
-    Decode.map2 wrapClick decodeMouseEvent givenDecoder
+    Decode.map2 wrapClick decodeMouseStartEvent givenDecoder
 
 
 preventDefaultAndStopPropagation :
@@ -313,7 +333,7 @@ preventDefaultAndStopPropagation =
 
 
 wrapMouseDown :
-    MouseEvent
+    MouseStartEvent
     -> (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
     -> Event drawingCoordinates msg
 wrapMouseDown mouseEvent userCallback =
@@ -321,13 +341,13 @@ wrapMouseDown mouseEvent userCallback =
         (\viewBox ->
             let
                 drawingPoint =
-                    toDrawingPoint viewBox mouseEvent
+                    toDrawingPoint viewBox mouseEvent.container mouseEvent
 
                 mouseInteraction =
                     MouseInteraction
                         { initialEvent = mouseEvent
                         , viewBox = viewBox
-                        , drawingScale = drawingScale viewBox mouseEvent.container
+                        , drawingScale = computeDrawingScale viewBox mouseEvent.container
                         , initialPoint = drawingPoint
                         }
             in
@@ -339,7 +359,7 @@ handleMouseDown :
     Dict Int (MouseDownDecoder drawingCoordinates msg)
     -> Decoder (Event drawingCoordinates msg)
 handleMouseDown decodersByButton =
-    decodeMouseEvent
+    decodeMouseStartEvent
         |> Decode.andThen
             (\mouseEvent ->
                 case Dict.get mouseEvent.button decodersByButton of
@@ -358,10 +378,10 @@ wrapMessage message =
 
 handleMouseUp : Dict Int (Decoder msg) -> Decoder (Event drawingCoordinates msg)
 handleMouseUp decodersByButton =
-    decodeMouseEvent
+    decodeButton
         |> Decode.andThen
-            (\mouseEvent ->
-                case Dict.get mouseEvent.button decodersByButton of
+            (\button ->
+                case Dict.get button decodersByButton of
                     Just givenDecoder ->
                         Decode.map wrapMessage givenDecoder
 
@@ -1448,6 +1468,9 @@ addEventHandlers attributeValues svgAttributes =
         |> addOnRightClick attributeValues.onRightClick
         |> addOnMouseDown attributeValues
         |> addOnMouseUp attributeValues
+        |> addOnTouchStart attributeValues
+        |> addOnTouchMove attributeValues
+        |> addOnTouchEnd attributeValues
 
 
 on :
@@ -1530,6 +1553,228 @@ addOnMouseUp attributeValues svgAttributes =
 
     else
         on "mouseup" (handleMouseUp decodersByButton) :: svgAttributes
+
+
+type alias TouchStartHandler drawingCoordinates msg =
+    TouchStartEvent -> Decoder (Event drawingCoordinates msg)
+
+
+addOnTouchStart :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnTouchStart attributeValues svgAttributes =
+    let
+        touchStartHandlers =
+            []
+                |> addSingleTouchStartHandler attributeValues.onSingleTouchStart
+    in
+    if List.isEmpty touchStartHandlers then
+        svgAttributes
+
+    else
+        on "touchstart" (handleTouchStart touchStartHandlers) :: svgAttributes
+
+
+addSingleTouchStartHandler :
+    Maybe (SingleTouchStartDecoder drawingCoordinates msg)
+    -> List (TouchStartHandler drawingCoordinates msg)
+    -> List (TouchStartHandler drawingCoordinates msg)
+addSingleTouchStartHandler maybeDecoder handlers =
+    case maybeDecoder of
+        Nothing ->
+            handlers
+
+        Just decoder ->
+            decodeSingleTouchStart decoder :: handlers
+
+
+decodeSingleTouchStart :
+    SingleTouchStartDecoder drawingCoordinates msg
+    -> TouchStartEvent
+    -> Decoder (Event drawingCoordinates msg)
+decodeSingleTouchStart givenDecoder touchStartEvent =
+    case TouchStartEvent.singleTouch touchStartEvent of
+        Just singleTouch ->
+            Decode.map (wrapSingleTouchStart touchStartEvent singleTouch) givenDecoder
+
+        Nothing ->
+            Decode.fail "Not a single touch"
+
+
+wrapSingleTouchStart : TouchStartEvent -> TouchStart -> (Point2d Pixels drawingCoordinates -> SingleTouchInteraction drawingCoordinates -> msg) -> Event drawingCoordinates msg
+wrapSingleTouchStart touchStartEvent touch userCallback =
+    Event
+        (\viewBox ->
+            let
+                drawingPoint =
+                    toDrawingPoint viewBox touchStartEvent.container touch
+
+                singleTouchInteraction =
+                    SingleTouchInteraction
+                        { container = touchStartEvent.container
+                        , initialTouch = touch
+                        , startTimeStamp = touchStartEvent.timeStamp
+                        , viewBox = viewBox
+                        , drawingScale = computeDrawingScale viewBox touchStartEvent.container
+                        , initialPoint = drawingPoint
+                        }
+            in
+            userCallback drawingPoint singleTouchInteraction
+        )
+
+
+wrapSingleTouchMove : SingleTouchInteraction drawingCoordinates -> TouchMove -> (Point2d Pixels drawingCoordinates -> msg) -> Event drawingCoordinates msg
+wrapSingleTouchMove (SingleTouchInteraction interaction) touch userCallback =
+    Event
+        (\viewBox ->
+            let
+                drawingPoint =
+                    toDisplacedPoint interaction.initialTouch
+                        interaction.drawingScale
+                        interaction.initialPoint
+                        touch
+            in
+            userCallback drawingPoint
+        )
+
+
+handleTouchStart :
+    List (TouchStartHandler drawingCoordinates msg)
+    -> Decoder (Event drawingCoordinates msg)
+handleTouchStart handlers =
+    decodeTouchStartEvent
+        |> Decode.andThen
+            (\touchStartEvent ->
+                Decode.oneOf (List.map ((|>) touchStartEvent) handlers)
+            )
+
+
+handleTouchMove :
+    List (TouchMoveHandler drawingCoordinates msg)
+    -> Decoder (Event drawingCoordinates msg)
+handleTouchMove handlers =
+    decodeTouchMoveEvent
+        |> Decode.andThen
+            (\touchMoveEvent ->
+                Decode.oneOf (List.map ((|>) touchMoveEvent) handlers)
+            )
+
+
+type alias TouchEndHandler drawingCoordinates msg =
+    TouchEndEvent -> Decoder (Event drawingCoordinates msg)
+
+
+type alias TouchMoveHandler drawingCoordinates msg =
+    TouchMoveEvent -> Decoder (Event drawingCoordinates msg)
+
+
+addOnTouchMove :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnTouchMove attributeValues svgAttributes =
+    let
+        touchMoveHandlers =
+            []
+                |> addSingleTouchMoveHandler attributeValues.onSingleTouchMove
+    in
+    if List.isEmpty touchMoveHandlers then
+        svgAttributes
+
+    else
+        on "touchmove" (handleTouchMove touchMoveHandlers) :: svgAttributes
+
+
+addSingleTouchMoveHandler :
+    Maybe ( SingleTouchMoveDecoder drawingCoordinates msg, SingleTouchInteraction drawingCoordinates )
+    -> List (TouchMoveHandler drawingCoordinates msg)
+    -> List (TouchMoveHandler drawingCoordinates msg)
+addSingleTouchMoveHandler maybePair handlers =
+    case maybePair of
+        Nothing ->
+            handlers
+
+        Just ( decoder, singleTouchInteraction ) ->
+            decodeSingleTouchMove decoder singleTouchInteraction :: handlers
+
+
+addOnTouchEnd :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addOnTouchEnd attributeValues svgAttributes =
+    let
+        touchEndHandlers =
+            []
+                |> addSingleTouchEndHandler attributeValues.onSingleTouchEnd
+    in
+    if List.isEmpty touchEndHandlers then
+        svgAttributes
+
+    else
+        on "touchend" (handleTouchEnd touchEndHandlers) :: svgAttributes
+
+
+addSingleTouchEndHandler :
+    Maybe ( TouchEndDecoder msg, SingleTouchInteraction drawingCoordinates )
+    -> List (TouchEndHandler drawingCoordinates msg)
+    -> List (TouchEndHandler drawingCoordinates msg)
+addSingleTouchEndHandler maybePair handlers =
+    case maybePair of
+        Nothing ->
+            handlers
+
+        Just ( decoder, singleTouchInteraction ) ->
+            decodeSingleTouchEnd decoder singleTouchInteraction :: handlers
+
+
+decodeSingleTouchEnd :
+    TouchEndDecoder msg
+    -> SingleTouchInteraction drawingCoordinates
+    -> TouchEndEvent
+    -> Decoder (Event drawingCoordinates msg)
+decodeSingleTouchEnd givenDecoder singleTouchInteraction touchEndEvent =
+    if touchEndEvent |> TouchEndEvent.isEndOf singleTouchInteraction then
+        let
+            (SingleTouchInteraction { startTimeStamp }) =
+                singleTouchInteraction
+
+            touchDuration =
+                touchEndEvent.timeStamp
+                    |> Quantity.minus startTimeStamp
+        in
+        givenDecoder
+            |> Decode.map ((|>) touchDuration)
+            |> Decode.map wrapMessage
+
+    else
+        Decode.fail "Not the end of the given touch"
+
+
+decodeSingleTouchMove :
+    SingleTouchMoveDecoder drawingCoordinates msg
+    -> SingleTouchInteraction drawingCoordinates
+    -> TouchMoveEvent
+    -> Decoder (Event drawingCoordinates msg)
+decodeSingleTouchMove givenDecoder singleTouchInteraction touchMoveEvent =
+    case TouchMoveEvent.singleTouch singleTouchInteraction touchMoveEvent of
+        Just touch ->
+            Decode.map (wrapSingleTouchMove singleTouchInteraction touch) givenDecoder
+
+        Nothing ->
+            Decode.fail "Not a move of the given touch"
+
+
+handleTouchEnd :
+    List (TouchEndHandler drawingCoordinates msg)
+    -> Decoder (Event drawingCoordinates msg)
+handleTouchEnd handlers =
+    decodeTouchEndEvent
+        |> Decode.andThen
+            (\touchEndEvent ->
+                Decode.oneOf (List.map ((|>) touchEndEvent) handlers)
+            )
 
 
 addStrokeGradient :

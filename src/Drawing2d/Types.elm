@@ -4,15 +4,21 @@ module Drawing2d.Types exposing
     , Fill(..)
     , Gradient(..)
     , MouseDownDecoder
-    , MouseEvent
     , MouseInteraction(..)
+    , MouseMoveEvent
+    , MouseStartEvent
     , SingleTouchInteraction(..)
     , SingleTouchMoveDecoder
     , SingleTouchStartDecoder
     , Stop
     , Stops(..)
     , Stroke(..)
+    , TouchEnd
     , TouchEndDecoder
+    , TouchEndEvent
+    , TouchMove
+    , TouchMoveEvent
+    , TouchStart
     , TouchStartEvent
     )
 
@@ -105,7 +111,7 @@ type AttributeIn units coordinates drawingCoordinates msg
     | OnSingleTouchEnd (TouchEndDecoder msg) (SingleTouchInteraction drawingCoordinates)
 
 
-type alias MouseEvent =
+type alias MouseStartEvent =
     { container : DOM.Rectangle
     , clientX : Float
     , clientY : Float
@@ -115,9 +121,15 @@ type alias MouseEvent =
     }
 
 
+type alias MouseMoveEvent =
+    { pageX : Float
+    , pageY : Float
+    }
+
+
 type MouseInteraction drawingCoordinates
     = MouseInteraction
-        { initialEvent : MouseEvent
+        { initialEvent : MouseStartEvent
         , viewBox : BoundingBox2d Pixels drawingCoordinates
         , drawingScale : Float
         , initialPoint : Point2d Pixels drawingCoordinates
@@ -126,13 +138,29 @@ type MouseInteraction drawingCoordinates
 
 type alias TouchStartEvent =
     { container : DOM.Rectangle
-    , touches : List Touch
-    , targetTouches : List Touch
-    , changedTouches : List Touch
+    , timeStamp : Duration
+    , touches : List TouchStart
+    , targetTouches : List TouchStart
+    , changedTouches : List TouchStart
     }
 
 
-type alias Touch =
+type alias TouchMoveEvent =
+    { touches : List TouchMove
+    , targetTouches : List TouchMove
+    , changedTouches : List TouchMove
+    }
+
+
+type alias TouchEndEvent =
+    { timeStamp : Duration
+    , touches : List TouchEnd
+    , targetTouches : List TouchEnd
+    , changedTouches : List TouchEnd
+    }
+
+
+type alias TouchStart =
     { identifier : Int
     , clientX : Float
     , clientY : Float
@@ -141,9 +169,23 @@ type alias Touch =
     }
 
 
+type alias TouchMove =
+    { identifier : Int
+    , pageX : Float
+    , pageY : Float
+    }
+
+
+type alias TouchEnd =
+    { identifier : Int
+    }
+
+
 type SingleTouchInteraction drawingCoordinates
-    = TouchInteraction
-        { initialEvent : TouchStartEvent
+    = SingleTouchInteraction
+        { container : DOM.Rectangle
+        , initialTouch : TouchStart
+        , startTimeStamp : Duration
         , viewBox : BoundingBox2d Pixels drawingCoordinates
         , drawingScale : Float
         , initialPoint : Point2d Pixels drawingCoordinates

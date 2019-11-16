@@ -1,18 +1,38 @@
 module Drawing2d.Utils exposing
-    ( decodeButton
+    ( computeDrawingScale
+    , debugDecoder
+    , decodeButton
     , decodeClientX
     , decodeClientY
-    , decodeMouseEvent
+    , decodeMouseMoveEvent
+    , decodeMouseStartEvent
     , decodePageX
     , decodePageY
-    , drawingScale
+    , decodeTouchEndEvent
+    , decodeTouchMoveEvent
+    , decodeTouchStartEvent
+    , isMemberOf
+    , isSameTouch
+    , isSubsetOf
+    , toDisplacedPoint
     , toDrawingPoint
     , wrongButton
     )
 
 import BoundingBox2d exposing (BoundingBox2d)
 import DOM
-import Drawing2d.Types exposing (MouseEvent)
+import Drawing2d.Types
+    exposing
+        ( MouseMoveEvent
+        , MouseStartEvent
+        , TouchEnd
+        , TouchEndEvent
+        , TouchMove
+        , TouchMoveEvent
+        , TouchStart
+        , TouchStartEvent
+        )
+import Duration exposing (Duration)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d exposing (Point2d)
@@ -45,8 +65,18 @@ decodeButton =
     Decode.field "button" Decode.int
 
 
-drawingScale : BoundingBox2d Pixels drawingCoordinates -> DOM.Rectangle -> Float
-drawingScale viewBox container =
+decodeIdentifier : Decoder Int
+decodeIdentifier =
+    Decode.field "identifier" Decode.int
+
+
+decodeTimeStamp : Decoder Duration
+decodeTimeStamp =
+    Decode.map Duration.milliseconds (Decode.field "timeStamp" Decode.float)
+
+
+computeDrawingScale : BoundingBox2d Pixels drawingCoordinates -> DOM.Rectangle -> Float
+computeDrawingScale viewBox container =
     let
         ( drawingWidth, drawingHeight ) =
             BoundingBox2d.dimensions viewBox
@@ -62,24 +92,25 @@ drawingScale viewBox container =
 
 toDrawingPoint :
     BoundingBox2d Pixels drawingCoordinates
-    -> { a | container : DOM.Rectangle, clientX : Float, clientY : Float }
+    -> DOM.Rectangle
+    -> { a | clientX : Float, clientY : Float }
     -> Point2d Pixels drawingCoordinates
-toDrawingPoint viewBox event =
+toDrawingPoint viewBox container { clientX, clientY } =
     let
         scale =
-            drawingScale viewBox event.container
+            computeDrawingScale viewBox container
 
         containerMidX =
-            event.container.left + event.container.width / 2
+            container.left + container.width / 2
 
         containerMidY =
-            event.container.top + event.container.height / 2
+            container.top + container.height / 2
 
         containerDeltaX =
-            event.clientX - containerMidX
+            clientX - containerMidX
 
         containerDeltaY =
-            event.clientY - containerMidY
+            clientY - containerMidY
 
         drawingDeltaX =
             pixels (containerDeltaX / scale)
@@ -89,6 +120,22 @@ toDrawingPoint viewBox event =
     in
     BoundingBox2d.centerPoint viewBox
         |> Point2d.translateBy (Vector2d.xy drawingDeltaX drawingDeltaY)
+
+
+toDisplacedPoint :
+    { a | pageX : Float, pageY : Float }
+    -> Float
+    -> Point2d Pixels drawingCoordinates
+    -> { b | pageX : Float, pageY : Float }
+    -> Point2d Pixels drawingCoordinates
+toDisplacedPoint start drawingScale initialPoint current =
+    let
+        displacement =
+            Vector2d.pixels
+                ((current.pageX - start.pageX) / drawingScale)
+                ((start.pageY - current.pageY) / drawingScale)
+    in
+    initialPoint |> Point2d.translateBy displacement
 
 
 wrongButton : Decoder msg
@@ -110,12 +157,134 @@ decodeContainer =
             ]
 
 
-decodeMouseEvent : Decoder MouseEvent
-decodeMouseEvent =
-    Decode.map6 MouseEvent
+decodeMouseStartEvent : Decoder MouseStartEvent
+decodeMouseStartEvent =
+    Decode.map6 MouseStartEvent
         decodeContainer
         decodeClientX
         decodeClientY
         decodePageX
         decodePageY
         decodeButton
+
+
+decodeMouseMoveEvent : Decoder MouseMoveEvent
+decodeMouseMoveEvent =
+    Decode.map2 MouseMoveEvent
+        decodePageX
+        decodePageY
+
+
+decodeTouchStartEvent : Decoder TouchStartEvent
+decodeTouchStartEvent =
+    Decode.map5 TouchStartEvent
+        decodeContainer
+        decodeTimeStamp
+        (Decode.field "touches" decodeTouchStartList)
+        (Decode.field "targetTouches" decodeTouchStartList)
+        (Decode.field "changedTouches" decodeTouchStartList)
+
+
+decodeTouchList : Decoder touch -> Decoder (List touch)
+decodeTouchList decodeTouch =
+    Decode.field "length" Decode.int
+        |> Decode.andThen (decodeTouchListItems decodeTouch [])
+
+
+decodeTouchStartList : Decoder (List TouchStart)
+decodeTouchStartList =
+    decodeTouchList decodeTouchStart
+
+
+decodeTouchMoveList : Decoder (List TouchMove)
+decodeTouchMoveList =
+    decodeTouchList decodeTouchMove
+
+
+decodeTouchEndList : Decoder (List TouchEnd)
+decodeTouchEndList =
+    decodeTouchList decodeTouchEnd
+
+
+decodeTouchListItems : Decoder touch -> List touch -> Int -> Decoder (List touch)
+decodeTouchListItems decodeTouch touches count =
+    if count == 0 then
+        Decode.succeed touches
+
+    else
+        Decode.field (String.fromInt (count - 1)) decodeTouch
+            |> Decode.andThen
+                (\touch -> decodeTouchListItems decodeTouch (touch :: touches) (count - 1))
+
+
+decodeTouchStart : Decoder TouchStart
+decodeTouchStart =
+    Decode.map5 TouchStart
+        decodeIdentifier
+        decodeClientX
+        decodeClientY
+        decodePageX
+        decodePageY
+
+
+decodeTouchMove : Decoder TouchMove
+decodeTouchMove =
+    Decode.map3 TouchMove
+        decodeIdentifier
+        decodePageX
+        decodePageY
+
+
+decodeTouchMoveEvent : Decoder TouchMoveEvent
+decodeTouchMoveEvent =
+    Decode.map3 TouchMoveEvent
+        (Decode.field "touches" decodeTouchMoveList)
+        (Decode.field "targetTouches" decodeTouchMoveList)
+        (Decode.field "changedTouches" decodeTouchMoveList)
+
+
+decodeTouchEndEvent : Decoder TouchEndEvent
+decodeTouchEndEvent =
+    Decode.map4 TouchEndEvent
+        decodeTimeStamp
+        (Decode.field "touches" decodeTouchEndList)
+        (Decode.field "targetTouches" decodeTouchEndList)
+        (Decode.field "changedTouches" decodeTouchEndList)
+
+
+decodeTouchEnd : Decoder TouchEnd
+decodeTouchEnd =
+    Decode.map TouchEnd decodeIdentifier
+
+
+isSameTouch : { a | identifier : Int } -> { b | identifier : Int } -> Bool
+isSameTouch firstTouch secondTouch =
+    firstTouch.identifier == secondTouch.identifier
+
+
+isMemberOf : List { a | identifier : Int } -> { b | identifier : Int } -> Bool
+isMemberOf touches touch =
+    List.any (isSameTouch touch) touches
+
+
+isSubsetOf : List { a | identifier : Int } -> List { b | identifier : Int } -> Bool
+isSubsetOf touches subset =
+    List.all (isMemberOf touches) subset
+
+
+debugDecoder : Decode.Decoder a -> Decode.Decoder a
+debugDecoder decoder =
+    Decode.value
+        |> Decode.andThen
+            (\value ->
+                case Decode.decodeValue decoder value of
+                    Ok _ ->
+                        decoder
+
+                    Err error ->
+                        let
+                            _ =
+                                Debug.log "Decoding failed" error
+                        in
+                        decoder
+            )
