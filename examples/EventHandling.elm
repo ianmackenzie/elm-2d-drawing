@@ -4,12 +4,12 @@ import Angle
 import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Color
-import Drawing2d
+import Drawing2d exposing (AttributeIn)
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
 import Drawing2d.Gradient as Gradient
 import Drawing2d.MouseInteraction exposing (MouseInteraction)
-import Drawing2d.SingleTouchInteraction as SingleTouchInteraction exposing (SingleTouchInteraction)
+import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Duration exposing (Duration)
 import Html exposing (Html)
 import Json.Decode as Decode
@@ -27,7 +27,7 @@ type DrawingCoordinates
 
 type alias Model =
     { messages : List String
-    , touchInteraction : Maybe (SingleTouchInteraction DrawingCoordinates)
+    , touchInteraction : Maybe (TouchInteraction DrawingCoordinates)
     }
 
 
@@ -38,9 +38,22 @@ type Msg
     | RightMouseUp Int
     | LeftMouseDown Int (Point2d Pixels DrawingCoordinates)
     | RightMouseDown Int (Point2d Pixels DrawingCoordinates)
-    | SingleTouchStart Int (Point2d Pixels DrawingCoordinates) (SingleTouchInteraction DrawingCoordinates)
-    | SingleTouchEnd Int Duration
-    | SingleTouchMove Int (Point2d Pixels DrawingCoordinates)
+    | TouchStart Int (List (Point2d Pixels DrawingCoordinates)) (TouchInteraction DrawingCoordinates)
+    | TouchEnd Int Duration
+    | TouchChange Int (List (Point2d Pixels DrawingCoordinates))
+
+
+logString : Msg -> String
+logString message =
+    case message of
+        TouchStart id points _ ->
+            "TouchStart " ++ String.fromInt id ++ " <" ++ String.fromInt (List.length points) ++ " point(s)>"
+
+        TouchChange id points ->
+            "TouchChange " ++ String.fromInt id ++ " <" ++ String.fromInt (List.length points) ++ " point(s)>"
+
+        _ ->
+            Debug.toString message
 
 
 eventHandlers : Int -> Model -> List (Drawing2d.Attribute DrawingCoordinates Msg)
@@ -53,17 +66,17 @@ eventHandlers id model =
             , Events.onRightMouseUp (RightMouseUp id)
             , Events.onLeftMouseDown (\point interaction -> LeftMouseDown id point)
             , Events.onRightMouseDown (\point interaction -> RightMouseDown id point)
-            , Events.onSingleTouchStart (SingleTouchStart id)
+            , Events.onTouchStart (TouchStart id)
             ]
     in
     case model.touchInteraction of
         Just interaction ->
             let
                 touchMoveHandler =
-                    interaction |> SingleTouchInteraction.onMove (SingleTouchMove id)
+                    interaction |> TouchInteraction.onChange (TouchChange id)
 
                 touchEndHandler =
-                    interaction |> SingleTouchInteraction.onEnd (SingleTouchEnd id)
+                    interaction |> TouchInteraction.onEnd (TouchEnd id)
             in
             touchMoveHandler :: touchEndHandler :: constantHandlers
 
@@ -128,16 +141,16 @@ update message model =
     let
         updatedModel =
             case message of
-                SingleTouchStart id point interaction ->
+                TouchStart id points interaction ->
                     { model | touchInteraction = Just interaction }
 
-                SingleTouchEnd id duration ->
+                TouchEnd id duration ->
                     { model | touchInteraction = Nothing }
 
                 _ ->
                     model
     in
-    ( { updatedModel | messages = model.messages ++ [ Debug.toString message ] }
+    ( { updatedModel | messages = model.messages ++ [ logString message ] }
     , Cmd.none
     )
 

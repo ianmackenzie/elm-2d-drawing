@@ -7,7 +7,7 @@ module Drawing2d.Events exposing
     , decodeRightClick
     , decodeRightMouseDown
     , decodeRightMouseUp
-    , decodeSingleTouchStart
+    , decodeTouchStart
     , onLeftClick
     , onLeftMouseDown
     , onLeftMouseUp
@@ -16,11 +16,12 @@ module Drawing2d.Events exposing
     , onRightClick
     , onRightMouseDown
     , onRightMouseUp
-    , onSingleTouchStart
+    , onTouchStart
     )
 
-import Drawing2d.Attributes exposing (AttributeIn)
-import Drawing2d.Types as Types exposing (MouseInteraction, SingleTouchInteraction)
+import Drawing2d.Attributes.Protected as Attributes exposing (AttributeIn)
+import Drawing2d.MouseInteraction exposing (MouseInteraction)
+import Drawing2d.TouchInteraction exposing (TouchInteraction)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
@@ -66,51 +67,51 @@ onMiddleMouseUp message =
     decodeMiddleMouseUp (Decode.succeed message)
 
 
-onSingleTouchStart : (Point2d Pixels drawingCoordinates -> SingleTouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
-onSingleTouchStart callback =
-    decodeSingleTouchStart (Decode.succeed callback)
+onTouchStart : (List (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
+onTouchStart callback =
+    decodeTouchStart (Decode.succeed callback)
 
 
 decodeLeftClick : Decoder (Point2d Pixels drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeLeftClick decoder =
-    Types.OnLeftClick decoder
+    Attributes.OnLeftClick decoder
 
 
 decodeRightClick : Decoder (Point2d Pixels drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeRightClick decoder =
-    Types.OnRightClick decoder
+    Attributes.OnRightClick decoder
 
 
 decodeLeftMouseDown : Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeLeftMouseDown decoder =
-    Types.OnLeftMouseDown decoder
+    Attributes.OnLeftMouseDown decoder
 
 
 decodeMiddleMouseDown : Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeMiddleMouseDown decoder =
-    Types.OnMiddleMouseDown decoder
+    Attributes.OnMiddleMouseDown decoder
 
 
 decodeRightMouseDown : Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeRightMouseDown decoder =
-    Types.OnRightMouseDown decoder
+    Attributes.OnRightMouseDown decoder
 
 
 decodeLeftMouseUp : Decoder msg -> AttributeIn units coordinates drawingCoordinates msg
 decodeLeftMouseUp decoder =
-    Types.OnLeftMouseUp decoder
+    Attributes.OnLeftMouseUp decoder
 
 
 decodeMiddleMouseUp : Decoder msg -> AttributeIn units coordinates drawingCoordinates msg
 decodeMiddleMouseUp decoder =
-    Types.OnMiddleMouseUp decoder
+    Attributes.OnMiddleMouseUp decoder
 
 
 decodeRightMouseUp : Decoder msg -> AttributeIn units coordinates drawingCoordinates msg
 decodeRightMouseUp decoder =
-    Types.OnRightMouseUp decoder
+    Attributes.OnRightMouseUp decoder
 
 
-decodeSingleTouchStart : Decoder (Point2d Pixels drawingCoordinates -> SingleTouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
-decodeSingleTouchStart decoder =
-    Types.OnSingleTouchStart decoder
+decodeTouchStart : Decoder (List (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
+decodeTouchStart decoder =
+    Attributes.OnTouchStart decoder

@@ -1,14 +1,11 @@
 module Drawing2d.Attributes exposing
-    ( Attribute, AttributeIn
-    , noFill, blackFill, whiteFill, fillColor, fillGradient
+    ( noFill, blackFill, whiteFill, fillColor, fillGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
     , noBorder, strokedBorder
     , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
     )
 
 {-|
-
-@docs Attribute, AttributeIn
 
 
 # Fill
@@ -34,25 +31,17 @@ module Drawing2d.Attributes exposing
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
+import Drawing2d.Attributes.Protected as Protected exposing (AttributeIn(..), Fill(..), Stroke(..))
 import Drawing2d.Font as Font
 import Drawing2d.Gradient as Gradient exposing (Gradient)
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
-import Drawing2d.Types as Types exposing (AttributeIn(..), Fill(..), Stroke(..))
 import Html.Events
 import Pixels exposing (Pixels, inPixels)
 import Point2d exposing (Point2d)
 import Quantity exposing (Quantity(..))
 import Svg exposing (Svg)
 import Svg.Attributes
-
-
-type alias AttributeIn units coordinates drawingCoordinates msg =
-    Types.AttributeIn units coordinates drawingCoordinates msg
-
-
-type alias Attribute drawingCoordinates msg =
-    AttributeIn Pixels drawingCoordinates drawingCoordinates msg
 
 
 fillColor : Color -> AttributeIn units coordinates drawingCoordinates msg

@@ -1,37 +1,56 @@
 module Drawing2d.TouchStartEvent exposing
-    ( doubleTouch
-    , singleTouch
+    ( TouchStart
+    , TouchStartEvent
+    , decoder
     )
 
-import Drawing2d.Types exposing (TouchStart, TouchStartEvent)
-import Set
+import DOM
+import Drawing2d.Decode as Decode
+import Duration exposing (Duration)
+import Json.Decode as Decode exposing (Decoder)
 
 
-singleTouch : TouchStartEvent -> Maybe TouchStart
-singleTouch event =
-    case event.targetTouches of
-        [ touch ] ->
-            -- There's only one touch point on the target, and this event
-            -- marked the start of a touch point on the target, so those two
-            -- must be one and the same
-            Just touch
-
-        _ ->
-            -- More than one current touch point: not the start of a single
-            -- touch
-            Nothing
+type alias TouchStartEvent =
+    { container : DOM.Rectangle
+    , timeStamp : Duration
+    , touches : ( TouchStart, List TouchStart )
+    , targetTouches : ( TouchStart, List TouchStart )
+    , changedTouches : ( TouchStart, List TouchStart )
+    }
 
 
-doubleTouch : TouchStartEvent -> Maybe ( TouchStart, TouchStart )
-doubleTouch event =
-    case event.targetTouches of
-        [ firstTouch, secondTouch ] ->
-            -- Exactly two touch points on the target, and this event marked the
-            -- start of at least one of them, so those two points are the start
-            -- of a double touch
-            Just ( firstTouch, secondTouch )
+type alias TouchStart =
+    { identifier : Int
+    , clientX : Float
+    , clientY : Float
+    , pageX : Float
+    , pageY : Float
+    }
 
-        _ ->
-            -- Not exactly two current touch points: not the start of a double
-            -- touch
-            Nothing
+
+decodeTouchStart : Decoder TouchStart
+decodeTouchStart =
+    Decode.map5 TouchStart
+        Decode.identifier
+        Decode.clientX
+        Decode.clientY
+        Decode.pageX
+        Decode.pageY
+
+
+decoder : Decoder TouchStartEvent
+decoder =
+    Decode.map5 TouchStartEvent
+        Decode.container
+        Decode.timeStamp
+        (Decode.nonempty (Decode.touches decodeTouchStart))
+        (Decode.nonempty (Decode.targetTouches decodeTouchStart))
+        (Decode.nonempty (Decode.changedTouches decodeTouchStart))
+        |> Decode.andThen
+            (\touchStartEvent ->
+                if touchStartEvent.targetTouches == touchStartEvent.changedTouches then
+                    Decode.succeed touchStartEvent
+
+                else
+                    Decode.fail "Not the initial start event"
+            )

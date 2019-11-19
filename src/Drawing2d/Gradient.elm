@@ -11,8 +11,8 @@ module Drawing2d.Gradient exposing
 import Axis2d exposing (Axis2d)
 import Circle2d exposing (Circle2d)
 import Color exposing (Color)
-import Drawing2d.Stops as Stops
-import Drawing2d.Types as Types exposing (Stop, Stops(..))
+import Drawing2d.Gradient.Private as Private
+import Drawing2d.Gradient.Stops as Stops exposing (Stops)
 import Frame2d exposing (Frame2d)
 import Murmur3
 import Point2d exposing (Point2d)
@@ -20,23 +20,17 @@ import Quantity exposing (Quantity(..))
 
 
 type alias Gradient units coordinates =
-    Types.Gradient units coordinates
+    Private.Gradient units coordinates
 
 
 along : Axis2d units coordinates -> List ( Quantity Float units, Color ) -> Gradient units coordinates
 along axis distanceStops =
     case distanceStops of
         [] ->
-            makeLinearGradient
-                Point2d.origin
-                Point2d.origin
-                (makeStops [])
+            makeLinearGradient Point2d.origin Point2d.origin Stops.empty
 
         [ ( distance, color ) ] ->
-            makeLinearGradient
-                Point2d.origin
-                Point2d.origin
-                (makeStops [ ( 0, color ) ])
+            makeLinearGradient Point2d.origin Point2d.origin (Stops.constant color)
 
         firstDistanceStop :: secondDistanceStop :: rest ->
             let
@@ -67,7 +61,7 @@ along axis distanceStops =
                         distanceStops
                             |> List.map (toFractionalStop startDistance delta)
             in
-            makeLinearGradient startPoint endPoint (makeStops fractionalStops)
+            makeLinearGradient startPoint endPoint (Stops.fromList fractionalStops)
 
 
 toFractionalStop : Quantity Float units -> Quantity Float units -> ( Quantity Float units, Color ) -> ( Float, Color )
@@ -96,7 +90,7 @@ makeLinearGradient start end stops =
                 , Stops.id stops
                 ]
     in
-    Types.LinearGradient
+    Private.LinearGradient
         { id = id
         , start = start
         , end = end
@@ -127,7 +121,7 @@ makeRadialGradient start end stops =
                 , Stops.id stops
                 ]
     in
-    Types.RadialGradient
+    Private.RadialGradient
         { id = id
         , start = start
         , end = end
@@ -137,30 +131,24 @@ makeRadialGradient start end stops =
 
 from : ( Point2d units coordinates, Color ) -> ( Point2d units coordinates, Color ) -> Gradient units coordinates
 from ( startPoint, startColor ) ( endPoint, endColor ) =
-    makeLinearGradient
-        startPoint
-        endPoint
-        (makeStops [ ( 0, startColor ), ( 1, endColor ) ])
+    makeLinearGradient startPoint endPoint (Stops.from startColor endColor)
 
 
 circular : Circle2d units coordinates -> Color -> Color -> Gradient units coordinates
 circular circle startColor endColor =
-    makeRadialGradient
-        (Circle2d.centerPoint circle)
-        circle
-        (makeStops [ ( 0, startColor ), ( 1, endColor ) ])
+    makeRadialGradient (Circle2d.centerPoint circle) circle (Stops.from startColor endColor)
 
 
 relativeTo : Frame2d units globalCoordinates { defines : localCoordinates } -> Gradient units globalCoordinates -> Gradient units localCoordinates
 relativeTo frame gradient =
     case gradient of
-        Types.LinearGradient linearGradient ->
+        Private.LinearGradient linearGradient ->
             makeLinearGradient
                 (Point2d.relativeTo frame linearGradient.start)
                 (Point2d.relativeTo frame linearGradient.end)
                 linearGradient.stops
 
-        Types.RadialGradient radialGradient ->
+        Private.RadialGradient radialGradient ->
             makeRadialGradient
                 (Point2d.relativeTo frame radialGradient.start)
                 (Circle2d.relativeTo frame radialGradient.end)
@@ -170,13 +158,13 @@ relativeTo frame gradient =
 placeIn : Frame2d units globalCoordinates { defines : localCoordinates } -> Gradient units localCoordinates -> Gradient units globalCoordinates
 placeIn frame gradient =
     case gradient of
-        Types.LinearGradient linearGradient ->
+        Private.LinearGradient linearGradient ->
             makeLinearGradient
                 (Point2d.placeIn frame linearGradient.start)
                 (Point2d.placeIn frame linearGradient.end)
                 linearGradient.stops
 
-        Types.RadialGradient radialGradient ->
+        Private.RadialGradient radialGradient ->
             makeRadialGradient
                 (Point2d.placeIn frame radialGradient.start)
                 (Circle2d.placeIn frame radialGradient.end)
@@ -186,44 +174,14 @@ placeIn frame gradient =
 scaleAbout : Point2d units coordinates -> Float -> Gradient units coordinates -> Gradient units coordinates
 scaleAbout centerPoint scale gradient =
     case gradient of
-        Types.LinearGradient linearGradient ->
+        Private.LinearGradient linearGradient ->
             makeLinearGradient
                 (Point2d.scaleAbout centerPoint scale linearGradient.start)
                 (Point2d.scaleAbout centerPoint scale linearGradient.end)
                 linearGradient.stops
 
-        Types.RadialGradient radialGradient ->
+        Private.RadialGradient radialGradient ->
             makeRadialGradient
                 (Point2d.scaleAbout centerPoint scale radialGradient.start)
                 (Circle2d.scaleAbout centerPoint scale radialGradient.end)
                 radialGradient.stops
-
-
-makeStops : List ( Float, Color ) -> Stops
-makeStops fractionalStops =
-    let
-        values =
-            List.map toStop fractionalStops
-
-        valuesString =
-            String.join "," (List.map stopString values)
-
-        hashValue =
-            Murmur3.hashString 0 valuesString
-
-        id =
-            "stops" ++ String.fromInt hashValue
-    in
-    StopValues id values
-
-
-toStop : ( Float, Color ) -> Stop
-toStop ( fraction, color ) =
-    { offset = String.fromFloat (fraction * 100) ++ "%"
-    , color = Color.toCssString color
-    }
-
-
-stopString : Stop -> String
-stopString { offset, color } =
-    offset ++ ":" ++ color

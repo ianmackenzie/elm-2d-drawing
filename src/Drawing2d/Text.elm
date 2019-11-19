@@ -1,16 +1,15 @@
-module Drawing2d.Text
-    exposing
-        ( Anchor
-        , bottomCenter
-        , bottomLeft
-        , bottomRight
-        , center
-        , centerLeft
-        , centerRight
-        , topCenter
-        , topLeft
-        , topRight
-        )
+module Drawing2d.Text exposing
+    ( Anchor
+    , bottomCenter
+    , bottomLeft
+    , bottomRight
+    , center
+    , centerLeft
+    , centerRight
+    , topCenter
+    , topLeft
+    , topRight
+    )
 
 import Drawing2d.TextAnchor as TextAnchor
 

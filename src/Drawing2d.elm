@@ -47,48 +47,33 @@ import DOM
 import Dict exposing (Dict)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attributes as Attributes
-import Drawing2d.Gradient as Gradient
-import Drawing2d.Stops as Stops
-import Drawing2d.Svg as Svg
-import Drawing2d.Text as Text
-import Drawing2d.TouchEndEvent as TouchEndEvent
-import Drawing2d.TouchMoveEvent as TouchMoveEvent
-import Drawing2d.TouchStartEvent as TouchStartEvent
-import Drawing2d.Types as Types
+import Drawing2d.Attributes.Protected as Attributes
     exposing
-        ( AttributeIn(..)
+        ( AttributeValues
         , ClickDecoder
         , Fill(..)
-        , Gradient(..)
         , MouseDownDecoder
-        , MouseInteraction(..)
-        , MouseStartEvent
-        , SingleTouchInteraction(..)
-        , SingleTouchMoveDecoder
-        , SingleTouchStartDecoder
-        , Stop
-        , Stops(..)
         , Stroke(..)
+        , TouchChangeDecoder
         , TouchEndDecoder
-        , TouchEndEvent
-        , TouchMove
-        , TouchMoveEvent
-        , TouchStart
-        , TouchStartEvent
+        , TouchStartDecoder
         )
-import Drawing2d.Utils
-    exposing
-        ( computeDrawingScale
-        , debugDecoder
-        , decodeButton
-        , decodeMouseStartEvent
-        , decodeTouchEndEvent
-        , decodeTouchMoveEvent
-        , decodeTouchStartEvent
-        , toDisplacedPoint
-        , toDrawingPoint
-        , wrongButton
-        )
+import Drawing2d.Decode as Decode
+import Drawing2d.Gradient as Gradient exposing (Gradient)
+import Drawing2d.Gradient.Protected as Gradient
+import Drawing2d.InteractionPoint as InteractionPoint
+import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
+import Drawing2d.MouseInteraction.Protected as MouseInteraction
+import Drawing2d.MouseMoveEvent as MouseMoveEvent exposing (MouseMoveEvent)
+import Drawing2d.MouseStartEvent as MouseStartEvent exposing (MouseStartEvent)
+import Drawing2d.Svg as Svg
+import Drawing2d.Text as Text
+import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent)
+import Drawing2d.TouchEndEvent as TouchEndEvent
+import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
+import Drawing2d.TouchInteraction.Protected as TouchInteraction
+import Drawing2d.TouchMoveEvent as TouchMoveEvent
+import Drawing2d.TouchStartEvent as TouchStartEvent exposing (TouchStart, TouchStartEvent)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -143,34 +128,11 @@ type Size
 
 
 type alias AttributeIn units coordinates drawingCoordinates msg =
-    Types.AttributeIn units coordinates drawingCoordinates msg
+    Attributes.AttributeIn units coordinates drawingCoordinates msg
 
 
 type alias Attribute drawingCoordinates msg =
     AttributeIn Pixels drawingCoordinates drawingCoordinates msg
-
-
-type alias AttributeValues units coordinates drawingCoordinates msg =
-    { fillStyle : Maybe (Fill units coordinates)
-    , strokeStyle : Maybe (Stroke units coordinates)
-    , fontSize : Maybe Float
-    , strokeWidth : Maybe Float
-    , borderVisibility : Maybe Bool
-    , textColor : Maybe String
-    , fontFamily : Maybe String
-    , textAnchor : Maybe { x : String, y : String }
-    , onLeftClick : Maybe (ClickDecoder drawingCoordinates msg)
-    , onRightClick : Maybe (ClickDecoder drawingCoordinates msg)
-    , onLeftMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
-    , onMiddleMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
-    , onRightMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
-    , onLeftMouseUp : Maybe (Decoder msg)
-    , onMiddleMouseUp : Maybe (Decoder msg)
-    , onRightMouseUp : Maybe (Decoder msg)
-    , onSingleTouchStart : Maybe (SingleTouchStartDecoder drawingCoordinates msg)
-    , onSingleTouchMove : Maybe ( SingleTouchMoveDecoder drawingCoordinates msg, SingleTouchInteraction drawingCoordinates )
-    , onSingleTouchEnd : Maybe ( TouchEndDecoder msg, SingleTouchInteraction drawingCoordinates )
-    }
 
 
 type alias Renderer a drawingCoordinates msg =
@@ -179,30 +141,6 @@ type alias Renderer a drawingCoordinates msg =
 
 
 ---------- CONSTANTS ----------
-
-
-emptyAttributeValues : AttributeValues units coordinates drawingCoordinates msg
-emptyAttributeValues =
-    { fillStyle = Nothing
-    , strokeStyle = Nothing
-    , fontSize = Nothing
-    , strokeWidth = Nothing
-    , borderVisibility = Nothing
-    , textColor = Nothing
-    , fontFamily = Nothing
-    , textAnchor = Nothing
-    , onLeftClick = Nothing
-    , onRightClick = Nothing
-    , onLeftMouseDown = Nothing
-    , onMiddleMouseDown = Nothing
-    , onRightMouseDown = Nothing
-    , onLeftMouseUp = Nothing
-    , onMiddleMouseUp = Nothing
-    , onRightMouseUp = Nothing
-    , onSingleTouchStart = Nothing
-    , onSingleTouchMove = Nothing
-    , onSingleTouchEnd = Nothing
-    }
 
 
 containerStaticCss : List (Html.Attribute msg)
@@ -304,9 +242,9 @@ toHtml { viewBox, size } attributes elements =
                     ]
 
         rootAttributeValues =
-            emptyAttributeValues
-                |> assignAttributes defaultAttributes
-                |> assignAttributes attributes
+            Attributes.emptyAttributeValues
+                |> Attributes.assignAttributes defaultAttributes
+                |> Attributes.assignAttributes attributes
 
         (Element svgElement) =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues elements
@@ -317,12 +255,15 @@ toHtml { viewBox, size } attributes elements =
 
 wrapClick : MouseStartEvent -> (Point2d Pixels drawingCoordinates -> msg) -> Event drawingCoordinates msg
 wrapClick mouseEvent userCallback =
-    Event (\viewBox -> userCallback (toDrawingPoint viewBox mouseEvent.container mouseEvent))
+    Event
+        (\viewBox ->
+            userCallback (InteractionPoint.position mouseEvent viewBox mouseEvent.container)
+        )
 
 
 handleClick : ClickDecoder drawingCoordinates msg -> Decoder (Event drawingCoordinates msg)
 handleClick givenDecoder =
-    Decode.map2 wrapClick decodeMouseStartEvent givenDecoder
+    Decode.map2 wrapClick MouseStartEvent.decoder givenDecoder
 
 
 preventDefaultAndStopPropagation :
@@ -341,15 +282,10 @@ wrapMouseDown mouseEvent userCallback =
         (\viewBox ->
             let
                 drawingPoint =
-                    toDrawingPoint viewBox mouseEvent.container mouseEvent
+                    InteractionPoint.position mouseEvent viewBox mouseEvent.container
 
                 mouseInteraction =
-                    MouseInteraction
-                        { initialEvent = mouseEvent
-                        , viewBox = viewBox
-                        , drawingScale = computeDrawingScale viewBox mouseEvent.container
-                        , initialPoint = drawingPoint
-                        }
+                    MouseInteraction.start mouseEvent viewBox
             in
             userCallback drawingPoint mouseInteraction
         )
@@ -359,7 +295,7 @@ handleMouseDown :
     Dict Int (MouseDownDecoder drawingCoordinates msg)
     -> Decoder (Event drawingCoordinates msg)
 handleMouseDown decodersByButton =
-    decodeMouseStartEvent
+    MouseStartEvent.decoder
         |> Decode.andThen
             (\mouseEvent ->
                 case Dict.get mouseEvent.button decodersByButton of
@@ -367,7 +303,7 @@ handleMouseDown decodersByButton =
                         Decode.map (wrapMouseDown mouseEvent) registeredDecoder
 
                     Nothing ->
-                        wrongButton
+                        Decode.wrongButton
             )
 
 
@@ -378,7 +314,7 @@ wrapMessage message =
 
 handleMouseUp : Dict Int (Decoder msg) -> Decoder (Event drawingCoordinates msg)
 handleMouseUp decodersByButton =
-    decodeButton
+    Decode.button
         |> Decode.andThen
             (\button ->
                 case Dict.get button decodersByButton of
@@ -386,7 +322,7 @@ handleMouseUp decodersByButton =
                         Decode.map wrapMessage givenDecoder
 
                     Nothing ->
-                        wrongButton
+                        Decode.wrongButton
             )
 
 
@@ -418,15 +354,14 @@ drawCurve :
 drawCurve attributes renderer curve =
     let
         attributeValues =
-            collectAttributeValues attributes
+            Attributes.collectAttributeValues attributes
     in
     Element <|
         \_ _ _ _ _ _ ->
             let
                 givenAttributes =
                     []
-                        |> addStrokeStyle attributeValues
-                        |> addStrokeWidth attributeValues
+                        |> Attributes.addCurveAttributes attributeValues
                         |> addEventHandlers attributeValues
 
                 svgAttributes =
@@ -454,31 +389,22 @@ drawRegion :
 drawRegion attributes renderer region =
     let
         attributeValues =
-            collectAttributeValues attributes
+            Attributes.collectAttributeValues attributes
     in
     Element <|
         \currentBordersVisible _ _ _ _ _ ->
             let
-                commonAttributes =
-                    []
-                        |> addFillStyle attributeValues
-                        |> addEventHandlers attributeValues
-
-                fillGradientElement =
-                    addFillGradient attributeValues []
-
                 bordersVisible =
                     attributeValues.borderVisibility
                         |> Maybe.withDefault currentBordersVisible
 
                 svgAttributes =
-                    if bordersVisible then
-                        commonAttributes
-                            |> addStrokeStyle attributeValues
-                            |> addStrokeWidth attributeValues
+                    []
+                        |> Attributes.addRegionAttributes bordersVisible attributeValues
+                        |> addEventHandlers attributeValues
 
-                    else
-                        Svg.Attributes.stroke "none" :: commonAttributes
+                fillGradientElement =
+                    addFillGradient attributeValues []
 
                 regionElement =
                     renderer svgAttributes region
@@ -533,7 +459,7 @@ group :
     -> List (ElementIn units coordinates drawingCoordinates msg)
     -> ElementIn units coordinates drawingCoordinates msg
 group attributes childElements =
-    groupLike "g" [] (collectAttributeValues attributes) childElements
+    groupLike "g" [] (Attributes.collectAttributeValues attributes) childElements
 
 
 groupLike :
@@ -570,7 +496,7 @@ groupLike tag extraSvgAttributes attributeValues childElements =
                             ""
 
                         Just (FillGradient gradient) ->
-                            encodeGradient gradient
+                            Gradient.encode gradient
 
                 updatedStrokeGradient =
                     case attributeValues.strokeStyle of
@@ -581,7 +507,7 @@ groupLike tag extraSvgAttributes attributeValues childElements =
                             ""
 
                         Just (StrokeGradient gradient) ->
-                            encodeGradient gradient
+                            Gradient.encode gradient
 
                 childSvgElements =
                     childElements
@@ -602,13 +528,7 @@ groupLike tag extraSvgAttributes attributeValues childElements =
 
                 groupAttributes =
                     []
-                        |> addFillStyle attributeValues
-                        |> addFontFamily attributeValues
-                        |> addFontSize attributeValues
-                        |> addStrokeStyle attributeValues
-                        |> addStrokeWidth attributeValues
-                        |> addTextAnchor attributeValues
-                        |> addTextColor attributeValues
+                        |> Attributes.addGroupAttributes attributeValues
                         |> addEventHandlers attributeValues
             in
             Svg.node tag
@@ -704,7 +624,7 @@ text :
 text attributes position string =
     let
         attributeValues =
-            collectAttributeValues attributes
+            Attributes.collectAttributeValues attributes
 
         { x, y } =
             Point2d.unwrap position
@@ -718,10 +638,7 @@ text attributes position string =
                     , Svg.Attributes.fill "currentColor"
                     , Svg.Attributes.stroke "none"
                     ]
-                        |> addFontFamily attributeValues
-                        |> addFontSize attributeValues
-                        |> addTextAnchor attributeValues
-                        |> addTextColor attributeValues
+                        |> Attributes.addTextAttributes attributeValues
                         |> addEventHandlers attributeValues
             in
             Svg.text_ svgAttributes [ Svg.text string ]
@@ -735,7 +652,7 @@ image :
 image attributes givenUrl givenRectangle =
     let
         attributeValues =
-            collectAttributeValues attributes
+            Attributes.collectAttributeValues attributes
 
         ( Quantity width, Quantity height ) =
             Rectangle2d.dimensions givenRectangle
@@ -795,21 +712,21 @@ placeIn frame (Element function) =
                     Gradient.relativeTo frame
 
                 localFillGradient =
-                    decodeGradient currentFillGradient
+                    Gradient.decode currentFillGradient
                         |> Maybe.map toLocalGradient
 
                 localStrokeGradient =
-                    decodeGradient currentStrokeGradient
+                    Gradient.decode currentStrokeGradient
                         |> Maybe.map toLocalGradient
 
                 updatedFillGradient =
                     localFillGradient
-                        |> Maybe.map encodeGradient
+                        |> Maybe.map Gradient.encode
                         |> Maybe.withDefault ""
 
                 updatedStrokeGradient =
                     localStrokeGradient
-                        |> Maybe.map encodeGradient
+                        |> Maybe.map Gradient.encode
                         |> Maybe.withDefault ""
 
                 localGradientReferences =
@@ -883,21 +800,21 @@ scaleImpl point scale (Element function) =
                     Gradient.scaleAbout point (1 / scale)
 
                 transformedFillGradient =
-                    decodeGradient currentFillGradient
+                    Gradient.decode currentFillGradient
                         |> Maybe.map transformation
 
                 transformedStrokeGradient =
-                    decodeGradient currentStrokeGradient
+                    Gradient.decode currentStrokeGradient
                         |> Maybe.map transformation
 
                 updatedFillGradient =
                     transformedFillGradient
-                        |> Maybe.map encodeGradient
+                        |> Maybe.map Gradient.encode
                         |> Maybe.withDefault ""
 
                 updatedStrokeGradient =
                     transformedStrokeGradient
-                        |> Maybe.map encodeGradient
+                        |> Maybe.map Gradient.encode
                         |> Maybe.withDefault ""
 
                 updatedPixelSize =
@@ -1022,425 +939,7 @@ map mapFunction (Element drawFunction) =
 
 
 
------ GRADIENTS -----
-
-
-encodeGradient : Gradient units coordinates -> String
-encodeGradient gradient =
-    Encode.encode 0 <|
-        case gradient of
-            LinearGradient linearGradient ->
-                let
-                    p1 =
-                        Point2d.unwrap linearGradient.start
-
-                    p2 =
-                        Point2d.unwrap linearGradient.end
-                in
-                Encode.list identity
-                    [ Encode.string "lg"
-                    , Encode.float p1.x
-                    , Encode.float p1.y
-                    , Encode.float p2.x
-                    , Encode.float p2.y
-                    , Encode.string (Stops.id linearGradient.stops)
-                    ]
-
-            RadialGradient radialGradient ->
-                let
-                    f =
-                        Point2d.unwrap radialGradient.start
-
-                    c =
-                        Point2d.unwrap (Circle2d.centerPoint radialGradient.end)
-
-                    (Quantity r) =
-                        Circle2d.radius radialGradient.end
-                in
-                Encode.list identity
-                    [ Encode.string "rg"
-                    , Encode.float f.x
-                    , Encode.float f.y
-                    , Encode.float c.x
-                    , Encode.float c.y
-                    , Encode.float r
-                    , Encode.string (Stops.id radialGradient.stops)
-                    ]
-
-
-gradientDecoder : Decoder (Maybe (Gradient units coordinates))
-gradientDecoder =
-    Decode.nullable
-        (Decode.index 0 Decode.string
-            |> Decode.andThen
-                (\tag ->
-                    case tag of
-                        "lg" ->
-                            Decode.map5 rebuildLinearGradient
-                                (Decode.index 1 Decode.float)
-                                (Decode.index 2 Decode.float)
-                                (Decode.index 3 Decode.float)
-                                (Decode.index 4 Decode.float)
-                                (Decode.index 5 Decode.string)
-
-                        "rg" ->
-                            Decode.map6 rebuildRadialGradient
-                                (Decode.index 1 Decode.float)
-                                (Decode.index 2 Decode.float)
-                                (Decode.index 3 Decode.float)
-                                (Decode.index 4 Decode.float)
-                                (Decode.index 5 Decode.float)
-                                (Decode.index 6 Decode.string)
-
-                        _ ->
-                            Decode.fail ("Unexpected tag '" ++ tag ++ "'")
-                )
-        )
-
-
-rebuildLinearGradient :
-    Float
-    -> Float
-    -> Float
-    -> Float
-    -> String
-    -> Gradient units coordinates
-rebuildLinearGradient x1 y1 x2 y2 stopsId =
-    LinearGradient
-        { id = ""
-        , start = Point2d.unsafe { x = x1, y = y1 }
-        , end = Point2d.unsafe { x = x2, y = y2 }
-        , stops = StopsReference stopsId
-        }
-
-
-rebuildRadialGradient :
-    Float
-    -> Float
-    -> Float
-    -> Float
-    -> Float
-    -> String
-    -> Gradient units coordinates
-rebuildRadialGradient fx fy cx cy r stopsId =
-    RadialGradient
-        { id = ""
-        , start = Point2d.unsafe { x = fx, y = fy }
-        , end = Circle2d.withRadius (Quantity r) (Point2d.unsafe { x = cx, y = cy })
-        , stops = StopsReference stopsId
-        }
-
-
-decodeGradient : String -> Maybe (Gradient units coordinates)
-decodeGradient string =
-    if String.isEmpty string then
-        Nothing
-
-    else
-        Decode.decodeString gradientDecoder string |> Result.withDefault Nothing
-
-
-addGradientElements :
-    Gradient units coordinates
-    -> List (Svg (Event drawingCoordinates msg))
-    -> List (Svg (Event drawingCoordinates msg))
-addGradientElements gradient svgElements =
-    case gradient of
-        LinearGradient linearGradient ->
-            let
-                p1 =
-                    Point2d.unwrap linearGradient.start
-
-                p2 =
-                    Point2d.unwrap linearGradient.end
-
-                stopsId =
-                    Stops.id linearGradient.stops
-
-                gradientElement =
-                    Svg.linearGradient
-                        [ Svg.Attributes.id linearGradient.id
-                        , Svg.Attributes.x1 (String.fromFloat p1.x)
-                        , Svg.Attributes.y1 (String.fromFloat -p1.y)
-                        , Svg.Attributes.x2 (String.fromFloat p2.x)
-                        , Svg.Attributes.y2 (String.fromFloat -p2.y)
-                        , Svg.Attributes.gradientUnits "userSpaceOnUse"
-                        , Svg.Attributes.xlinkHref ("#" ++ stopsId)
-                        ]
-                        []
-            in
-            case linearGradient.stops of
-                StopValues _ stopValues ->
-                    let
-                        stopsElement =
-                            Svg.linearGradient [ Svg.Attributes.id stopsId ]
-                                (List.map stopElement stopValues)
-                    in
-                    stopsElement :: gradientElement :: svgElements
-
-                StopsReference _ ->
-                    gradientElement :: svgElements
-
-        RadialGradient radialGradient ->
-            let
-                f =
-                    Point2d.unwrap radialGradient.start
-
-                c =
-                    Point2d.unwrap (Circle2d.centerPoint radialGradient.end)
-
-                (Quantity r) =
-                    Circle2d.radius radialGradient.end
-
-                stopsId =
-                    Stops.id radialGradient.stops
-
-                gradientElement =
-                    Svg.radialGradient
-                        [ Svg.Attributes.id radialGradient.id
-                        , Svg.Attributes.fx (String.fromFloat f.x)
-                        , Svg.Attributes.fy (String.fromFloat -f.y)
-                        , Svg.Attributes.cx (String.fromFloat c.x)
-                        , Svg.Attributes.cy (String.fromFloat -c.y)
-                        , Svg.Attributes.r (String.fromFloat r)
-                        , Svg.Attributes.gradientUnits "userSpaceOnUse"
-                        , Svg.Attributes.xlinkHref ("#" ++ stopsId)
-                        ]
-                        []
-            in
-            case radialGradient.stops of
-                StopValues _ stopValues ->
-                    let
-                        stopsElement =
-                            Svg.radialGradient [ Svg.Attributes.id stopsId ]
-                                (List.map stopElement stopValues)
-                    in
-                    stopsElement :: gradientElement :: svgElements
-
-                StopsReference _ ->
-                    gradientElement :: svgElements
-
-
-stopElement : Stop -> Svg (Event drawingCoordinates msg)
-stopElement { offset, color } =
-    Svg.stop
-        [ Svg.Attributes.offset offset
-        , Svg.Attributes.stopColor color
-        ]
-        []
-
-
-gradientReference : Gradient units coordinates -> String
-gradientReference gradient =
-    let
-        gradientId =
-            case gradient of
-                LinearGradient { id } ->
-                    id
-
-                RadialGradient { id } ->
-                    id
-    in
-    "url(#" ++ gradientId ++ ")"
-
-
-transformEncoded : String -> (Gradient units coordinates1 -> Gradient units coordinates2) -> String
-transformEncoded gradient function =
-    if gradient == "" then
-        gradient
-
-    else
-        case decodeGradient gradient of
-            Just decoded ->
-                encodeGradient (function decoded)
-
-            Nothing ->
-                ""
-
-
-
 ----- ATTRIBUTES -----
-
-
-setAttribute :
-    AttributeIn units coordinates drawingCoordinates msg
-    -> AttributeValues units coordinates drawingCoordinates msg
-    -> AttributeValues units coordinates drawingCoordinates msg
-setAttribute attribute attributeValues =
-    case attribute of
-        FillStyle fill ->
-            { attributeValues | fillStyle = Just fill }
-
-        StrokeStyle stroke ->
-            { attributeValues | strokeStyle = Just stroke }
-
-        FontSize size ->
-            { attributeValues | fontSize = Just size }
-
-        StrokeWidth width ->
-            { attributeValues | strokeWidth = Just width }
-
-        BorderVisibility bordersVisible ->
-            { attributeValues | borderVisibility = Just bordersVisible }
-
-        TextColor string ->
-            { attributeValues | textColor = Just string }
-
-        FontFamily string ->
-            { attributeValues | fontFamily = Just string }
-
-        TextAnchor position ->
-            { attributeValues | textAnchor = Just position }
-
-        OnLeftClick decoder ->
-            { attributeValues | onLeftClick = Just decoder }
-
-        OnRightClick decoder ->
-            { attributeValues | onRightClick = Just decoder }
-
-        OnLeftMouseDown decoder ->
-            { attributeValues | onLeftMouseDown = Just decoder }
-
-        OnMiddleMouseDown decoder ->
-            { attributeValues | onMiddleMouseDown = Just decoder }
-
-        OnRightMouseDown decoder ->
-            { attributeValues | onRightMouseDown = Just decoder }
-
-        OnLeftMouseUp decoder ->
-            { attributeValues | onLeftMouseUp = Just decoder }
-
-        OnMiddleMouseUp decoder ->
-            { attributeValues | onMiddleMouseUp = Just decoder }
-
-        OnRightMouseUp decoder ->
-            { attributeValues | onRightMouseUp = Just decoder }
-
-        OnSingleTouchStart decoder ->
-            { attributeValues | onSingleTouchStart = Just decoder }
-
-        OnSingleTouchMove decoder interaction ->
-            { attributeValues | onSingleTouchMove = Just ( decoder, interaction ) }
-
-        OnSingleTouchEnd decoder interaction ->
-            { attributeValues | onSingleTouchEnd = Just ( decoder, interaction ) }
-
-
-collectAttributeValues :
-    List (AttributeIn units coordinates drawingCoordinates msg)
-    -> AttributeValues units coordinates drawingCoordinates msg
-collectAttributeValues attributeList =
-    assignAttributes attributeList emptyAttributeValues
-
-
-assignAttributes :
-    List (AttributeIn units coordinates drawingCoordinates msg)
-    -> AttributeValues units coordinates drawingCoordinates msg
-    -> AttributeValues units coordinates drawingCoordinates msg
-assignAttributes attributeList attributeValues =
-    List.foldr setAttribute attributeValues attributeList
-
-
-addFillStyle :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addFillStyle attributeValues svgAttributes =
-    case attributeValues.fillStyle of
-        Nothing ->
-            svgAttributes
-
-        Just NoFill ->
-            Svg.Attributes.fill "none" :: svgAttributes
-
-        Just (FillColor string) ->
-            Svg.Attributes.fill string :: svgAttributes
-
-        Just (FillGradient gradient) ->
-            Svg.Attributes.fill (gradientReference gradient) :: svgAttributes
-
-
-addStrokeStyle :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addStrokeStyle attributeValues svgAttributes =
-    case attributeValues.strokeStyle of
-        Nothing ->
-            svgAttributes
-
-        Just (StrokeColor string) ->
-            Svg.Attributes.stroke string :: svgAttributes
-
-        Just (StrokeGradient gradient) ->
-            Svg.Attributes.stroke (gradientReference gradient) :: svgAttributes
-
-
-addFontSize :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addFontSize attributeValues svgAttributes =
-    case attributeValues.fontSize of
-        Nothing ->
-            svgAttributes
-
-        Just size ->
-            Svg.Attributes.fontSize (String.fromFloat size) :: svgAttributes
-
-
-addStrokeWidth :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addStrokeWidth attributeValues svgAttributes =
-    case attributeValues.strokeWidth of
-        Nothing ->
-            svgAttributes
-
-        Just width ->
-            Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
-
-
-addTextColor :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addTextColor attributeValues svgAttributes =
-    case attributeValues.textColor of
-        Nothing ->
-            svgAttributes
-
-        Just string ->
-            Svg.Attributes.color string :: svgAttributes
-
-
-addFontFamily :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addFontFamily attributeValues svgAttributes =
-    case attributeValues.fontFamily of
-        Nothing ->
-            svgAttributes
-
-        Just string ->
-            Svg.Attributes.fontFamily string :: svgAttributes
-
-
-addTextAnchor :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
-addTextAnchor attributeValues svgAttributes =
-    case attributeValues.textAnchor of
-        Nothing ->
-            svgAttributes
-
-        Just position ->
-            Svg.Attributes.textAnchor position.x
-                :: Svg.Attributes.dominantBaseline position.y
-                :: svgAttributes
 
 
 leftButton : Int
@@ -1464,13 +963,13 @@ addEventHandlers :
     -> List (Svg.Attribute (Event drawingCoordinates msg))
 addEventHandlers attributeValues svgAttributes =
     svgAttributes
-        |> addOnLeftClick attributeValues.onLeftClick
-        |> addOnRightClick attributeValues.onRightClick
-        |> addOnMouseDown attributeValues
-        |> addOnMouseUp attributeValues
-        |> addOnTouchStart attributeValues
-        |> addOnTouchMove attributeValues
-        |> addOnTouchEnd attributeValues
+        |> addClickHandler attributeValues.onLeftClick
+        |> addContextmenuHandler attributeValues.onRightClick
+        |> addMousedownHandler attributeValues
+        |> addMouseupHandler attributeValues
+        |> addTouchstartHandler attributeValues
+        |> addTouchmoveHandler attributeValues
+        |> addTouchendHandler attributeValues
 
 
 on :
@@ -1481,11 +980,11 @@ on eventName decoder =
     Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
 
 
-addOnLeftClick :
+addClickHandler :
     Maybe (ClickDecoder drawingCoordinates msg)
     -> List (Svg.Attribute (Event drawingCoordinates msg))
     -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnLeftClick registeredDecoder svgAttributes =
+addClickHandler registeredDecoder svgAttributes =
     case registeredDecoder of
         Nothing ->
             svgAttributes
@@ -1494,11 +993,11 @@ addOnLeftClick registeredDecoder svgAttributes =
             on "click" (handleClick decoder) :: svgAttributes
 
 
-addOnRightClick :
+addContextmenuHandler :
     Maybe (ClickDecoder drawingCoordinates msg)
     -> List (Svg.Attribute (Event drawingCoordinates msg))
     -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnRightClick registeredDecoder svgAttributes =
+addContextmenuHandler registeredDecoder svgAttributes =
     case registeredDecoder of
         Nothing ->
             svgAttributes
@@ -1517,11 +1016,11 @@ registerDecoder whichButton maybeDecoder dict =
             dict
 
 
-addOnMouseDown :
+addMousedownHandler :
     AttributeValues units coordinates drawingCoordinates msg
     -> List (Svg.Attribute (Event drawingCoordinates msg))
     -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnMouseDown attributeValues svgAttributes =
+addMousedownHandler attributeValues svgAttributes =
     let
         decodersByButton =
             Dict.empty
@@ -1536,11 +1035,11 @@ addOnMouseDown attributeValues svgAttributes =
         on "mousedown" (handleMouseDown decodersByButton) :: svgAttributes
 
 
-addOnMouseUp :
+addMouseupHandler :
     AttributeValues units coordinates drawingCoordinates msg
     -> List (Svg.Attribute (Event drawingCoordinates msg))
     -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnMouseUp attributeValues svgAttributes =
+addMouseupHandler attributeValues svgAttributes =
     let
         decodersByButton =
             Dict.empty
@@ -1555,226 +1054,118 @@ addOnMouseUp attributeValues svgAttributes =
         on "mouseup" (handleMouseUp decodersByButton) :: svgAttributes
 
 
-type alias TouchStartHandler drawingCoordinates msg =
-    TouchStartEvent -> Decoder (Event drawingCoordinates msg)
-
-
-addOnTouchStart :
+addTouchstartHandler :
     AttributeValues units coordinates drawingCoordinates msg
     -> List (Svg.Attribute (Event drawingCoordinates msg))
     -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnTouchStart attributeValues svgAttributes =
-    let
-        touchStartHandlers =
-            []
-                |> addSingleTouchStartHandler attributeValues.onSingleTouchStart
-    in
-    if List.isEmpty touchStartHandlers then
-        svgAttributes
+addTouchstartHandler attributeValues svgAttributes =
+    case ( attributeValues.onTouchStart, attributeValues.onTouchChange ) of
+        ( Nothing, Nothing ) ->
+            svgAttributes
 
-    else
-        on "touchstart" (handleTouchStart touchStartHandlers) :: svgAttributes
+        ( Just touchStartDecoder, Nothing ) ->
+            on "touchstart" (decodeTouchStart touchStartDecoder) :: svgAttributes
 
+        ( Nothing, Just ( touchChangeDecoder, touchInteraction ) ) ->
+            on "touchstart" (decodeTouchChange touchChangeDecoder touchInteraction) :: svgAttributes
 
-addSingleTouchStartHandler :
-    Maybe (SingleTouchStartDecoder drawingCoordinates msg)
-    -> List (TouchStartHandler drawingCoordinates msg)
-    -> List (TouchStartHandler drawingCoordinates msg)
-addSingleTouchStartHandler maybeDecoder handlers =
-    case maybeDecoder of
-        Nothing ->
-            handlers
-
-        Just decoder ->
-            decodeSingleTouchStart decoder :: handlers
-
-
-decodeSingleTouchStart :
-    SingleTouchStartDecoder drawingCoordinates msg
-    -> TouchStartEvent
-    -> Decoder (Event drawingCoordinates msg)
-decodeSingleTouchStart givenDecoder touchStartEvent =
-    case TouchStartEvent.singleTouch touchStartEvent of
-        Just singleTouch ->
-            Decode.map (wrapSingleTouchStart touchStartEvent singleTouch) givenDecoder
-
-        Nothing ->
-            Decode.fail "Not a single touch"
-
-
-wrapSingleTouchStart : TouchStartEvent -> TouchStart -> (Point2d Pixels drawingCoordinates -> SingleTouchInteraction drawingCoordinates -> msg) -> Event drawingCoordinates msg
-wrapSingleTouchStart touchStartEvent touch userCallback =
-    Event
-        (\viewBox ->
+        ( Just touchStartDecoder, Just ( touchChangeDecoder, touchInteraction ) ) ->
             let
-                drawingPoint =
-                    toDrawingPoint viewBox touchStartEvent.container touch
-
-                singleTouchInteraction =
-                    SingleTouchInteraction
-                        { container = touchStartEvent.container
-                        , initialTouch = touch
-                        , startTimeStamp = touchStartEvent.timeStamp
-                        , viewBox = viewBox
-                        , drawingScale = computeDrawingScale viewBox touchStartEvent.container
-                        , initialPoint = drawingPoint
-                        }
+                combinedDecoder =
+                    Decode.oneOf
+                        [ decodeTouchStart touchStartDecoder
+                        , decodeTouchChange touchChangeDecoder touchInteraction
+                        ]
             in
-            userCallback drawingPoint singleTouchInteraction
-        )
+            on "touchstart" combinedDecoder :: svgAttributes
 
 
-wrapSingleTouchMove : SingleTouchInteraction drawingCoordinates -> TouchMove -> (Point2d Pixels drawingCoordinates -> msg) -> Event drawingCoordinates msg
-wrapSingleTouchMove (SingleTouchInteraction interaction) touch userCallback =
-    Event
-        (\viewBox ->
+addTouchmoveHandler :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addTouchmoveHandler attributeValues svgAttributes =
+    case attributeValues.onTouchChange of
+        Nothing ->
+            svgAttributes
+
+        Just ( touchChangeDecoder, touchInteraction ) ->
+            on "touchmove" (decodeTouchChange touchChangeDecoder touchInteraction) :: svgAttributes
+
+
+addTouchendHandler :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addTouchendHandler attributeValues svgAttributes =
+    case ( attributeValues.onTouchEnd, attributeValues.onTouchChange ) of
+        ( Nothing, Nothing ) ->
+            svgAttributes
+
+        ( Just ( touchEndDecoder, touchInteraction ), Nothing ) ->
+            on "touchend" (decodeTouchEnd touchEndDecoder touchInteraction) :: svgAttributes
+
+        ( Nothing, Just ( touchChangeDecoder, touchInteraction ) ) ->
+            on "touchend" (decodeTouchChange touchChangeDecoder touchInteraction) :: svgAttributes
+
+        ( Just ( touchEndDecoder, touchEndInteraction ), Just ( touchChangeDecoder, touchChangeInteraction ) ) ->
             let
-                drawingPoint =
-                    toDisplacedPoint interaction.initialTouch
-                        interaction.drawingScale
-                        interaction.initialPoint
-                        touch
+                combinedDecoder =
+                    Decode.oneOf
+                        [ decodeTouchEnd touchEndDecoder touchEndInteraction
+                        , decodeTouchChange touchChangeDecoder touchChangeInteraction
+                        ]
             in
-            userCallback drawingPoint
+            on "touchend" combinedDecoder :: svgAttributes
+
+
+decodeTouchStart : TouchStartDecoder drawingCoordinates msg -> Decoder (Event drawingCoordinates msg)
+decodeTouchStart touchStartDecoder =
+    Decode.map2
+        (\callback touchStartEvent ->
+            Event
+                (\viewBox ->
+                    let
+                        ( touchInteraction, initialPoints ) =
+                            TouchInteraction.start touchStartEvent viewBox
+                    in
+                    callback initialPoints touchInteraction
+                )
         )
+        touchStartDecoder
+        TouchStartEvent.decoder
 
 
-handleTouchStart :
-    List (TouchStartHandler drawingCoordinates msg)
-    -> Decoder (Event drawingCoordinates msg)
-handleTouchStart handlers =
-    decodeTouchStartEvent
-        |> Decode.andThen
-            (\touchStartEvent ->
-                Decode.oneOf (List.map ((|>) touchStartEvent) handlers)
-            )
+decodeTouchChange : TouchChangeDecoder drawingCoordinates msg -> TouchInteraction drawingCoordinates -> Decoder (Event drawingCoordinates msg)
+decodeTouchChange touchChangeDecoder touchInteraction =
+    Decode.map2
+        (\callback touchChangeEvent ->
+            Event
+                (\viewBox ->
+                    let
+                        updatedPoints =
+                            touchChangeEvent.targetTouches
+                                |> List.map (TouchInteraction.updatedPoint touchInteraction)
+                    in
+                    callback updatedPoints
+                )
+        )
+        touchChangeDecoder
+        TouchChangeEvent.decoder
 
 
-handleTouchMove :
-    List (TouchMoveHandler drawingCoordinates msg)
-    -> Decoder (Event drawingCoordinates msg)
-handleTouchMove handlers =
-    decodeTouchMoveEvent
-        |> Decode.andThen
-            (\touchMoveEvent ->
-                Decode.oneOf (List.map ((|>) touchMoveEvent) handlers)
-            )
-
-
-type alias TouchEndHandler drawingCoordinates msg =
-    TouchEndEvent -> Decoder (Event drawingCoordinates msg)
-
-
-type alias TouchMoveHandler drawingCoordinates msg =
-    TouchMoveEvent -> Decoder (Event drawingCoordinates msg)
-
-
-addOnTouchMove :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute (Event drawingCoordinates msg))
-    -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnTouchMove attributeValues svgAttributes =
-    let
-        touchMoveHandlers =
-            []
-                |> addSingleTouchMoveHandler attributeValues.onSingleTouchMove
-    in
-    if List.isEmpty touchMoveHandlers then
-        svgAttributes
-
-    else
-        on "touchmove" (handleTouchMove touchMoveHandlers) :: svgAttributes
-
-
-addSingleTouchMoveHandler :
-    Maybe ( SingleTouchMoveDecoder drawingCoordinates msg, SingleTouchInteraction drawingCoordinates )
-    -> List (TouchMoveHandler drawingCoordinates msg)
-    -> List (TouchMoveHandler drawingCoordinates msg)
-addSingleTouchMoveHandler maybePair handlers =
-    case maybePair of
-        Nothing ->
-            handlers
-
-        Just ( decoder, singleTouchInteraction ) ->
-            decodeSingleTouchMove decoder singleTouchInteraction :: handlers
-
-
-addOnTouchEnd :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute (Event drawingCoordinates msg))
-    -> List (Svg.Attribute (Event drawingCoordinates msg))
-addOnTouchEnd attributeValues svgAttributes =
-    let
-        touchEndHandlers =
-            []
-                |> addSingleTouchEndHandler attributeValues.onSingleTouchEnd
-    in
-    if List.isEmpty touchEndHandlers then
-        svgAttributes
-
-    else
-        on "touchend" (handleTouchEnd touchEndHandlers) :: svgAttributes
-
-
-addSingleTouchEndHandler :
-    Maybe ( TouchEndDecoder msg, SingleTouchInteraction drawingCoordinates )
-    -> List (TouchEndHandler drawingCoordinates msg)
-    -> List (TouchEndHandler drawingCoordinates msg)
-addSingleTouchEndHandler maybePair handlers =
-    case maybePair of
-        Nothing ->
-            handlers
-
-        Just ( decoder, singleTouchInteraction ) ->
-            decodeSingleTouchEnd decoder singleTouchInteraction :: handlers
-
-
-decodeSingleTouchEnd :
-    TouchEndDecoder msg
-    -> SingleTouchInteraction drawingCoordinates
-    -> TouchEndEvent
-    -> Decoder (Event drawingCoordinates msg)
-decodeSingleTouchEnd givenDecoder singleTouchInteraction touchEndEvent =
-    if touchEndEvent |> TouchEndEvent.isEndOf singleTouchInteraction then
-        let
-            (SingleTouchInteraction { startTimeStamp }) =
-                singleTouchInteraction
-
-            touchDuration =
-                touchEndEvent.timeStamp
-                    |> Quantity.minus startTimeStamp
-        in
-        givenDecoder
-            |> Decode.map ((|>) touchDuration)
-            |> Decode.map wrapMessage
-
-    else
-        Decode.fail "Not the end of the given touch"
-
-
-decodeSingleTouchMove :
-    SingleTouchMoveDecoder drawingCoordinates msg
-    -> SingleTouchInteraction drawingCoordinates
-    -> TouchMoveEvent
-    -> Decoder (Event drawingCoordinates msg)
-decodeSingleTouchMove givenDecoder singleTouchInteraction touchMoveEvent =
-    case TouchMoveEvent.singleTouch singleTouchInteraction touchMoveEvent of
-        Just touch ->
-            Decode.map (wrapSingleTouchMove singleTouchInteraction touch) givenDecoder
-
-        Nothing ->
-            Decode.fail "Not a move of the given touch"
-
-
-handleTouchEnd :
-    List (TouchEndHandler drawingCoordinates msg)
-    -> Decoder (Event drawingCoordinates msg)
-handleTouchEnd handlers =
-    decodeTouchEndEvent
-        |> Decode.andThen
-            (\touchEndEvent ->
-                Decode.oneOf (List.map ((|>) touchEndEvent) handlers)
-            )
+decodeTouchEnd : TouchEndDecoder msg -> TouchInteraction drawingCoordinates -> Decoder (Event drawingCoordinates msg)
+decodeTouchEnd touchEndDecoder touchInteraction =
+    Decode.map2
+        (\callback touchEndEvent ->
+            let
+                elapsedDuration =
+                    TouchInteraction.duration touchInteraction touchEndEvent
+            in
+            wrapMessage (callback elapsedDuration)
+        )
+        touchEndDecoder
+        TouchEndEvent.decoder
 
 
 addStrokeGradient :
@@ -1790,7 +1181,7 @@ addStrokeGradient attributeValues svgElements =
             svgElements
 
         Just (StrokeGradient gradient) ->
-            addGradientElements gradient svgElements
+            Gradient.render gradient svgElements
 
 
 addFillGradient :
@@ -1809,7 +1200,7 @@ addFillGradient attributeValues svgElements =
             svgElements
 
         Just (FillGradient gradient) ->
-            addGradientElements gradient svgElements
+            Gradient.render gradient svgElements
 
 
 addGradientElement :
@@ -1822,7 +1213,7 @@ addGradientElement maybeGradient svgElements =
             svgElements
 
         Just gradient ->
-            addGradientElements gradient svgElements
+            Gradient.render gradient svgElements
 
 
 addTransformedFillGradientReference :
@@ -1835,7 +1226,7 @@ addTransformedFillGradientReference maybeGradient svgAttributes =
             svgAttributes
 
         Just gradient ->
-            Svg.Attributes.fill (gradientReference gradient) :: svgAttributes
+            Svg.Attributes.fill (Gradient.reference gradient) :: svgAttributes
 
 
 addTransformedStrokeGradientReference :
@@ -1848,4 +1239,4 @@ addTransformedStrokeGradientReference maybeGradient svgAttributes =
             svgAttributes
 
         Just gradient ->
-            Svg.Attributes.stroke (gradientReference gradient) :: svgAttributes
+            Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes

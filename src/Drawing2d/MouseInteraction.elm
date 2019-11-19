@@ -1,12 +1,16 @@
 module Drawing2d.MouseInteraction exposing
     ( MouseInteraction
+    , decodeEnd
+    , decodeMove
     , onEnd
     , onMove
     )
 
 import Browser.Events
-import Drawing2d.Types as Types exposing (MouseMoveEvent, MouseStartEvent)
-import Drawing2d.Utils exposing (decodeMouseMoveEvent, decodeMouseStartEvent, toDisplacedPoint, wrongButton)
+import Drawing2d.Decode as Decode
+import Drawing2d.InteractionPoint as InteractionPoint
+import Drawing2d.MouseInteraction.Private as Private
+import Drawing2d.MouseMoveEvent as MouseMoveEvent exposing (MouseMoveEvent)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
@@ -14,51 +18,42 @@ import Vector2d
 
 
 type alias MouseInteraction drawingCoordinates =
-    Types.MouseInteraction drawingCoordinates
+    Private.MouseInteraction drawingCoordinates
 
 
-decodeDisplacedPoint :
-    { initialEvent | pageX : Float, pageY : Float }
-    -> Float
-    -> Point2d Pixels drawingCoordinates
-    -> Decoder (Point2d Pixels drawingCoordinates)
-decodeDisplacedPoint initialEvent drawingScale initialPoint =
-    Decode.map (toDisplacedPoint initialEvent drawingScale initialPoint) decodeMouseMoveEvent
-
-
-mouseMoveDecoder :
-    MouseInteraction drawingCoordinates
-    -> Decoder (Point2d Pixels drawingCoordinates -> msg)
-    -> Decoder msg
-mouseMoveDecoder (Types.MouseInteraction mouseInteraction) givenDecoder =
-    let
-        { initialEvent, drawingScale, initialPoint } =
-            mouseInteraction
-    in
-    Decode.map2 (<|) givenDecoder (decodeDisplacedPoint initialEvent drawingScale initialPoint)
-
-
-onMove :
-    MouseInteraction drawingCoordinates
-    -> Decoder (Point2d Pixels drawingCoordinates -> msg)
+decodeMove :
+    Decoder (Point2d Pixels drawingCoordinates -> msg)
+    -> MouseInteraction drawingCoordinates
     -> Sub msg
-onMove mouseInteraction givenDecoder =
-    Browser.Events.onMouseMove (mouseMoveDecoder mouseInteraction givenDecoder)
+decodeMove givenDecoder (Private.MouseInteraction interaction) =
+    let
+        positionDecoder =
+            MouseMoveEvent.decoder
+                |> Decode.map (InteractionPoint.updatedPosition interaction.referencePoint)
+    in
+    Browser.Events.onMouseMove (Decode.map2 (<|) givenDecoder positionDecoder)
 
 
-decodeMouseUp : MouseInteraction drawingCoordinates -> Decoder msg -> Decoder msg
-decodeMouseUp (Types.MouseInteraction mouseInteraction) givenDecoder =
-    Decode.field "button" Decode.int
-        |> Decode.andThen
-            (\button ->
-                if button == mouseInteraction.initialEvent.button then
-                    givenDecoder
-
-                else
-                    wrongButton
-            )
+onMove : (Point2d Pixels drawingCoordinates -> msg) -> MouseInteraction drawingCoordinates -> Sub msg
+onMove callback mouseInteraction =
+    decodeMove (Decode.succeed callback) mouseInteraction
 
 
-onEnd : MouseInteraction drawingCoordinates -> Decoder msg -> Sub msg
-onEnd mouseInteraction decoder =
-    Browser.Events.onMouseUp (decodeMouseUp mouseInteraction decoder)
+decodeEnd : Decoder msg -> MouseInteraction drawingCoordinates -> Sub msg
+decodeEnd givenDecoder (Private.MouseInteraction interaction) =
+    Browser.Events.onMouseUp
+        (Decode.button
+            |> Decode.andThen
+                (\button ->
+                    if button == interaction.button then
+                        givenDecoder
+
+                    else
+                        Decode.wrongButton
+                )
+        )
+
+
+onEnd : msg -> MouseInteraction drawingCoordinates -> Sub msg
+onEnd message mouseInteraction =
+    decodeEnd (Decode.succeed message) mouseInteraction
