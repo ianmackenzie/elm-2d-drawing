@@ -72,7 +72,6 @@ import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent
 import Drawing2d.TouchEndEvent as TouchEndEvent
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Drawing2d.TouchInteraction.Protected as TouchInteraction
-import Drawing2d.TouchMoveEvent as TouchMoveEvent
 import Drawing2d.TouchStartEvent as TouchStartEvent exposing (TouchStart, TouchStartEvent)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
