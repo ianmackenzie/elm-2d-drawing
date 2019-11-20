@@ -953,6 +953,7 @@ addEventHandlers attributeValues svgAttributes =
         |> addTouchstartHandler attributeValues
         |> addTouchmoveHandler attributeValues
         |> addTouchendHandler attributeValues
+        |> addTouchActionCss attributeValues
 
 
 on :
@@ -1149,6 +1150,18 @@ decodeTouchEnd touchEndDecoder touchInteraction =
         )
         touchEndDecoder
         TouchEndEvent.decoder
+
+
+addTouchActionCss :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+    -> List (Svg.Attribute (Event drawingCoordinates msg))
+addTouchActionCss attributeValues svgAttributes =
+    if (attributeValues.onTouchStart == Nothing) && (attributeValues.onTouchChange == Nothing) && (attributeValues.onTouchEnd == Nothing) then
+        svgAttributes
+
+    else
+        Html.Attributes.style "touch-action" "none" :: svgAttributes
 
 
 addStrokeGradient :
