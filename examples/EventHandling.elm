@@ -4,6 +4,7 @@ import Angle
 import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Color
+import Dict exposing (Dict)
 import Drawing2d exposing (AttributeIn)
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
@@ -38,19 +39,19 @@ type Msg
     | RightMouseUp Int
     | LeftMouseDown Int (Point2d Pixels DrawingCoordinates)
     | RightMouseDown Int (Point2d Pixels DrawingCoordinates)
-    | TouchStart Int (List (Point2d Pixels DrawingCoordinates)) (TouchInteraction DrawingCoordinates)
+    | TouchStart Int (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction DrawingCoordinates)
     | TouchEnd Int Duration
-    | TouchChange Int (List (Point2d Pixels DrawingCoordinates))
+    | TouchChange Int (Dict Int (Point2d Pixels DrawingCoordinates))
 
 
 logString : Msg -> String
 logString message =
     case message of
         TouchStart id points _ ->
-            "TouchStart " ++ String.fromInt id ++ " <" ++ String.fromInt (List.length points) ++ " point(s)>"
+            "TouchStart " ++ String.fromInt id ++ " <" ++ String.fromInt (Dict.size points) ++ " point(s)>"
 
         TouchChange id points ->
-            "TouchChange " ++ String.fromInt id ++ " <" ++ String.fromInt (List.length points) ++ " point(s)>"
+            "TouchChange " ++ String.fromInt id ++ " <" ++ String.fromInt (Dict.size points) ++ " point(s)>"
 
         _ ->
             Debug.toString message

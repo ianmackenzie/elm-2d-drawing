@@ -1,10 +1,11 @@
 module Drawing2d.TouchInteraction.Protected exposing (TouchInteraction, duration, start, updatedPoint)
 
 import BoundingBox2d exposing (BoundingBox2d)
-import Drawing2d.InteractionPoint as InteractionPoint
+import Dict exposing (Dict)
+import Drawing2d.InteractionPoint as InteractionPoint exposing (ReferencePoint)
 import Drawing2d.TouchEndEvent exposing (TouchEndEvent)
 import Drawing2d.TouchInteraction.Private as Private
-import Drawing2d.TouchStartEvent exposing (TouchStartEvent)
+import Drawing2d.TouchStartEvent exposing (TouchStart, TouchStartEvent)
 import Duration exposing (Duration)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
@@ -15,7 +16,7 @@ type alias TouchInteraction drawingCoordinates =
     Private.TouchInteraction drawingCoordinates
 
 
-start : TouchStartEvent -> BoundingBox2d Pixels drawingCoordinates -> ( TouchInteraction drawingCoordinates, List (Point2d Pixels drawingCoordinates) )
+start : TouchStartEvent -> BoundingBox2d Pixels drawingCoordinates -> ( TouchInteraction drawingCoordinates, Dict Int (Point2d Pixels drawingCoordinates) )
 start touchStartEvent viewBox =
     let
         ( firstTargetTouch, remainingTargetTouches ) =
@@ -24,11 +25,15 @@ start touchStartEvent viewBox =
         referencePoint =
             InteractionPoint.referencePoint firstTargetTouch viewBox touchStartEvent.container
 
+        firstIdentifier =
+            firstTargetTouch.identifier
+
         firstPoint =
             InteractionPoint.startPosition referencePoint
 
-        remainingPoints =
-            List.map (InteractionPoint.updatedPosition referencePoint) remainingTargetTouches
+        dictEntries =
+            ( firstIdentifier, firstPoint )
+                :: List.map (toDictEntry referencePoint) remainingTargetTouches
 
         touchInteraction =
             Private.TouchInteraction
@@ -36,12 +41,17 @@ start touchStartEvent viewBox =
                 , referencePoint = referencePoint
                 }
     in
-    ( touchInteraction, firstPoint :: remainingPoints )
+    ( touchInteraction, Dict.fromList dictEntries )
 
 
-updatedPoint : TouchInteraction drawingCoordinates -> { a | pageX : Float, pageY : Float } -> Point2d Pixels drawingCoordinates
+toDictEntry : ReferencePoint drawingCoordinates -> TouchStart -> ( Int, Point2d Pixels drawingCoordinates )
+toDictEntry referencePoint touchStart =
+    ( touchStart.identifier, InteractionPoint.updatedPosition referencePoint touchStart )
+
+
+updatedPoint : TouchInteraction drawingCoordinates -> { a | identifier : Int, pageX : Float, pageY : Float } -> ( Int, Point2d Pixels drawingCoordinates )
 updatedPoint (Private.TouchInteraction interaction) touch =
-    InteractionPoint.updatedPosition interaction.referencePoint touch
+    ( touch.identifier, InteractionPoint.updatedPosition interaction.referencePoint touch )
 
 
 duration : TouchInteraction drawingCoordinates -> TouchEndEvent -> Duration

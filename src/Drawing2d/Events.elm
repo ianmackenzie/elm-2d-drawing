@@ -19,6 +19,7 @@ module Drawing2d.Events exposing
     , onTouchStart
     )
 
+import Dict exposing (Dict)
 import Drawing2d.Attributes.Protected as Attributes exposing (AttributeIn)
 import Drawing2d.MouseInteraction exposing (MouseInteraction)
 import Drawing2d.TouchInteraction exposing (TouchInteraction)
@@ -67,7 +68,7 @@ onMiddleMouseUp message =
     decodeMiddleMouseUp (Decode.succeed message)
 
 
-onTouchStart : (List (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
+onTouchStart : (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 onTouchStart callback =
     decodeTouchStart (Decode.succeed callback)
 
@@ -112,6 +113,6 @@ decodeRightMouseUp decoder =
     Attributes.OnRightMouseUp decoder
 
 
-decodeTouchStart : Decoder (List (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
+decodeTouchStart : Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg) -> AttributeIn units coordinates drawingCoordinates msg
 decodeTouchStart decoder =
     Attributes.OnTouchStart decoder

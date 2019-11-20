@@ -17,6 +17,7 @@ module Drawing2d.Attributes.Protected exposing
     , emptyAttributeValues
     )
 
+import Dict exposing (Dict)
 import Drawing2d.Gradient.Protected as Gradient exposing (Gradient)
 import Drawing2d.MouseInteraction.Protected exposing (MouseInteraction)
 import Drawing2d.TouchInteraction.Protected exposing (TouchInteraction)
@@ -48,11 +49,11 @@ type alias MouseDownDecoder drawingCoordinates msg =
 
 
 type alias TouchStartDecoder drawingCoordinates msg =
-    Decoder (List (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
+    Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
 
 
 type alias TouchChangeDecoder drawingCoordinates msg =
-    Decoder (List (Point2d Pixels drawingCoordinates) -> msg)
+    Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> msg)
 
 
 type alias TouchEndDecoder msg =

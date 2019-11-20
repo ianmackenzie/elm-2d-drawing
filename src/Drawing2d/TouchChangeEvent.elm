@@ -10,14 +10,16 @@ type alias TouchChangeEvent =
 
 
 type alias TouchPosition =
-    { pageX : Float
+    { identifier : Int
+    , pageX : Float
     , pageY : Float
     }
 
 
 decodeTouchPosition : Decoder TouchPosition
 decodeTouchPosition =
-    Decode.map2 TouchPosition
+    Decode.map3 TouchPosition
+        Decode.identifier
         Decode.pageX
         Decode.pageY
 

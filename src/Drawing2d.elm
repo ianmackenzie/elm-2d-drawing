@@ -1138,6 +1138,7 @@ decodeTouchChange touchChangeDecoder touchInteraction =
                         updatedPoints =
                             touchChangeEvent.targetTouches
                                 |> List.map (TouchInteraction.updatedPoint touchInteraction)
+                                |> Dict.fromList
                     in
                     callback updatedPoints
                 )

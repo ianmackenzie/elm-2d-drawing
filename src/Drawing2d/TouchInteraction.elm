@@ -6,6 +6,7 @@ module Drawing2d.TouchInteraction exposing
     , onEnd
     )
 
+import Dict exposing (Dict)
 import Drawing2d.Attributes.Protected as Attributes exposing (AttributeIn)
 import Drawing2d.TouchInteraction.Private as Private
 import Duration exposing (Duration)
@@ -18,7 +19,7 @@ type alias TouchInteraction drawingCoordinates =
     Private.TouchInteraction drawingCoordinates
 
 
-decodeChange : Decoder (List (Point2d Pixels drawingCoordinates) -> msg) -> TouchInteraction drawingCoordinates -> AttributeIn units coordinates drawingCoordinates msg
+decodeChange : Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> msg) -> TouchInteraction drawingCoordinates -> AttributeIn units coordinates drawingCoordinates msg
 decodeChange decoder touchInteraction =
     Attributes.OnTouchChange decoder touchInteraction
 
@@ -28,7 +29,7 @@ decodeEnd decoder touchInteraction =
     Attributes.OnTouchEnd decoder touchInteraction
 
 
-onChange : (List (Point2d Pixels drawingCoordinates) -> msg) -> TouchInteraction drawingCoordinates -> AttributeIn units coordinates drawingCoordinates msg
+onChange : (Dict Int (Point2d Pixels drawingCoordinates) -> msg) -> TouchInteraction drawingCoordinates -> AttributeIn units coordinates drawingCoordinates msg
 onChange callback touchInteraction =
     decodeChange (Decode.succeed callback) touchInteraction
 
