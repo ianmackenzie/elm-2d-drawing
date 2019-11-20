@@ -96,10 +96,6 @@ import Vector2d exposing (Vector2d)
 import VirtualDom
 
 
-
----------- TYPES ----------
-
-
 type Event drawingCoordinates msg
     = Event (BoundingBox2d Pixels drawingCoordinates -> msg)
 
@@ -138,10 +134,6 @@ type alias Renderer a drawingCoordinates msg =
     List (Svg.Attribute (Event drawingCoordinates msg)) -> a -> Svg (Event drawingCoordinates msg)
 
 
-
----------- CONSTANTS ----------
-
-
 containerStaticCss : List (Html.Attribute msg)
 containerStaticCss =
     [ Html.Attributes.style "position" "relative"
@@ -172,10 +164,6 @@ defaultAttributes =
     , Attributes.textColor Color.black
     , Attributes.textAnchor Text.bottomLeft
     ]
-
-
-
----------- FUNCTIONS ----------
 
 
 toHtml :
@@ -935,10 +923,6 @@ map mapFunction (Element drawFunction) =
         (\arg1 arg2 arg3 arg4 arg5 arg6 ->
             Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
         )
-
-
-
------ ATTRIBUTES -----
 
 
 leftButton : Int
