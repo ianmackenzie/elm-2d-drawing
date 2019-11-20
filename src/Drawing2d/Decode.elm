@@ -64,9 +64,30 @@ wrongButton =
     Decode.fail "Ignoring non-matching button"
 
 
+decodeBoundingClientRectProperty : Decoder DOM.Rectangle
+decodeBoundingClientRectProperty =
+    Decode.field "boundingClientRect"
+        (Decode.map4
+            (\left top width height ->
+                { left = left
+                , top = top
+                , width = width
+                , height = height
+                }
+            )
+            (Decode.field "left" Decode.float)
+            (Decode.field "top" Decode.float)
+            (Decode.field "width" Decode.float)
+            (Decode.field "height" Decode.float)
+        )
+
+
 decodeBoundingClientRect : Decoder DOM.Rectangle
 decodeBoundingClientRect =
-    DOM.boundingClientRect
+    Decode.oneOf
+        [ decodeBoundingClientRectProperty
+        , DOM.boundingClientRect
+        ]
 
 
 container : Decoder DOM.Rectangle
