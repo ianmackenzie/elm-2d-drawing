@@ -3,6 +3,8 @@ module Drawing2d.Attributes.Protected exposing
     , AttributeValues
     , ClickDecoder
     , Fill(..)
+    , LineCap(..)
+    , LineJoin(..)
     , MouseDownDecoder
     , Stroke(..)
     , TouchChangeDecoder
@@ -40,6 +42,18 @@ type Stroke units coordinates
     | StrokeGradient (Gradient units coordinates)
 
 
+type LineJoin
+    = BevelJoin
+    | MiterJoin
+    | RoundJoin
+
+
+type LineCap
+    = ButtCap
+    | SquareCap
+    | RoundCap
+
+
 type alias ClickDecoder drawingCoordinates msg =
     Decoder (Point2d Pixels drawingCoordinates -> msg)
 
@@ -65,6 +79,8 @@ type AttributeIn units coordinates drawingCoordinates msg
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
     | FontSize Float
     | StrokeWidth Float
+    | StrokeLineJoin LineJoin
+    | StrokeLineCap LineCap
     | BorderVisibility Bool
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
@@ -87,6 +103,8 @@ type alias AttributeValues units coordinates drawingCoordinates msg =
     , strokeStyle : Maybe (Stroke units coordinates)
     , fontSize : Maybe Float
     , strokeWidth : Maybe Float
+    , strokeLineJoin : Maybe LineJoin
+    , strokeLineCap : Maybe LineCap
     , borderVisibility : Maybe Bool
     , textColor : Maybe String
     , fontFamily : Maybe String
@@ -111,6 +129,8 @@ emptyAttributeValues =
     , strokeStyle = Nothing
     , fontSize = Nothing
     , strokeWidth = Nothing
+    , strokeLineJoin = Nothing
+    , strokeLineCap = Nothing
     , borderVisibility = Nothing
     , textColor = Nothing
     , fontFamily = Nothing
@@ -146,6 +166,12 @@ setAttribute attribute attributeValues =
 
         StrokeWidth width ->
             { attributeValues | strokeWidth = Just width }
+
+        StrokeLineJoin lineJoin ->
+            { attributeValues | strokeLineJoin = Just lineJoin }
+
+        StrokeLineCap lineCap ->
+            { attributeValues | strokeLineCap = Just lineCap }
 
         BorderVisibility bordersVisible ->
             { attributeValues | borderVisibility = Just bordersVisible }
@@ -279,6 +305,56 @@ addStrokeWidth attributeValues svgAttributes =
             Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
 
 
+lineJoinString lineJoin =
+    case lineJoin of
+        BevelJoin ->
+            "bevel"
+
+        RoundJoin ->
+            "round"
+
+        MiterJoin ->
+            "miter"
+
+
+lineCapString lineJoin =
+    case lineJoin of
+        ButtCap ->
+            "butt"
+
+        SquareCap ->
+            "square"
+
+        RoundCap ->
+            "round"
+
+
+addStrokeLineJoin :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
+addStrokeLineJoin attributeValues svgAttributes =
+    case attributeValues.strokeLineJoin of
+        Nothing ->
+            svgAttributes
+
+        Just lineJoin ->
+            Svg.Attributes.strokeLinejoin (lineJoinString lineJoin) :: svgAttributes
+
+
+addStrokeLineCap :
+    AttributeValues units coordinates drawingCoordinates msg
+    -> List (Svg.Attribute a)
+    -> List (Svg.Attribute a)
+addStrokeLineCap attributeValues svgAttributes =
+    case attributeValues.strokeLineCap of
+        Nothing ->
+            svgAttributes
+
+        Just lineCap ->
+            Svg.Attributes.strokeLinecap (lineCapString lineCap) :: svgAttributes
+
+
 addTextColor :
     AttributeValues units coordinates drawingCoordinates msg
     -> List (Svg.Attribute a)
@@ -328,6 +404,8 @@ addCurveAttributes attributeValues svgAttributes =
     svgAttributes
         |> addStrokeStyle attributeValues
         |> addStrokeWidth attributeValues
+        |> addStrokeLineJoin attributeValues
+        |> addStrokeLineCap attributeValues
 
 
 addRegionAttributes :
@@ -341,9 +419,7 @@ addRegionAttributes bordersVisible attributeValues svgAttributes =
             svgAttributes |> addFillStyle attributeValues
     in
     if bordersVisible then
-        attributesWithFillStyle
-            |> addStrokeStyle attributeValues
-            |> addStrokeWidth attributeValues
+        attributesWithFillStyle |> addCurveAttributes attributeValues
 
     else
         noStroke :: attributesWithFillStyle
@@ -360,6 +436,8 @@ addGroupAttributes attributeValues svgAttributes =
         |> addFontSize attributeValues
         |> addStrokeStyle attributeValues
         |> addStrokeWidth attributeValues
+        |> addStrokeLineJoin attributeValues
+        |> addStrokeLineCap attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
 

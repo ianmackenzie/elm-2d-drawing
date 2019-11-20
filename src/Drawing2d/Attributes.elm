@@ -1,6 +1,8 @@
 module Drawing2d.Attributes exposing
     ( noFill, blackFill, whiteFill, fillColor, fillGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+    , roundJoins, bevelJoins, miterJoins
+    , roundCaps, buttCaps, squareCaps
     , noBorder, strokedBorder
     , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
     )
@@ -18,6 +20,16 @@ module Drawing2d.Attributes exposing
 @docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
 
 
+## Line joins
+
+@docs roundJoins, bevelJoins, miterJoins
+
+
+## Line caps
+
+@docs roundCaps, buttCaps, squareCaps
+
+
 # Borders
 
 @docs noBorder, strokedBorder
@@ -31,7 +43,7 @@ module Drawing2d.Attributes exposing
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
-import Drawing2d.Attributes.Protected as Protected exposing (AttributeIn(..), Fill(..), Stroke(..))
+import Drawing2d.Attributes.Protected as Protected exposing (AttributeIn(..), Fill(..), LineCap(..), LineJoin(..), Stroke(..))
 import Drawing2d.Font as Font
 import Drawing2d.Gradient as Gradient exposing (Gradient)
 import Drawing2d.Text as Text
@@ -102,6 +114,36 @@ strokedBorder =
 strokeWidth : Quantity Float units -> AttributeIn units coordinates drawingCoordinates msg
 strokeWidth (Quantity size) =
     StrokeWidth size
+
+
+roundJoins : AttributeIn units coordinates drawingCoordinates msg
+roundJoins =
+    StrokeLineJoin RoundJoin
+
+
+bevelJoins : AttributeIn units coordinates drawingCoordinates msg
+bevelJoins =
+    StrokeLineJoin BevelJoin
+
+
+miterJoins : AttributeIn units coordinates drawingCoordinates msg
+miterJoins =
+    StrokeLineJoin MiterJoin
+
+
+roundCaps : AttributeIn units coordinates drawingCoordinates msg
+roundCaps =
+    StrokeLineCap RoundCap
+
+
+buttCaps : AttributeIn units coordinates drawingCoordinates msg
+buttCaps =
+    StrokeLineCap ButtCap
+
+
+squareCaps : AttributeIn units coordinates drawingCoordinates msg
+squareCaps =
+    StrokeLineCap SquareCap
 
 
 textAnchor : Text.Anchor -> AttributeIn units coordinates drawingCoordinates msg

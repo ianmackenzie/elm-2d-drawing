@@ -158,6 +158,8 @@ defaultAttributes : List (Attribute drawingCoordinates msg)
 defaultAttributes =
     [ Attributes.blackStroke
     , Attributes.strokeWidth (pixels 1)
+    , Attributes.bevelJoins
+    , Attributes.buttCaps
     , Attributes.whiteFill
     , Attributes.strokedBorder
     , Attributes.fontSize (pixels 20)
