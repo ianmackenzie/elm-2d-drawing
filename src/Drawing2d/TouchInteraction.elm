@@ -8,7 +8,7 @@ module Drawing2d.TouchInteraction exposing
 
 import Dict exposing (Dict)
 import Drawing2d.Attributes.Protected as Attributes exposing (AttributeIn)
-import Drawing2d.TouchInteraction.Private as Private
+import Drawing2d.TouchInteraction.Protected as Protected
 import Duration exposing (Duration)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
@@ -16,7 +16,7 @@ import Point2d exposing (Point2d)
 
 
 type alias TouchInteraction drawingCoordinates =
-    Private.TouchInteraction drawingCoordinates
+    Protected.TouchInteraction drawingCoordinates
 
 
 decodeChange : Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> msg) -> TouchInteraction drawingCoordinates -> AttributeIn units coordinates drawingCoordinates msg

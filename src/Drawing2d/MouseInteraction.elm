@@ -9,7 +9,7 @@ module Drawing2d.MouseInteraction exposing
 import Browser.Events
 import Drawing2d.Decode as Decode
 import Drawing2d.InteractionPoint as InteractionPoint
-import Drawing2d.MouseInteraction.Private as Private
+import Drawing2d.MouseInteraction.Protected as Protected
 import Drawing2d.MouseMoveEvent as MouseMoveEvent exposing (MouseMoveEvent)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
@@ -18,14 +18,14 @@ import Vector2d
 
 
 type alias MouseInteraction drawingCoordinates =
-    Private.MouseInteraction drawingCoordinates
+    Protected.MouseInteraction drawingCoordinates
 
 
 decodeMove :
     Decoder (Point2d Pixels drawingCoordinates -> msg)
     -> MouseInteraction drawingCoordinates
     -> Sub msg
-decodeMove givenDecoder (Private.MouseInteraction interaction) =
+decodeMove givenDecoder (Protected.MouseInteraction interaction) =
     let
         positionDecoder =
             MouseMoveEvent.decoder
@@ -40,7 +40,7 @@ onMove callback mouseInteraction =
 
 
 decodeEnd : Decoder msg -> MouseInteraction drawingCoordinates -> Sub msg
-decodeEnd givenDecoder (Private.MouseInteraction interaction) =
+decodeEnd givenDecoder (Protected.MouseInteraction interaction) =
     Browser.Events.onMouseUp
         (Decode.button
             |> Decode.andThen
