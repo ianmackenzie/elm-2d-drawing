@@ -1087,10 +1087,18 @@ addTouchendHandler attributeValues svgAttributes =
             svgAttributes
 
         ( Just ( touchEndDecoder, touchInteraction ), Nothing ) ->
-            on "touchend" (decodeTouchEnd touchEndDecoder touchInteraction) :: svgAttributes
+            let
+                decoder =
+                    decodeTouchEnd touchEndDecoder touchInteraction
+            in
+            on "touchend" decoder :: on "touchcancel" decoder :: svgAttributes
 
         ( Nothing, Just ( touchChangeDecoder, touchInteraction ) ) ->
-            on "touchend" (decodeTouchChange touchChangeDecoder touchInteraction) :: svgAttributes
+            let
+                decoder =
+                    decodeTouchChange touchChangeDecoder touchInteraction
+            in
+            on "touchend" decoder :: on "touchcancel" decoder :: svgAttributes
 
         ( Just ( touchEndDecoder, touchEndInteraction ), Just ( touchChangeDecoder, touchChangeInteraction ) ) ->
             let
@@ -1100,7 +1108,7 @@ addTouchendHandler attributeValues svgAttributes =
                         , decodeTouchChange touchChangeDecoder touchChangeInteraction
                         ]
             in
-            on "touchend" combinedDecoder :: svgAttributes
+            on "touchend" combinedDecoder :: on "touchcancel" combinedDecoder :: svgAttributes
 
 
 decodeTouchStart : TouchStartDecoder drawingCoordinates msg -> Decoder (Event drawingCoordinates msg)
