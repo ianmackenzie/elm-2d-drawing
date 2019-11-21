@@ -100,6 +100,13 @@ view model =
                 , y2 = pixels 200
                 }
 
+        dropShadow =
+            Attributes.dropShadow
+                { radius = pixels 8
+                , color = Color.darkGrey
+                , offset = Vector2d.pixels 2 -4
+                }
+
         rectangle1 =
             Drawing2d.rectangle [] rectangle
 
@@ -133,9 +140,9 @@ view model =
             [ Attributes.strokeColor Color.black
             , Attributes.fillColor Color.white
             ]
-            [ rectangle1 |> Drawing2d.addAttributes (eventHandlers 1 model)
-            , rectangle2 |> Drawing2d.addAttributes (eventHandlers 2 model)
-            , rectangle3 |> Drawing2d.addAttributes (eventHandlers 3 model)
+            [ rectangle1 |> Drawing2d.addAttributes (dropShadow :: eventHandlers 1 model)
+            , rectangle2 |> Drawing2d.addAttributes (dropShadow :: eventHandlers 2 model)
+            , rectangle3 |> Drawing2d.addAttributes (dropShadow :: eventHandlers 3 model)
             ]
         , Html.div [] (List.map messageLine model.messages)
         ]

@@ -1,6 +1,7 @@
 module Images exposing (main)
 
 import BoundingBox2d
+import Color
 import CubicSpline2d
 import Drawing2d
 import Drawing2d.Attributes as Attributes
@@ -10,6 +11,7 @@ import Pixels exposing (pixels)
 import Point2d
 import Quantity exposing (zero)
 import Rectangle2d
+import Vector2d
 
 
 main : Html msg
@@ -82,8 +84,17 @@ main =
                         ]
             in
             Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-                []
-                [ Drawing2d.cubicSpline [] spline
+                [ Attributes.dropShadow
+                    { radius = pixels 6
+                    , offset = Vector2d.pixels 2 -4
+                    , color = Color.darkGrey
+                    }
+                ]
+                [ Drawing2d.cubicSpline
+                    [ Attributes.strokeWidth (pixels 4)
+                    , Attributes.strokeColor Color.charcoal
+                    ]
+                    spline
                 , Drawing2d.group [] (List.map toImage samples)
                 ]
 

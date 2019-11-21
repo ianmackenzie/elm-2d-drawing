@@ -13,6 +13,7 @@ import Parameter1d
 import Pixels exposing (pixels)
 import Point2d
 import Rectangle2d
+import Vector2d
 
 
 main : Html Never
@@ -53,7 +54,13 @@ main =
                 |> Arc2d.pointOn
                 |> Parameter1d.steps 32
                 |> List.map dot
-        , Drawing2d.text []
+        , Drawing2d.text
+            [ Attributes.dropShadow
+                { color = Color.darkGrey
+                , offset = Vector2d.pixels 1 -2
+                , radius = pixels 2
+                }
+            ]
             (Point2d.pixels 50 750)
             "Test text"
         , Drawing2d.text
@@ -62,6 +69,11 @@ main =
             , Attributes.textColor Color.darkGrey
             , Attributes.fillColor Color.orange
             , Attributes.strokeColor Color.blue
+            , Attributes.dropShadow
+                { color = Color.blue
+                , offset = Vector2d.pixels -1 -2
+                , radius = pixels 4
+                }
             ]
             (Point2d.pixels 100 650)
             "Large colored text"

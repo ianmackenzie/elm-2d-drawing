@@ -10,6 +10,7 @@ import LineSegment2d
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d
 import Triangle2d
+import Vector2d
 
 
 main : Html msg
@@ -24,22 +25,19 @@ main =
         p3 =
             Point2d.pixels 400 100
 
-        blue =
-            Color.rgb 0 0 1
-
-        green =
-            Color.rgb 0 1 0
-
         gradient =
-            Gradient.from ( p1, green ) ( p2, blue )
-
-        reversedGradient =
-            Gradient.from ( p1, blue ) ( p2, green )
+            Gradient.from ( p1, Color.rgb 0 0 0.75 ) ( p2, Color.rgb 0 0.75 1 )
 
         elements =
             [ Drawing2d.triangle
                 [ Attributes.fillGradient gradient
                 , Attributes.strokeWidth (pixels 4)
+                , Attributes.dropShadow
+                    { radius = pixels 8
+                    , offset = Vector2d.pixels 4 -4
+                    , color = Color.darkGrey
+                    }
+                , Attributes.roundJoins
                 ]
                 (Triangle2d.from p1 p2 p3)
             ]

@@ -15,6 +15,7 @@ import LineSegment2d
 import Pixels exposing (pixels)
 import Point2d
 import Rectangle2d
+import Vector2d
 
 
 type alias Model =
@@ -64,6 +65,11 @@ view model =
                         Gradient.from
                             ( gradientStartPoint, Color.red )
                             ( gradientEndPoint, Color.blue )
+                    , Attributes.dropShadow
+                        { radius = pixels 12
+                        , offset = Vector2d.pixels 6 -6
+                        , color = Color.black
+                        }
                     ]
                     (Rectangle2d.from lowerLeftCorner upperRightCorner)
                 , Drawing2d.lineSegment [] gradientLine
