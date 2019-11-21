@@ -28,6 +28,10 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
+type alias DrawingEvent =
+    Drawing2d.Event DrawingCoordinates Msg
+
+
 type LineColor
     = Blue
     | Green
@@ -69,14 +73,14 @@ toColor lineColor =
 
 
 drawPolyline :
-    List (Drawing2d.Attribute DrawingCoordinates Msg)
+    List (Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent)
     -> ( LineColor, Polyline2d Pixels DrawingCoordinates )
-    -> Drawing2d.Element DrawingCoordinates Msg
+    -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
 drawPolyline attributes ( lineColor, polyline ) =
     Drawing2d.polyline (Attributes.strokeColor (toColor lineColor) :: attributes) polyline
 
 
-rightClickHandler : Int -> Drawing2d.Attribute DrawingCoordinates Msg
+rightClickHandler : Int -> Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent
 rightClickHandler id =
     Events.onRightClick (always (LineRightClick id))
 
@@ -213,8 +217,8 @@ subscriptions model =
     case model.drawState of
         Drawing { lineColor, mouseInteraction } ->
             Sub.batch
-                [ MouseInteraction.onMove mouseInteraction (Decode.succeed MouseMove)
-                , MouseInteraction.onEnd mouseInteraction (Decode.succeed MouseUp)
+                [ mouseInteraction |> MouseInteraction.onMove MouseMove
+                , mouseInteraction |> MouseInteraction.onEnd MouseUp
                 ]
 
         NotDrawing ->

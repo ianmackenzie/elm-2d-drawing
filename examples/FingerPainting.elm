@@ -24,6 +24,10 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
+type alias DrawingEvent =
+    Drawing2d.Event DrawingCoordinates Msg
+
+
 type alias Line =
     { index : Int
     , color : Color
@@ -276,7 +280,7 @@ bullet text =
     Html.li [] [ Html.text text ]
 
 
-drawLine : Line -> Drawing2d.Element DrawingCoordinates Msg
+drawLine : Line -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
 drawLine line =
     Drawing2d.polyline
         [ Attributes.strokeColor line.color, Attributes.strokeWidth line.width ]
@@ -288,8 +292,8 @@ subscriptions model =
     case model.currentMouseSession of
         Just { mouseInteraction } ->
             Sub.batch
-                [ MouseInteraction.onMove MouseMove mouseInteraction
-                , MouseInteraction.onEnd MouseUp mouseInteraction
+                [ mouseInteraction |> MouseInteraction.onMove MouseMove
+                , mouseInteraction |> MouseInteraction.onEnd MouseUp
                 ]
 
         Nothing ->

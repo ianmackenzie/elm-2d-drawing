@@ -5,7 +5,7 @@ import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Color
 import Dict exposing (Dict)
-import Drawing2d exposing (AttributeIn)
+import Drawing2d
 import Drawing2d.Attributes as Attributes
 import Drawing2d.Events as Events
 import Drawing2d.Gradient as Gradient
@@ -24,6 +24,10 @@ import Vector2d
 
 type DrawingCoordinates
     = DrawingCoordinates
+
+
+type alias DrawingEvent =
+    Drawing2d.Event DrawingCoordinates Msg
 
 
 type alias Model =
@@ -57,7 +61,7 @@ logString message =
             Debug.toString message
 
 
-eventHandlers : Int -> Model -> List (Drawing2d.Attribute DrawingCoordinates Msg)
+eventHandlers : Int -> Model -> List (Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent)
 eventHandlers id model =
     let
         constantHandlers =
