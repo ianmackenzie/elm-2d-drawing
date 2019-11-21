@@ -1,9 +1,6 @@
 module Drawing2d.TouchInteraction.Protected exposing
     ( TouchInteraction(..)
-    , TouchInteractionData
-    , duration
     , start
-    , updatedPoint
     )
 
 import BoundingBox2d exposing (BoundingBox2d)
@@ -14,17 +11,13 @@ import Drawing2d.TouchStartEvent exposing (TouchStart, TouchStartEvent)
 import Duration exposing (Duration)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
-import Quantity
-
-
-type alias TouchInteractionData =
-    { startTimeStamp : Duration
-    , referencePoint : ReferencePoint
-    }
 
 
 type TouchInteraction drawingCoordinates
-    = TouchInteraction TouchInteractionData
+    = TouchInteraction
+        { startTimeStamp : Duration
+        , referencePoint : ReferencePoint drawingCoordinates
+        }
 
 
 start : TouchStartEvent -> BoundingBox2d Pixels drawingCoordinates -> ( TouchInteraction drawingCoordinates, Dict Int (Point2d Pixels drawingCoordinates) )
@@ -55,16 +48,6 @@ start touchStartEvent viewBox =
     ( touchInteraction, Dict.fromList dictEntries )
 
 
-toDictEntry : ReferencePoint -> TouchStart -> ( Int, Point2d Pixels drawingCoordinates )
+toDictEntry : ReferencePoint drawingCoordinates -> TouchStart -> ( Int, Point2d Pixels drawingCoordinates )
 toDictEntry referencePoint touchStart =
     ( touchStart.identifier, InteractionPoint.updatedPosition referencePoint touchStart )
-
-
-updatedPoint : TouchInteraction drawingCoordinates -> { a | identifier : Int, pageX : Float, pageY : Float } -> ( Int, Point2d Pixels drawingCoordinates )
-updatedPoint (TouchInteraction interaction) touch =
-    ( touch.identifier, InteractionPoint.updatedPosition interaction.referencePoint touch )
-
-
-duration : TouchInteraction drawingCoordinates -> TouchEndEvent -> Duration
-duration (TouchInteraction interaction) touchEndEvent =
-    touchEndEvent.timeStamp |> Quantity.minus interaction.startTimeStamp

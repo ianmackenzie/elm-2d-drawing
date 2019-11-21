@@ -14,11 +14,11 @@ import Point2d exposing (Point2d)
 import Vector2d exposing (Vector2d)
 
 
-type ReferencePoint
+type ReferencePoint drawingCoordinates
     = ReferencePoint
         { pageX : Float
         , pageY : Float
-        , drawingPoint : { x : Float, y : Float }
+        , drawingPoint : Point2d Pixels drawingCoordinates
         , drawingScale : Float
         }
 
@@ -27,7 +27,7 @@ referencePoint :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
     -> BoundingBox2d Pixels drawingCoordinates
     -> DOM.Rectangle
-    -> ReferencePoint
+    -> ReferencePoint drawingCoordinates
 referencePoint startEvent viewBox container =
     let
         -- Dimensions of the displayed portion of the drawing, in drawing units
@@ -77,13 +77,13 @@ referencePoint startEvent viewBox container =
         { pageX = startEvent.pageX
         , pageY = startEvent.pageY
         , drawingScale = drawingScale
-        , drawingPoint = Point2d.toPixels drawingPoint
+        , drawingPoint = drawingPoint
         }
 
 
-startPosition : ReferencePoint -> Point2d Pixels drawingCoordinates
+startPosition : ReferencePoint drawingCoordinates -> Point2d Pixels drawingCoordinates
 startPosition (ReferencePoint reference) =
-    Point2d.fromPixels reference.drawingPoint
+    reference.drawingPoint
 
 
 position :
@@ -96,11 +96,11 @@ position startEvent viewBox container =
         (ReferencePoint reference) =
             referencePoint startEvent viewBox container
     in
-    Point2d.fromPixels reference.drawingPoint
+    reference.drawingPoint
 
 
 updatedPosition :
-    ReferencePoint
+    ReferencePoint drawingCoordinates
     -> { a | pageX : Float, pageY : Float }
     -> Point2d Pixels drawingCoordinates
 updatedPosition (ReferencePoint reference) { pageX, pageY } =
@@ -110,4 +110,4 @@ updatedPosition (ReferencePoint reference) { pageX, pageY } =
                 ((pageX - reference.pageX) / reference.drawingScale)
                 ((reference.pageY - pageY) / reference.drawingScale)
     in
-    Point2d.fromPixels reference.drawingPoint |> Point2d.translateBy displacementFromReference
+    reference.drawingPoint |> Point2d.translateBy displacementFromReference

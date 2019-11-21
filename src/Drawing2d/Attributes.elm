@@ -43,7 +43,7 @@ module Drawing2d.Attributes exposing
 
 import Axis2d exposing (Axis2d)
 import Color exposing (Color)
-import Drawing2d.Attributes.Protected as Protected exposing (AttributeIn(..), Fill(..), LineCap(..), LineJoin(..), Stroke(..))
+import Drawing2d.Attributes.Protected as Protected exposing (Attribute(..), Event(..), Fill(..), LineCap(..), LineJoin(..), Stroke(..))
 import Drawing2d.Font as Font
 import Drawing2d.Gradient as Gradient exposing (Gradient)
 import Drawing2d.Text as Text
@@ -56,97 +56,97 @@ import Svg exposing (Svg)
 import Svg.Attributes
 
 
-fillColor : Color -> AttributeIn units coordinates drawingCoordinates msg
+fillColor : Color -> Attribute units coordinates event
 fillColor color =
     FillStyle (FillColor (Color.toCssString color))
 
 
-noFill : AttributeIn units coordinates drawingCoordinates msg
+noFill : Attribute units coordinates event
 noFill =
     FillStyle (FillColor "none")
 
 
-blackFill : AttributeIn units coordinates drawingCoordinates msg
+blackFill : Attribute units coordinates event
 blackFill =
     FillStyle (FillColor "black")
 
 
-whiteFill : AttributeIn units coordinates drawingCoordinates msg
+whiteFill : Attribute units coordinates event
 whiteFill =
     FillStyle (FillColor "white")
 
 
-fillGradient : Gradient units coordinates -> AttributeIn units coordinates drawingCoordinates msg
+fillGradient : Gradient units coordinates -> Attribute units coordinates event
 fillGradient gradient =
     FillStyle (FillGradient gradient)
 
 
-strokeColor : Color -> AttributeIn units coordinates drawingCoordinates msg
+strokeColor : Color -> Attribute units coordinates event
 strokeColor color =
     StrokeStyle (StrokeColor (Color.toCssString color))
 
 
-blackStroke : AttributeIn units coordinates drawingCoordinates msg
+blackStroke : Attribute units coordinates event
 blackStroke =
     StrokeStyle (StrokeColor "black")
 
 
-whiteStroke : AttributeIn units coordinates drawingCoordinates msg
+whiteStroke : Attribute units coordinates event
 whiteStroke =
     StrokeStyle (StrokeColor "white")
 
 
-strokeGradient : Gradient units coordinates -> AttributeIn units coordinates drawingCoordinates msg
+strokeGradient : Gradient units coordinates -> Attribute units coordinates event
 strokeGradient gradient =
     StrokeStyle (StrokeGradient gradient)
 
 
-noBorder : AttributeIn units coordinates drawingCoordinates msg
+noBorder : Attribute units coordinates event
 noBorder =
     BorderVisibility False
 
 
-strokedBorder : AttributeIn units coordinates drawingCoordinates msg
+strokedBorder : Attribute units coordinates event
 strokedBorder =
     BorderVisibility True
 
 
-strokeWidth : Quantity Float units -> AttributeIn units coordinates drawingCoordinates msg
+strokeWidth : Quantity Float units -> Attribute units coordinates event
 strokeWidth (Quantity size) =
     StrokeWidth size
 
 
-roundJoins : AttributeIn units coordinates drawingCoordinates msg
+roundJoins : Attribute units coordinates event
 roundJoins =
     StrokeLineJoin RoundJoin
 
 
-bevelJoins : AttributeIn units coordinates drawingCoordinates msg
+bevelJoins : Attribute units coordinates event
 bevelJoins =
     StrokeLineJoin BevelJoin
 
 
-miterJoins : AttributeIn units coordinates drawingCoordinates msg
+miterJoins : Attribute units coordinates event
 miterJoins =
     StrokeLineJoin MiterJoin
 
 
-roundCaps : AttributeIn units coordinates drawingCoordinates msg
+roundCaps : Attribute units coordinates event
 roundCaps =
     StrokeLineCap RoundCap
 
 
-buttCaps : AttributeIn units coordinates drawingCoordinates msg
+buttCaps : Attribute units coordinates event
 buttCaps =
     StrokeLineCap ButtCap
 
 
-squareCaps : AttributeIn units coordinates drawingCoordinates msg
+squareCaps : Attribute units coordinates event
 squareCaps =
     StrokeLineCap SquareCap
 
 
-textAnchor : Text.Anchor -> AttributeIn units coordinates drawingCoordinates msg
+textAnchor : Text.Anchor -> Attribute units coordinates event
 textAnchor anchor =
     case anchor of
         TextAnchor.TopLeft ->
@@ -177,22 +177,22 @@ textAnchor anchor =
             TextAnchor { x = "end", y = "alphabetic" }
 
 
-blackText : AttributeIn units coordinates drawingCoordinates msg
+blackText : Attribute units coordinates event
 blackText =
     TextColor "black"
 
 
-whiteText : AttributeIn units coordinates drawingCoordinates msg
+whiteText : Attribute units coordinates event
 whiteText =
     TextColor "white"
 
 
-textColor : Color -> AttributeIn units coordinates drawingCoordinates msg
+textColor : Color -> Attribute units coordinates event
 textColor color =
     TextColor (Color.toCssString color)
 
 
-fontSize : Quantity Float units -> AttributeIn units coordinates drawingCoordinates msg
+fontSize : Quantity Float units -> Attribute units coordinates event
 fontSize (Quantity size) =
     FontSize size
 
@@ -212,6 +212,6 @@ normalizeFont font =
         "\"" ++ font ++ "\""
 
 
-fontFamily : List String -> AttributeIn units coordinates drawingCoordinates msg
+fontFamily : List String -> Attribute units coordinates event
 fontFamily fonts =
     FontFamily (fonts |> List.map normalizeFont |> String.join ",")

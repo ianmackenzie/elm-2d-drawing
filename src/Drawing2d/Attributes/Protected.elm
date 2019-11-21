@@ -1,16 +1,13 @@
 module Drawing2d.Attributes.Protected exposing
-    ( AttributeIn(..)
+    ( Attribute(..)
     , AttributeValues
-    , ClickDecoder
+    , Event(..)
     , Fill(..)
     , LineCap(..)
     , LineJoin(..)
-    , MouseDownDecoder
     , Stroke(..)
-    , TouchChangeDecoder
-    , TouchEndDecoder
-    , TouchStartDecoder
     , addCurveAttributes
+    , addEventHandlers
     , addGroupAttributes
     , addRegionAttributes
     , addTextAttributes
@@ -19,16 +16,20 @@ module Drawing2d.Attributes.Protected exposing
     , emptyAttributeValues
     )
 
+import BoundingBox2d exposing (BoundingBox2d)
 import Dict exposing (Dict)
 import Drawing2d.Gradient.Protected as Gradient exposing (Gradient)
-import Drawing2d.MouseInteraction.Protected exposing (MouseInteraction)
-import Drawing2d.TouchInteraction.Protected exposing (TouchInteraction)
+import Drawing2d.MouseInteraction.Protected exposing (MouseInteraction(..))
+import Drawing2d.TouchInteraction.Protected exposing (TouchInteraction(..))
 import Duration exposing (Duration)
-import Json.Decode exposing (Decoder)
+import Html.Attributes
+import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
+import Quantity exposing (Quantity)
 import Svg
 import Svg.Attributes
+import Svg.Events
 
 
 type Fill units coordinates
@@ -54,27 +55,11 @@ type LineCap
     | RoundCap
 
 
-type alias ClickDecoder drawingCoordinates msg =
-    Decoder (Point2d Pixels drawingCoordinates -> msg)
+type Event drawingCoordinates msg
+    = Event (BoundingBox2d Pixels drawingCoordinates -> msg)
 
 
-type alias MouseDownDecoder drawingCoordinates msg =
-    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-
-
-type alias TouchStartDecoder drawingCoordinates msg =
-    Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
-
-
-type alias TouchChangeDecoder drawingCoordinates msg =
-    Decoder (Dict Int (Point2d Pixels drawingCoordinates) -> msg)
-
-
-type alias TouchEndDecoder msg =
-    Decoder (Duration -> msg)
-
-
-type AttributeIn units coordinates drawingCoordinates msg
+type Attribute units coordinates event
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
     | FontSize Float
@@ -85,20 +70,10 @@ type AttributeIn units coordinates drawingCoordinates msg
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
-    | OnLeftClick (ClickDecoder drawingCoordinates msg)
-    | OnRightClick (ClickDecoder drawingCoordinates msg)
-    | OnLeftMouseDown (MouseDownDecoder drawingCoordinates msg)
-    | OnMiddleMouseDown (MouseDownDecoder drawingCoordinates msg)
-    | OnRightMouseDown (MouseDownDecoder drawingCoordinates msg)
-    | OnLeftMouseUp (Decoder msg)
-    | OnMiddleMouseUp (Decoder msg)
-    | OnRightMouseUp (Decoder msg)
-    | OnTouchStart (TouchStartDecoder drawingCoordinates msg)
-    | OnTouchChange (TouchChangeDecoder drawingCoordinates msg) (TouchInteraction drawingCoordinates)
-    | OnTouchEnd (TouchEndDecoder msg) (TouchInteraction drawingCoordinates)
+    | EventHandlers (List ( String, Decoder event ))
 
 
-type alias AttributeValues units coordinates drawingCoordinates msg =
+type alias AttributeValues units coordinates event =
     { fillStyle : Maybe (Fill units coordinates)
     , strokeStyle : Maybe (Stroke units coordinates)
     , fontSize : Maybe Float
@@ -109,21 +84,11 @@ type alias AttributeValues units coordinates drawingCoordinates msg =
     , textColor : Maybe String
     , fontFamily : Maybe String
     , textAnchor : Maybe { x : String, y : String }
-    , onLeftClick : Maybe (ClickDecoder drawingCoordinates msg)
-    , onRightClick : Maybe (ClickDecoder drawingCoordinates msg)
-    , onLeftMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
-    , onMiddleMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
-    , onRightMouseDown : Maybe (MouseDownDecoder drawingCoordinates msg)
-    , onLeftMouseUp : Maybe (Decoder msg)
-    , onMiddleMouseUp : Maybe (Decoder msg)
-    , onRightMouseUp : Maybe (Decoder msg)
-    , onTouchStart : Maybe (TouchStartDecoder drawingCoordinates msg)
-    , onTouchChange : Maybe ( TouchChangeDecoder drawingCoordinates msg, TouchInteraction drawingCoordinates )
-    , onTouchEnd : Maybe ( TouchEndDecoder msg, TouchInteraction drawingCoordinates )
+    , eventHandlers : Dict String (List (Decoder event))
     }
 
 
-emptyAttributeValues : AttributeValues units coordinates drawingCoordinates msg
+emptyAttributeValues : AttributeValues units coordinates event
 emptyAttributeValues =
     { fillStyle = Nothing
     , strokeStyle = Nothing
@@ -135,24 +100,14 @@ emptyAttributeValues =
     , textColor = Nothing
     , fontFamily = Nothing
     , textAnchor = Nothing
-    , onLeftClick = Nothing
-    , onRightClick = Nothing
-    , onLeftMouseDown = Nothing
-    , onMiddleMouseDown = Nothing
-    , onRightMouseDown = Nothing
-    , onLeftMouseUp = Nothing
-    , onMiddleMouseUp = Nothing
-    , onRightMouseUp = Nothing
-    , onTouchStart = Nothing
-    , onTouchChange = Nothing
-    , onTouchEnd = Nothing
+    , eventHandlers = Dict.empty
     }
 
 
 setAttribute :
-    AttributeIn units coordinates drawingCoordinates msg
-    -> AttributeValues units coordinates drawingCoordinates msg
-    -> AttributeValues units coordinates drawingCoordinates msg
+    Attribute units coordinates event
+    -> AttributeValues units coordinates event
+    -> AttributeValues units coordinates event
 setAttribute attribute attributeValues =
     case attribute of
         FillStyle fill ->
@@ -185,69 +140,56 @@ setAttribute attribute attributeValues =
         TextAnchor position ->
             { attributeValues | textAnchor = Just position }
 
-        OnLeftClick decoder ->
-            { attributeValues | onLeftClick = Just decoder }
+        EventHandlers eventHandlers ->
+            List.foldl registerEventHandler attributeValues eventHandlers
 
-        OnRightClick decoder ->
-            { attributeValues | onRightClick = Just decoder }
 
-        OnLeftMouseDown decoder ->
-            { attributeValues | onLeftMouseDown = Just decoder }
+registerEventHandler : ( String, Decoder event ) -> AttributeValues units coordinates event -> AttributeValues units coordinates event
+registerEventHandler ( eventName, handler ) attributeValues =
+    { attributeValues
+        | eventHandlers =
+            attributeValues.eventHandlers
+                |> Dict.update eventName
+                    (\registeredHandlers ->
+                        case registeredHandlers of
+                            Nothing ->
+                                Just [ handler ]
 
-        OnMiddleMouseDown decoder ->
-            { attributeValues | onMiddleMouseDown = Just decoder }
-
-        OnRightMouseDown decoder ->
-            { attributeValues | onRightMouseDown = Just decoder }
-
-        OnLeftMouseUp decoder ->
-            { attributeValues | onLeftMouseUp = Just decoder }
-
-        OnMiddleMouseUp decoder ->
-            { attributeValues | onMiddleMouseUp = Just decoder }
-
-        OnRightMouseUp decoder ->
-            { attributeValues | onRightMouseUp = Just decoder }
-
-        OnTouchStart decoder ->
-            { attributeValues | onTouchStart = Just decoder }
-
-        OnTouchChange decoder interaction ->
-            { attributeValues | onTouchChange = Just ( decoder, interaction ) }
-
-        OnTouchEnd decoder interaction ->
-            { attributeValues | onTouchEnd = Just ( decoder, interaction ) }
+                            Just existingHandlers ->
+                                Just (handler :: existingHandlers)
+                    )
+    }
 
 
 collectAttributeValues :
-    List (AttributeIn units coordinates drawingCoordinates msg)
-    -> AttributeValues units coordinates drawingCoordinates msg
+    List (Attribute units coordinates event)
+    -> AttributeValues units coordinates event
 collectAttributeValues attributeList =
     assignAttributes attributeList emptyAttributeValues
 
 
 assignAttributes :
-    List (AttributeIn units coordinates drawingCoordinates msg)
-    -> AttributeValues units coordinates drawingCoordinates msg
-    -> AttributeValues units coordinates drawingCoordinates msg
+    List (Attribute units coordinates event)
+    -> AttributeValues units coordinates event
+    -> AttributeValues units coordinates event
 assignAttributes attributeList attributeValues =
     List.foldr setAttribute attributeValues attributeList
 
 
-noStroke : Svg.Attribute msg
+noStroke : Svg.Attribute event
 noStroke =
     Svg.Attributes.stroke "none"
 
 
-noFill : Svg.Attribute msg
+noFill : Svg.Attribute event
 noFill =
     Svg.Attributes.fill "none"
 
 
 addFillStyle :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addFillStyle attributeValues svgAttributes =
     case attributeValues.fillStyle of
         Nothing ->
@@ -264,9 +206,9 @@ addFillStyle attributeValues svgAttributes =
 
 
 addStrokeStyle :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addStrokeStyle attributeValues svgAttributes =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -280,9 +222,9 @@ addStrokeStyle attributeValues svgAttributes =
 
 
 addFontSize :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addFontSize attributeValues svgAttributes =
     case attributeValues.fontSize of
         Nothing ->
@@ -293,9 +235,9 @@ addFontSize attributeValues svgAttributes =
 
 
 addStrokeWidth :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addStrokeWidth attributeValues svgAttributes =
     case attributeValues.strokeWidth of
         Nothing ->
@@ -330,9 +272,9 @@ lineCapString lineJoin =
 
 
 addStrokeLineJoin :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addStrokeLineJoin attributeValues svgAttributes =
     case attributeValues.strokeLineJoin of
         Nothing ->
@@ -343,9 +285,9 @@ addStrokeLineJoin attributeValues svgAttributes =
 
 
 addStrokeLineCap :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addStrokeLineCap attributeValues svgAttributes =
     case attributeValues.strokeLineCap of
         Nothing ->
@@ -356,9 +298,9 @@ addStrokeLineCap attributeValues svgAttributes =
 
 
 addTextColor :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addTextColor attributeValues svgAttributes =
     case attributeValues.textColor of
         Nothing ->
@@ -369,9 +311,9 @@ addTextColor attributeValues svgAttributes =
 
 
 addFontFamily :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addFontFamily attributeValues svgAttributes =
     case attributeValues.fontFamily of
         Nothing ->
@@ -382,9 +324,9 @@ addFontFamily attributeValues svgAttributes =
 
 
 addTextAnchor :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addTextAnchor attributeValues svgAttributes =
     case attributeValues.textAnchor of
         Nothing ->
@@ -397,26 +339,29 @@ addTextAnchor attributeValues svgAttributes =
 
 
 addCurveAttributes :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addCurveAttributes attributeValues svgAttributes =
     svgAttributes
         |> addStrokeStyle attributeValues
         |> addStrokeWidth attributeValues
         |> addStrokeLineJoin attributeValues
         |> addStrokeLineCap attributeValues
+        |> addEventHandlers attributeValues
 
 
 addRegionAttributes :
     Bool
-    -> AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    -> AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addRegionAttributes bordersVisible attributeValues svgAttributes =
     let
         attributesWithFillStyle =
-            svgAttributes |> addFillStyle attributeValues
+            svgAttributes
+                |> addFillStyle attributeValues
+                |> addEventHandlers attributeValues
     in
     if bordersVisible then
         attributesWithFillStyle |> addCurveAttributes attributeValues
@@ -426,9 +371,9 @@ addRegionAttributes bordersVisible attributeValues svgAttributes =
 
 
 addGroupAttributes :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addGroupAttributes attributeValues svgAttributes =
     svgAttributes
         |> addFillStyle attributeValues
@@ -440,15 +385,59 @@ addGroupAttributes attributeValues svgAttributes =
         |> addStrokeLineCap attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
+        |> addEventHandlers attributeValues
 
 
 addTextAttributes :
-    AttributeValues units coordinates drawingCoordinates msg
-    -> List (Svg.Attribute a)
-    -> List (Svg.Attribute a)
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
 addTextAttributes attributeValues svgAttributes =
     svgAttributes
         |> addFontFamily attributeValues
         |> addFontSize attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
+        |> addEventHandlers attributeValues
+
+
+addEventHandlers :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addEventHandlers attributeValues svgAttributes =
+    Dict.foldl addEventHandler svgAttributes attributeValues.eventHandlers
+        |> suppressTouchActions attributeValues
+
+
+addEventHandler : String -> List (Decoder event) -> List (Svg.Attribute event) -> List (Svg.Attribute event)
+addEventHandler eventName decoders svgAttributes =
+    on eventName (Decode.oneOf decoders) :: svgAttributes
+
+
+suppressTouchActions :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+suppressTouchActions attributeValues svgAttributes =
+    if
+        Dict.member "touchstart" attributeValues.eventHandlers
+            || Dict.member "touchmove" attributeValues.eventHandlers
+            || Dict.member "touchend" attributeValues.eventHandlers
+    then
+        Html.Attributes.style "touch-action" "none" :: svgAttributes
+
+    else
+        svgAttributes
+
+
+on : String -> Decoder event -> Svg.Attribute event
+on eventName decoder =
+    Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
+
+
+preventDefaultAndStopPropagation :
+    Decoder msg
+    -> Decoder { message : msg, preventDefault : Bool, stopPropagation : Bool }
+preventDefaultAndStopPropagation =
+    Decode.map (\message -> { message = message, preventDefault = True, stopPropagation = True })

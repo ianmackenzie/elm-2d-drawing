@@ -1,6 +1,5 @@
 module Drawing2d.MouseInteraction.Protected exposing
     ( MouseInteraction(..)
-    , MouseInteractionData
     , start
     )
 
@@ -10,14 +9,11 @@ import Drawing2d.MouseStartEvent exposing (MouseStartEvent)
 import Pixels exposing (Pixels)
 
 
-type alias MouseInteractionData =
-    { button : Int
-    , referencePoint : ReferencePoint
-    }
-
-
 type MouseInteraction drawingCoordinates
-    = MouseInteraction MouseInteractionData
+    = MouseInteraction
+        { button : Int
+        , referencePoint : ReferencePoint drawingCoordinates
+        }
 
 
 start : MouseStartEvent -> BoundingBox2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates
