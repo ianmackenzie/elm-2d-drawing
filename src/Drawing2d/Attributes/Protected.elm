@@ -10,6 +10,7 @@ module Drawing2d.Attributes.Protected exposing
     , addEventHandlers
     , addGroupAttributes
     , addRegionAttributes
+    , addShadowFilter
     , addTextAttributes
     , assignAttributes
     , collectAttributeValues
@@ -20,6 +21,7 @@ import BoundingBox2d exposing (BoundingBox2d)
 import Dict exposing (Dict)
 import Drawing2d.Gradient.Protected as Gradient exposing (Gradient)
 import Drawing2d.MouseInteraction.Protected exposing (MouseInteraction(..))
+import Drawing2d.Shadow as Shadow exposing (Shadow)
 import Drawing2d.TouchInteraction.Protected exposing (TouchInteraction(..))
 import Duration exposing (Duration)
 import Html.Attributes
@@ -30,6 +32,7 @@ import Quantity exposing (Quantity)
 import Svg
 import Svg.Attributes
 import Svg.Events
+import Vector2d exposing (Vector2d)
 
 
 type Fill units coordinates
@@ -67,6 +70,7 @@ type Attribute units coordinates event
     | StrokeLineJoin LineJoin
     | StrokeLineCap LineCap
     | BorderVisibility Bool
+    | DropShadow (Shadow units coordinates)
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
@@ -81,6 +85,7 @@ type alias AttributeValues units coordinates event =
     , strokeLineJoin : Maybe LineJoin
     , strokeLineCap : Maybe LineCap
     , borderVisibility : Maybe Bool
+    , dropShadow : Maybe (Shadow units coordinates)
     , textColor : Maybe String
     , fontFamily : Maybe String
     , textAnchor : Maybe { x : String, y : String }
@@ -97,6 +102,7 @@ emptyAttributeValues =
     , strokeLineJoin = Nothing
     , strokeLineCap = Nothing
     , borderVisibility = Nothing
+    , dropShadow = Nothing
     , textColor = Nothing
     , fontFamily = Nothing
     , textAnchor = Nothing
@@ -130,6 +136,9 @@ setAttribute attribute attributeValues =
 
         BorderVisibility bordersVisible ->
             { attributeValues | borderVisibility = Just bordersVisible }
+
+        DropShadow shadow ->
+            { attributeValues | dropShadow = Just shadow }
 
         TextColor string ->
             { attributeValues | textColor = Just string }
@@ -247,6 +256,19 @@ addStrokeWidth attributeValues svgAttributes =
             Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
 
 
+addShadowFilter :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addShadowFilter attributeValues svgAttributes =
+    case attributeValues.dropShadow of
+        Nothing ->
+            svgAttributes
+
+        Just shadow ->
+            Svg.Attributes.filter (Shadow.reference shadow) :: svgAttributes
+
+
 lineJoinString lineJoin =
     case lineJoin of
         BevelJoin ->
@@ -348,6 +370,7 @@ addCurveAttributes attributeValues svgAttributes =
         |> addStrokeWidth attributeValues
         |> addStrokeLineJoin attributeValues
         |> addStrokeLineCap attributeValues
+        |> addShadowFilter attributeValues
         |> addEventHandlers attributeValues
 
 
@@ -358,16 +381,17 @@ addRegionAttributes :
     -> List (Svg.Attribute event)
 addRegionAttributes bordersVisible attributeValues svgAttributes =
     let
-        attributesWithFillStyle =
+        commonAttributes =
             svgAttributes
                 |> addFillStyle attributeValues
+                |> addShadowFilter attributeValues
                 |> addEventHandlers attributeValues
     in
     if bordersVisible then
-        attributesWithFillStyle |> addCurveAttributes attributeValues
+        commonAttributes |> addCurveAttributes attributeValues
 
     else
-        noStroke :: attributesWithFillStyle
+        noStroke :: commonAttributes
 
 
 addGroupAttributes :
@@ -385,6 +409,7 @@ addGroupAttributes attributeValues svgAttributes =
         |> addStrokeLineCap attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
+        |> addShadowFilter attributeValues
         |> addEventHandlers attributeValues
 
 
@@ -398,6 +423,7 @@ addTextAttributes attributeValues svgAttributes =
         |> addFontSize attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
+        |> addShadowFilter attributeValues
         |> addEventHandlers attributeValues
 
 

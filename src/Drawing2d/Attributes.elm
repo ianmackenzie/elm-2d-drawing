@@ -1,6 +1,7 @@
 module Drawing2d.Attributes exposing
     ( noFill, blackFill, whiteFill, fillColor, fillGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+    , dropShadow
     , roundJoins, bevelJoins, miterJoins
     , roundCaps, buttCaps, squareCaps
     , noBorder, strokedBorder
@@ -18,6 +19,11 @@ module Drawing2d.Attributes exposing
 # Stroke
 
 @docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+
+
+# Shadows
+
+@docs dropShadow
 
 
 ## Line joins
@@ -46,6 +52,7 @@ import Color exposing (Color)
 import Drawing2d.Attributes.Protected as Protected exposing (Attribute(..), Event(..), Fill(..), LineCap(..), LineJoin(..), Stroke(..))
 import Drawing2d.Font as Font
 import Drawing2d.Gradient as Gradient exposing (Gradient)
+import Drawing2d.Shadow as Shadow
 import Drawing2d.Text as Text
 import Drawing2d.TextAnchor as TextAnchor
 import Html.Events
@@ -54,6 +61,7 @@ import Point2d exposing (Point2d)
 import Quantity exposing (Quantity(..))
 import Svg exposing (Svg)
 import Svg.Attributes
+import Vector2d exposing (Vector2d)
 
 
 fillColor : Color -> Attribute units coordinates event
@@ -144,6 +152,16 @@ buttCaps =
 squareCaps : Attribute units coordinates event
 squareCaps =
     StrokeLineCap SquareCap
+
+
+dropShadow :
+    { radius : Quantity Float units
+    , offset : Vector2d units coordinates
+    , color : Color
+    }
+    -> Attribute units coordinates event
+dropShadow properties =
+    DropShadow (Shadow.with properties)
 
 
 textAnchor : Text.Anchor -> Attribute units coordinates event

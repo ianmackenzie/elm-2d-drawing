@@ -61,6 +61,7 @@ import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction
 import Drawing2d.MouseInteraction.Protected as MouseInteraction
 import Drawing2d.MouseMoveEvent as MouseMoveEvent exposing (MouseMoveEvent)
 import Drawing2d.MouseStartEvent as MouseStartEvent exposing (MouseStartEvent)
+import Drawing2d.Shadow as Shadow
 import Drawing2d.Svg as Svg
 import Drawing2d.Text as Text
 import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent)
@@ -274,15 +275,12 @@ drawCurve attributes renderer curve =
                 curveElement =
                     renderer svgAttributes curve
 
-                gradientElements =
-                    addStrokeGradient attributeValues []
+                defs =
+                    []
+                        |> addStrokeGradient attributeValues
+                        |> addDropShadow attributeValues
             in
-            case gradientElements of
-                [] ->
-                    curveElement
-
-                _ ->
-                    Svg.g [] (curveElement :: gradientElements)
+            curveElement |> addDefs defs
 
 
 drawRegion :
@@ -318,13 +316,11 @@ drawRegion attributes renderer region =
 
                     else
                         fillGradientElement
-            in
-            case gradientElements of
-                [] ->
-                    regionElement
 
-                _ ->
-                    Svg.g [] (regionElement :: gradientElements)
+                defs =
+                    gradientElements |> addDropShadow attributeValues
+            in
+            regionElement |> addDefs defs
 
 
 lineSegment :
@@ -423,17 +419,18 @@ groupLike tag extraSvgAttributes attributeValues childElements =
                                 updatedStrokeGradient
                             )
 
-                gradientElements =
+                defs =
                     []
                         |> addStrokeGradient attributeValues
                         |> addFillGradient attributeValues
+                        |> addDropShadow attributeValues
 
                 groupAttributes =
-                    [] |> Attributes.addGroupAttributes attributeValues
+                    Attributes.addGroupAttributes attributeValues []
             in
             Svg.node tag
                 (groupAttributes ++ extraSvgAttributes)
-                (gradientElements ++ childSvgElements)
+                (defs ++ childSvgElements)
 
 
 addAttributes :
@@ -541,6 +538,7 @@ text attributes position string =
                         |> Attributes.addTextAttributes attributeValues
             in
             Svg.text_ svgAttributes [ Svg.text string ]
+                |> addDefs (addDropShadow attributeValues [])
 
 
 image :
@@ -567,9 +565,11 @@ image attributes givenUrl givenRectangle =
                     , Svg.Attributes.height (String.fromFloat height)
                     , placementTransform (Rectangle2d.axes givenRectangle)
                     ]
+                        |> Attributes.addShadowFilter attributeValues
                         |> Attributes.addEventHandlers attributeValues
             in
             Svg.image svgAttributes []
+                |> addDefs (addDropShadow attributeValues [])
 
 
 placementTransform : Frame2d units coordinates defines -> Svg.Attribute a
@@ -900,3 +900,23 @@ addTransformedStrokeGradientReference maybeGradient svgAttributes =
 
         Just gradient ->
             Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes
+
+
+addDropShadow : AttributeValues units coordinates event -> List (Svg event) -> List (Svg event)
+addDropShadow attributeValues svgElements =
+    case attributeValues.dropShadow of
+        Nothing ->
+            svgElements
+
+        Just shadow ->
+            Shadow.element shadow :: svgElements
+
+
+addDefs : List (Svg event) -> Svg event -> Svg event
+addDefs defs svgElement =
+    case defs of
+        [] ->
+            svgElement
+
+        _ ->
+            Svg.g [] (svgElement :: defs)
