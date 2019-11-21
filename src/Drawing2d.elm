@@ -637,8 +637,8 @@ placeIn frame (Element function) =
 
                 localGradientElements =
                     []
-                        |> addGradientElement localFillGradient
-                        |> addGradientElement localStrokeGradient
+                        |> addGradientElements localFillGradient
+                        |> addGradientElements localStrokeGradient
 
                 localSvgElement =
                     function
@@ -739,8 +739,8 @@ scaleImpl point scale (Element function) =
 
                 transformedGradientElements =
                     []
-                        |> addGradientElement transformedFillGradient
-                        |> addGradientElement transformedStrokeGradient
+                        |> addGradientElements transformedFillGradient
+                        |> addGradientElements transformedStrokeGradient
 
                 childSvgElement =
                     function
@@ -866,8 +866,8 @@ addFillGradient attributeValues svgElements =
             Gradient.render gradient svgElements
 
 
-addGradientElement : Maybe (Gradient units coordinates) -> List (Svg event) -> List (Svg event)
-addGradientElement maybeGradient svgElements =
+addGradientElements : Maybe (Gradient units coordinates) -> List (Svg event) -> List (Svg event)
+addGradientElements maybeGradient svgElements =
     case maybeGradient of
         Nothing ->
             svgElements
