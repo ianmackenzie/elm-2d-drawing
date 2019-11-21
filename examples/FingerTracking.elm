@@ -67,7 +67,12 @@ update message model =
             Dict.merge endTouch moveTouch startTouch model.touchPoints newPoints model
 
         TouchEnd ->
-            Dict.foldl endTouch model model.touchPoints |> endInteraction
+            { model | touchInteraction = Nothing, touchPoints = Dict.empty }
+
+
+startInteraction : TouchInteraction DrawingCoordinates -> Model -> Model
+startInteraction touchInteraction model =
+    { model | touchInteraction = Just touchInteraction }
 
 
 colorGenerator : Random.Generator Color
@@ -99,16 +104,6 @@ moveTouch identifier currentPoint newPosition model =
 endTouch : Int -> TouchPoint -> Model -> Model
 endTouch identifier touchPoint model =
     { model | touchPoints = Dict.remove identifier model.touchPoints }
-
-
-startInteraction : TouchInteraction DrawingCoordinates -> Model -> Model
-startInteraction touchInteraction model =
-    { model | touchInteraction = Just touchInteraction }
-
-
-endInteraction : Model -> Model
-endInteraction model =
-    { model | touchInteraction = Nothing, touchPoints = Dict.empty }
 
 
 view : Model -> Html Msg
