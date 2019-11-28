@@ -8,8 +8,6 @@ import Color
 import Common exposing (dot)
 import Direction2d
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Text as Text
 import Html exposing (Html)
 import LineSegment2d
 import Parameter1d
@@ -51,31 +49,31 @@ main =
 
         text anchor position string =
             Drawing2d.group []
-                [ Drawing2d.text [ Attributes.textAnchor anchor ]
+                [ Drawing2d.text [ Drawing2d.textAnchor anchor ]
                     position
                     string
                 , dot position
                 ]
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        [ Attributes.fillColor Color.orange
-        , Attributes.strokeColor Color.blue
+        [ Drawing2d.fillColor Color.orange
+        , Drawing2d.strokeColor Color.blue
         ]
-        [ Drawing2d.group [ Attributes.strokeWidth (pixels 2) ]
+        [ Drawing2d.group [ Drawing2d.strokeWidth (pixels 2) ]
             (List.map (Drawing2d.lineSegment []) [ lineSegment, mirroredSegment ])
         , Drawing2d.group
-            [ Attributes.whiteFill, Attributes.blackStroke ]
+            [ Drawing2d.whiteFill, Drawing2d.blackStroke ]
             (List.map dot arcPoints)
         , dot (Arc2d.centerPoint arc)
         , Drawing2d.group []
-            [ text Text.topLeft (Point2d.pixels 300 200) "topLeft"
-            , text Text.topCenter (Point2d.pixels 500 200) "topCenter"
-            , text Text.topRight (Point2d.pixels 700 200) "topRight"
-            , text Text.centerLeft (Point2d.pixels 300 150) "centerLeft"
-            , text Text.center (Point2d.pixels 500 150) "center"
-            , text Text.centerRight (Point2d.pixels 700 150) "centerRight"
-            , text Text.bottomLeft (Point2d.pixels 300 100) "bottomLeft"
-            , text Text.bottomCenter (Point2d.pixels 500 100) "bottomCenter"
-            , text Text.bottomRight (Point2d.pixels 700 100) "bottomRight"
+            [ text Drawing2d.topLeft (Point2d.pixels 300 200) "topLeft"
+            , text Drawing2d.topCenter (Point2d.pixels 500 200) "topCenter"
+            , text Drawing2d.topRight (Point2d.pixels 700 200) "topRight"
+            , text Drawing2d.centerLeft (Point2d.pixels 300 150) "centerLeft"
+            , text Drawing2d.center (Point2d.pixels 500 150) "center"
+            , text Drawing2d.centerRight (Point2d.pixels 700 150) "centerRight"
+            , text Drawing2d.bottomLeft (Point2d.pixels 300 100) "bottomLeft"
+            , text Drawing2d.bottomCenter (Point2d.pixels 500 100) "bottomCenter"
+            , text Drawing2d.bottomRight (Point2d.pixels 700 100) "bottomRight"
             ]
         ]

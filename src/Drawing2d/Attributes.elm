@@ -1,235 +1,469 @@
 module Drawing2d.Attributes exposing
-    ( noFill, blackFill, whiteFill, fillColor, fillGradient
-    , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
-    , dropShadow
-    , roundJoins, bevelJoins, miterJoins
-    , roundCaps, buttCaps, squareCaps
-    , noBorder, strokedBorder
-    , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
+    ( Attribute(..)
+    , AttributeValues
+    , Event(..)
+    , Fill(..)
+    , LineCap(..)
+    , LineJoin(..)
+    , Stroke(..)
+    , addCurveAttributes
+    , addEventHandlers
+    , addGroupAttributes
+    , addRegionAttributes
+    , addShadowFilter
+    , addTextAttributes
+    , assignAttributes
+    , collectAttributeValues
+    , emptyAttributeValues
     )
 
-{-|
-
-
-# Fill
-
-@docs noFill, blackFill, whiteFill, fillColor, fillGradient
-
-
-# Stroke
-
-@docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
-
-
-# Shadows
-
-@docs dropShadow
-
-
-## Line joins
-
-@docs roundJoins, bevelJoins, miterJoins
-
-
-## Line caps
-
-@docs roundCaps, buttCaps, squareCaps
-
-
-# Borders
-
-@docs noBorder, strokedBorder
-
-
-# Text
-
-@docs fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
-
--}
-
-import Axis2d exposing (Axis2d)
-import Color exposing (Color)
-import Drawing2d.Attributes.Protected as Protected exposing (Attribute(..), Event(..), Fill(..), LineCap(..), LineJoin(..), Stroke(..))
-import Drawing2d.Font as Font
+import BoundingBox2d exposing (BoundingBox2d)
+import Dict exposing (Dict)
 import Drawing2d.Gradient as Gradient exposing (Gradient)
-import Drawing2d.Shadow as Shadow
-import Drawing2d.Text as Text
-import Drawing2d.TextAnchor as TextAnchor
-import Html.Events
-import Pixels exposing (Pixels, inPixels)
+import Drawing2d.MouseInteraction.Protected exposing (MouseInteraction(..))
+import Drawing2d.Shadow as Shadow exposing (Shadow)
+import Drawing2d.TouchInteraction.Protected exposing (TouchInteraction(..))
+import Duration exposing (Duration)
+import Html.Attributes
+import Json.Decode as Decode exposing (Decoder)
+import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
-import Quantity exposing (Quantity(..))
-import Svg exposing (Svg)
+import Quantity exposing (Quantity)
+import Svg
 import Svg.Attributes
+import Svg.Events
 import Vector2d exposing (Vector2d)
 
 
-fillColor : Color -> Attribute units coordinates event
-fillColor color =
-    FillStyle (FillColor (Color.toCssString color))
+type Fill units coordinates
+    = NoFill
+    | FillColor String
+    | FillGradient (Gradient units coordinates)
 
 
-noFill : Attribute units coordinates event
-noFill =
-    FillStyle (FillColor "none")
+type Stroke units coordinates
+    = StrokeColor String
+    | StrokeGradient (Gradient units coordinates)
 
 
-blackFill : Attribute units coordinates event
-blackFill =
-    FillStyle (FillColor "black")
+type LineJoin
+    = BevelJoin
+    | MiterJoin
+    | RoundJoin
 
 
-whiteFill : Attribute units coordinates event
-whiteFill =
-    FillStyle (FillColor "white")
+type LineCap
+    = NoCap
+    | SquareCap
+    | RoundCap
 
 
-fillGradient : Gradient units coordinates -> Attribute units coordinates event
-fillGradient gradient =
-    FillStyle (FillGradient gradient)
+type Event drawingCoordinates msg
+    = Event (BoundingBox2d Pixels drawingCoordinates -> msg)
 
 
-strokeColor : Color -> Attribute units coordinates event
-strokeColor color =
-    StrokeStyle (StrokeColor (Color.toCssString color))
+type Attribute units coordinates event
+    = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
+    | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
+    | FontSize Float
+    | StrokeWidth Float
+    | StrokeLineJoin LineJoin
+    | StrokeLineCap LineCap
+    | BorderVisibility Bool
+    | DropShadow (Shadow units coordinates)
+    | TextColor String -- Svg.Attributes.color
+    | FontFamily String -- Svg.Attributes.fontFamily
+    | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
+    | EventHandlers (List ( String, Decoder event ))
 
 
-blackStroke : Attribute units coordinates event
-blackStroke =
-    StrokeStyle (StrokeColor "black")
-
-
-whiteStroke : Attribute units coordinates event
-whiteStroke =
-    StrokeStyle (StrokeColor "white")
-
-
-strokeGradient : Gradient units coordinates -> Attribute units coordinates event
-strokeGradient gradient =
-    StrokeStyle (StrokeGradient gradient)
-
-
-noBorder : Attribute units coordinates event
-noBorder =
-    BorderVisibility False
-
-
-strokedBorder : Attribute units coordinates event
-strokedBorder =
-    BorderVisibility True
-
-
-strokeWidth : Quantity Float units -> Attribute units coordinates event
-strokeWidth (Quantity size) =
-    StrokeWidth size
-
-
-roundJoins : Attribute units coordinates event
-roundJoins =
-    StrokeLineJoin RoundJoin
-
-
-bevelJoins : Attribute units coordinates event
-bevelJoins =
-    StrokeLineJoin BevelJoin
-
-
-miterJoins : Attribute units coordinates event
-miterJoins =
-    StrokeLineJoin MiterJoin
-
-
-roundCaps : Attribute units coordinates event
-roundCaps =
-    StrokeLineCap RoundCap
-
-
-buttCaps : Attribute units coordinates event
-buttCaps =
-    StrokeLineCap ButtCap
-
-
-squareCaps : Attribute units coordinates event
-squareCaps =
-    StrokeLineCap SquareCap
-
-
-dropShadow :
-    { radius : Quantity Float units
-    , offset : Vector2d units coordinates
-    , color : Color
+type alias AttributeValues units coordinates event =
+    { fillStyle : Maybe (Fill units coordinates)
+    , strokeStyle : Maybe (Stroke units coordinates)
+    , fontSize : Maybe Float
+    , strokeWidth : Maybe Float
+    , strokeLineJoin : Maybe LineJoin
+    , strokeLineCap : Maybe LineCap
+    , borderVisibility : Maybe Bool
+    , dropShadow : Maybe (Shadow units coordinates)
+    , textColor : Maybe String
+    , fontFamily : Maybe String
+    , textAnchor : Maybe { x : String, y : String }
+    , eventHandlers : Dict String (List (Decoder event))
     }
-    -> Attribute units coordinates event
-dropShadow properties =
-    DropShadow (Shadow.with properties)
 
 
-textAnchor : Text.Anchor -> Attribute units coordinates event
-textAnchor anchor =
-    case anchor of
-        TextAnchor.TopLeft ->
-            TextAnchor { x = "start", y = "hanging" }
-
-        TextAnchor.TopCenter ->
-            TextAnchor { x = "middle", y = "hanging" }
-
-        TextAnchor.TopRight ->
-            TextAnchor { x = "end", y = "hanging" }
-
-        TextAnchor.CenterLeft ->
-            TextAnchor { x = "start", y = "middle" }
-
-        TextAnchor.Center ->
-            TextAnchor { x = "middle", y = "middle" }
-
-        TextAnchor.CenterRight ->
-            TextAnchor { x = "end", y = "middle" }
-
-        TextAnchor.BottomLeft ->
-            TextAnchor { x = "start", y = "alphabetic" }
-
-        TextAnchor.BottomCenter ->
-            TextAnchor { x = "middle", y = "alphabetic" }
-
-        TextAnchor.BottomRight ->
-            TextAnchor { x = "end", y = "alphabetic" }
+emptyAttributeValues : AttributeValues units coordinates event
+emptyAttributeValues =
+    { fillStyle = Nothing
+    , strokeStyle = Nothing
+    , fontSize = Nothing
+    , strokeWidth = Nothing
+    , strokeLineJoin = Nothing
+    , strokeLineCap = Nothing
+    , borderVisibility = Nothing
+    , dropShadow = Nothing
+    , textColor = Nothing
+    , fontFamily = Nothing
+    , textAnchor = Nothing
+    , eventHandlers = Dict.empty
+    }
 
 
-blackText : Attribute units coordinates event
-blackText =
-    TextColor "black"
+setAttribute :
+    Attribute units coordinates event
+    -> AttributeValues units coordinates event
+    -> AttributeValues units coordinates event
+setAttribute attribute attributeValues =
+    case attribute of
+        FillStyle fill ->
+            { attributeValues | fillStyle = Just fill }
+
+        StrokeStyle stroke ->
+            { attributeValues | strokeStyle = Just stroke }
+
+        FontSize size ->
+            { attributeValues | fontSize = Just size }
+
+        StrokeWidth width ->
+            { attributeValues | strokeWidth = Just width }
+
+        StrokeLineJoin lineJoin ->
+            { attributeValues | strokeLineJoin = Just lineJoin }
+
+        StrokeLineCap lineCap ->
+            { attributeValues | strokeLineCap = Just lineCap }
+
+        BorderVisibility bordersVisible ->
+            { attributeValues | borderVisibility = Just bordersVisible }
+
+        DropShadow shadow ->
+            { attributeValues | dropShadow = Just shadow }
+
+        TextColor string ->
+            { attributeValues | textColor = Just string }
+
+        FontFamily string ->
+            { attributeValues | fontFamily = Just string }
+
+        TextAnchor position ->
+            { attributeValues | textAnchor = Just position }
+
+        EventHandlers eventHandlers ->
+            List.foldl registerEventHandler attributeValues eventHandlers
 
 
-whiteText : Attribute units coordinates event
-whiteText =
-    TextColor "white"
+registerEventHandler : ( String, Decoder event ) -> AttributeValues units coordinates event -> AttributeValues units coordinates event
+registerEventHandler ( eventName, handler ) attributeValues =
+    { attributeValues
+        | eventHandlers =
+            attributeValues.eventHandlers
+                |> Dict.update eventName
+                    (\registeredHandlers ->
+                        case registeredHandlers of
+                            Nothing ->
+                                Just [ handler ]
+
+                            Just existingHandlers ->
+                                Just (handler :: existingHandlers)
+                    )
+    }
 
 
-textColor : Color -> Attribute units coordinates event
-textColor color =
-    TextColor (Color.toCssString color)
+collectAttributeValues :
+    List (Attribute units coordinates event)
+    -> AttributeValues units coordinates event
+collectAttributeValues attributeList =
+    assignAttributes attributeList emptyAttributeValues
 
 
-fontSize : Quantity Float units -> Attribute units coordinates event
-fontSize (Quantity size) =
-    FontSize size
+assignAttributes :
+    List (Attribute units coordinates event)
+    -> AttributeValues units coordinates event
+    -> AttributeValues units coordinates event
+assignAttributes attributeList attributeValues =
+    List.foldr setAttribute attributeValues attributeList
 
 
-normalizeFont : String -> String
-normalizeFont font =
-    if font == Font.serif then
-        font
+noStroke : Svg.Attribute event
+noStroke =
+    Svg.Attributes.stroke "none"
 
-    else if font == Font.sansSerif then
-        font
 
-    else if font == Font.monospace then
-        font
+noFill : Svg.Attribute event
+noFill =
+    Svg.Attributes.fill "none"
+
+
+addFillStyle :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addFillStyle attributeValues svgAttributes =
+    case attributeValues.fillStyle of
+        Nothing ->
+            svgAttributes
+
+        Just NoFill ->
+            noFill :: svgAttributes
+
+        Just (FillColor string) ->
+            Svg.Attributes.fill string :: svgAttributes
+
+        Just (FillGradient gradient) ->
+            Svg.Attributes.fill (Gradient.reference gradient) :: svgAttributes
+
+
+addStrokeStyle :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addStrokeStyle attributeValues svgAttributes =
+    case attributeValues.strokeStyle of
+        Nothing ->
+            svgAttributes
+
+        Just (StrokeColor string) ->
+            Svg.Attributes.stroke string :: svgAttributes
+
+        Just (StrokeGradient gradient) ->
+            Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes
+
+
+addFontSize :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addFontSize attributeValues svgAttributes =
+    case attributeValues.fontSize of
+        Nothing ->
+            svgAttributes
+
+        Just size ->
+            Svg.Attributes.fontSize (String.fromFloat size) :: svgAttributes
+
+
+addStrokeWidth :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addStrokeWidth attributeValues svgAttributes =
+    case attributeValues.strokeWidth of
+        Nothing ->
+            svgAttributes
+
+        Just width ->
+            Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
+
+
+addShadowFilter :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addShadowFilter attributeValues svgAttributes =
+    case attributeValues.dropShadow of
+        Nothing ->
+            svgAttributes
+
+        Just shadow ->
+            Svg.Attributes.filter (Shadow.reference shadow) :: svgAttributes
+
+
+lineJoinString lineJoin =
+    case lineJoin of
+        BevelJoin ->
+            "bevel"
+
+        RoundJoin ->
+            "round"
+
+        MiterJoin ->
+            "miter"
+
+
+lineCapString lineJoin =
+    case lineJoin of
+        NoCap ->
+            "butt"
+
+        SquareCap ->
+            "square"
+
+        RoundCap ->
+            "round"
+
+
+addStrokeLineJoin :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addStrokeLineJoin attributeValues svgAttributes =
+    case attributeValues.strokeLineJoin of
+        Nothing ->
+            svgAttributes
+
+        Just lineJoin ->
+            Svg.Attributes.strokeLinejoin (lineJoinString lineJoin) :: svgAttributes
+
+
+addStrokeLineCap :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addStrokeLineCap attributeValues svgAttributes =
+    case attributeValues.strokeLineCap of
+        Nothing ->
+            svgAttributes
+
+        Just lineCap ->
+            Svg.Attributes.strokeLinecap (lineCapString lineCap) :: svgAttributes
+
+
+addTextColor :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addTextColor attributeValues svgAttributes =
+    case attributeValues.textColor of
+        Nothing ->
+            svgAttributes
+
+        Just string ->
+            Svg.Attributes.color string :: svgAttributes
+
+
+addFontFamily :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addFontFamily attributeValues svgAttributes =
+    case attributeValues.fontFamily of
+        Nothing ->
+            svgAttributes
+
+        Just string ->
+            Svg.Attributes.fontFamily string :: svgAttributes
+
+
+addTextAnchor :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addTextAnchor attributeValues svgAttributes =
+    case attributeValues.textAnchor of
+        Nothing ->
+            svgAttributes
+
+        Just position ->
+            Svg.Attributes.textAnchor position.x
+                :: Svg.Attributes.dominantBaseline position.y
+                :: svgAttributes
+
+
+addCurveAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addCurveAttributes attributeValues svgAttributes =
+    svgAttributes
+        |> addStrokeStyle attributeValues
+        |> addStrokeWidth attributeValues
+        |> addStrokeLineJoin attributeValues
+        |> addStrokeLineCap attributeValues
+        |> addShadowFilter attributeValues
+        |> addEventHandlers attributeValues
+
+
+addRegionAttributes :
+    Bool
+    -> AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addRegionAttributes bordersVisible attributeValues svgAttributes =
+    let
+        commonAttributes =
+            svgAttributes
+                |> addFillStyle attributeValues
+                |> addShadowFilter attributeValues
+                |> addEventHandlers attributeValues
+    in
+    if bordersVisible then
+        commonAttributes |> addCurveAttributes attributeValues
 
     else
-        "\"" ++ font ++ "\""
+        noStroke :: commonAttributes
 
 
-fontFamily : List String -> Attribute units coordinates event
-fontFamily fonts =
-    FontFamily (fonts |> List.map normalizeFont |> String.join ",")
+addGroupAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addGroupAttributes attributeValues svgAttributes =
+    svgAttributes
+        |> addFillStyle attributeValues
+        |> addFontFamily attributeValues
+        |> addFontSize attributeValues
+        |> addStrokeStyle attributeValues
+        |> addStrokeWidth attributeValues
+        |> addStrokeLineJoin attributeValues
+        |> addStrokeLineCap attributeValues
+        |> addTextAnchor attributeValues
+        |> addTextColor attributeValues
+        |> addShadowFilter attributeValues
+        |> addEventHandlers attributeValues
+
+
+addTextAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addTextAttributes attributeValues svgAttributes =
+    svgAttributes
+        |> addFontFamily attributeValues
+        |> addFontSize attributeValues
+        |> addTextAnchor attributeValues
+        |> addTextColor attributeValues
+        |> addShadowFilter attributeValues
+        |> addEventHandlers attributeValues
+
+
+addEventHandlers :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addEventHandlers attributeValues svgAttributes =
+    Dict.foldl addEventHandler svgAttributes attributeValues.eventHandlers
+        |> suppressTouchActions attributeValues
+
+
+addEventHandler : String -> List (Decoder event) -> List (Svg.Attribute event) -> List (Svg.Attribute event)
+addEventHandler eventName decoders svgAttributes =
+    on eventName (Decode.oneOf decoders) :: svgAttributes
+
+
+suppressTouchActions :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+suppressTouchActions attributeValues svgAttributes =
+    if
+        Dict.member "touchstart" attributeValues.eventHandlers
+            || Dict.member "touchmove" attributeValues.eventHandlers
+            || Dict.member "touchend" attributeValues.eventHandlers
+    then
+        Html.Attributes.style "touch-action" "none" :: svgAttributes
+
+    else
+        svgAttributes
+
+
+on : String -> Decoder event -> Svg.Attribute event
+on eventName decoder =
+    Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
+
+
+preventDefaultAndStopPropagation :
+    Decoder msg
+    -> Decoder { message : msg, preventDefault : Bool, stopPropagation : Bool }
+preventDefaultAndStopPropagation =
+    Decode.map (\message -> { message = message, preventDefault = True, stopPropagation = True })

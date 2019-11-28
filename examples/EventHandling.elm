@@ -6,9 +6,6 @@ import Browser
 import Color
 import Dict exposing (Dict)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Events as Events
-import Drawing2d.Gradient as Gradient
 import Drawing2d.MouseInteraction exposing (MouseInteraction)
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Duration exposing (Duration)
@@ -65,13 +62,13 @@ eventHandlers : Int -> Model -> List (Drawing2d.Attribute Pixels DrawingCoordina
 eventHandlers id model =
     let
         constantHandlers =
-            [ Events.onLeftClick (LeftClick id)
-            , Events.onRightClick (RightClick id)
-            , Events.onLeftMouseUp (LeftMouseUp id)
-            , Events.onRightMouseUp (RightMouseUp id)
-            , Events.onLeftMouseDown (\point interaction -> LeftMouseDown id point)
-            , Events.onRightMouseDown (\point interaction -> RightMouseDown id point)
-            , Events.onTouchStart (TouchStart id)
+            [ Drawing2d.onLeftClick (LeftClick id)
+            , Drawing2d.onRightClick (RightClick id)
+            , Drawing2d.onLeftMouseUp (LeftMouseUp id)
+            , Drawing2d.onRightMouseUp (RightMouseUp id)
+            , Drawing2d.onLeftMouseDown (\point interaction -> LeftMouseDown id point)
+            , Drawing2d.onRightMouseDown (\point interaction -> RightMouseDown id point)
+            , Drawing2d.onTouchStart (TouchStart id)
             ]
     in
     case model.touchInteraction of
@@ -93,15 +90,10 @@ view : Model -> Html Msg
 view model =
     let
         rectangle =
-            Rectangle2d.with
-                { x1 = pixels 0
-                , x2 = pixels 300
-                , y1 = pixels 0
-                , y2 = pixels 200
-                }
+            Rectangle2d.from Point2d.origin (Point2d.pixels 300 200)
 
         dropShadow =
-            Attributes.dropShadow
+            Drawing2d.dropShadow
                 { radius = pixels 8
                 , color = Color.darkGrey
                 , offset = Vector2d.pixels 2 -4
@@ -125,24 +117,19 @@ view model =
                 |> Drawing2d.scaleAbout Point2d.origin (2 / 3)
 
         viewBox =
-            BoundingBox2d.fromExtrema
-                { minX = pixels -10
-                , minY = pixels -10
-                , maxX = pixels 800
-                , maxY = pixels 400
-                }
+            BoundingBox2d.from (Point2d.pixels -10 -10) (Point2d.pixels 800 400)
 
         messageLine message =
             Html.div [] [ Html.text message ]
     in
     Html.div []
         [ Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-            [ Attributes.strokeColor Color.black
-            , Attributes.fillColor Color.white
+            [ Drawing2d.strokeColor Color.black
+            , Drawing2d.fillColor Color.white
             ]
-            [ rectangle1 |> Drawing2d.addAttributes (dropShadow :: eventHandlers 1 model)
-            , rectangle2 |> Drawing2d.addAttributes (dropShadow :: eventHandlers 2 model)
-            , rectangle3 |> Drawing2d.addAttributes (dropShadow :: eventHandlers 3 model)
+            [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
+            , rectangle2 |> Drawing2d.add (dropShadow :: eventHandlers 2 model)
+            , rectangle3 |> Drawing2d.add (dropShadow :: eventHandlers 3 model)
             ]
         , Html.div [] (List.map messageLine model.messages)
         ]

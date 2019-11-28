@@ -14,12 +14,7 @@ main : Html msg
 main =
     let
         viewBox =
-            BoundingBox2d.fromExtrema
-                { minX = zero
-                , maxX = pixels 300
-                , minY = zero
-                , maxY = pixels 150
-                }
+            BoundingBox2d.from (Point2d.pixels 0 0) (Point2d.pixels 300 150)
 
         points =
             Parameter1d.steps 20 <|
@@ -30,6 +25,5 @@ main =
         circles =
             List.map (Circle2d.withRadius (pixels 3)) points
     in
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        []
-        (List.map (Drawing2d.circle []) circles)
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
+        List.map (Drawing2d.circle []) circles

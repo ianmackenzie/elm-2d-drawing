@@ -1,4 +1,4 @@
-module Drawing2d.Gradient.Stops exposing
+module Drawing2d.Stops exposing
     ( Stops
     , constant
     , empty

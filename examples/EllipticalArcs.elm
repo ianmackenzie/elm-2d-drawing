@@ -6,8 +6,6 @@ import Color
 import Common exposing (dot)
 import Direction2d exposing (Direction2d)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Gradient as Gradient
 import EllipticalArc2d
 import Html exposing (Html)
 import Pixels exposing (Pixels, inPixels, pixels)
@@ -41,14 +39,14 @@ main =
             EllipticalArc2d.endPoint arc
 
         gradient =
-            Gradient.from
+            Drawing2d.gradientFrom
                 ( startPoint, Color.rgb 0 1 0 )
                 ( endPoint, Color.rgb 0 0 1 )
 
         elements =
             [ Drawing2d.ellipticalArc
-                [ Attributes.strokeGradient gradient
-                , Attributes.strokeWidth (pixels 8)
+                [ Drawing2d.strokeGradient gradient
+                , Drawing2d.strokeWidth (pixels 8)
                 ]
                 arc
             , dot centerPoint

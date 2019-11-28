@@ -6,9 +6,6 @@ import Browser
 import Color
 import Common exposing (dot)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Gradient as Gradient
-import Drawing2d.Text as Text
 import Html exposing (Html)
 import Html.Events
 import LineSegment2d
@@ -61,11 +58,11 @@ view model =
         box =
             Drawing2d.group []
                 [ Drawing2d.rectangle
-                    [ Attributes.fillGradient <|
-                        Gradient.from
+                    [ Drawing2d.fillGradient <|
+                        Drawing2d.gradientFrom
                             ( gradientStartPoint, Color.red )
                             ( gradientEndPoint, Color.blue )
-                    , Attributes.dropShadow
+                    , Drawing2d.dropShadow
                         { radius = pixels 12
                         , offset = Vector2d.pixels 6 -6
                         , color = Color.black
@@ -75,7 +72,7 @@ view model =
                 , Drawing2d.lineSegment [] gradientLine
                 , dot gradientStartPoint
                 , dot gradientEndPoint
-                , Drawing2d.text [ Attributes.textAnchor Text.topLeft ]
+                , Drawing2d.text [ Drawing2d.textAnchor Drawing2d.topLeft ]
                     lowerLeftCorner
                     "Click to toggle transform"
                 ]
@@ -91,7 +88,7 @@ view model =
     in
     Html.div [ Html.Events.onClick ToggleTransform ]
         [ Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-            [ Attributes.fontSize (pixels 20) ]
+            [ Drawing2d.fontSize (pixels 20) ]
             [ rendered ]
         ]
 

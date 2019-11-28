@@ -5,8 +5,6 @@ import Browser
 import Color exposing (Color)
 import Dict exposing (Dict)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Events as Events
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Element
@@ -218,10 +216,10 @@ view model =
                 )
 
         commonAttributes =
-            [ Attributes.roundJoins
-            , Attributes.roundCaps
-            , Events.onTouchStart TouchStart
-            , Events.onLeftMouseDown MouseDown
+            [ Drawing2d.roundStrokeJoins
+            , Drawing2d.roundStrokeCaps
+            , Drawing2d.onTouchStart TouchStart
+            , Drawing2d.onLeftMouseDown MouseDown
             ]
 
         touchInteractionAttributes =
@@ -283,7 +281,7 @@ bullet text =
 drawLine : Line -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
 drawLine line =
     Drawing2d.polyline
-        [ Attributes.strokeColor line.color, Attributes.strokeWidth line.width ]
+        [ Drawing2d.strokeColor line.color, Drawing2d.strokeWidth line.width ]
         (Polyline2d.fromVertices line.points)
 
 

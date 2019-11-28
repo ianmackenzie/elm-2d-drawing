@@ -3,8 +3,6 @@ module Simple exposing (main)
 import BoundingBox2d exposing (BoundingBox2d)
 import Color
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Gradient as Gradient
 import Html exposing (Html)
 import LineSegment2d
 import Pixels exposing (Pixels, inPixels, pixels)
@@ -26,18 +24,18 @@ main =
             Point2d.pixels 400 100
 
         gradient =
-            Gradient.from ( p1, Color.rgb 0 0 0.75 ) ( p2, Color.rgb 0 0.75 1 )
+            Drawing2d.gradientFrom ( p1, Color.rgb 0 0 0.75 ) ( p2, Color.rgb 0 0.75 1 )
 
         elements =
             [ Drawing2d.triangle
-                [ Attributes.fillGradient gradient
-                , Attributes.strokeWidth (pixels 4)
-                , Attributes.dropShadow
+                [ Drawing2d.fillGradient gradient
+                , Drawing2d.strokeWidth (pixels 4)
+                , Drawing2d.dropShadow
                     { radius = pixels 8
                     , offset = Vector2d.pixels 4 -4
                     , color = Color.darkGrey
                     }
-                , Attributes.roundJoins
+                , Drawing2d.roundStrokeJoins
                 ]
                 (Triangle2d.from p1 p2 p3)
             ]

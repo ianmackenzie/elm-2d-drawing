@@ -5,11 +5,7 @@
     "license": "MPL-2.0",
     "version": "1.0.0",
     "exposed-modules": [
-        "Drawing2d",
-        "Drawing2d.Attributes",
-        "Drawing2d.Font",
-        "Drawing2d.Gradient",
-        "Drawing2d.Text"
+        "Drawing2d"
     ],
     "elm-version": "0.19.1 <= v < 0.20.0",
     "dependencies": {
@@ -23,8 +19,7 @@
         "elm/svg": "1.0.1 <= v < 2.0.0",
         "elm/virtual-dom": "1.0.2 <= v < 2.0.0",
         "ianmackenzie/elm-1d-parameter": "1.0.1 <= v < 2.0.0",
-        "ianmackenzie/elm-geometry": "2.0.0 <= v < 3.0.0",
-        "ianmackenzie/elm-geometry-svg": "2.0.0 <= v < 3.0.0",
+        "ianmackenzie/elm-geometry": "3.0.0 <= v < 4.0.0",
         "ianmackenzie/elm-units": "2.2.0 <= v < 3.0.0",
         "mpizenberg/elm-pointer-events": "4.0.1 <= v < 5.0.0"
     },

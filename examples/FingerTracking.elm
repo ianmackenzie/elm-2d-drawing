@@ -5,8 +5,6 @@ import Browser
 import Color exposing (Color)
 import Dict exposing (Dict)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Events as Events
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Element
@@ -120,7 +118,7 @@ view model =
         attributes =
             case model.touchInteraction of
                 Nothing ->
-                    [ Events.onTouchStart TouchStart ]
+                    [ Drawing2d.onTouchStart TouchStart ]
 
                 Just touchInteraction ->
                     [ touchInteraction |> TouchInteraction.onChange TouchChange
@@ -171,7 +169,7 @@ drawPoint point =
         { x, y } =
             Point2d.toPixels point.position
     in
-    Drawing2d.group [ Attributes.strokeColor point.color, Attributes.strokeWidth (pixels 4) ] <|
+    Drawing2d.group [ Drawing2d.strokeColor point.color, Drawing2d.strokeWidth (pixels 4) ] <|
         List.map (Drawing2d.lineSegment []) <|
             [ LineSegment2d.from (Point2d.pixels x 0) (Point2d.pixels x 600)
             , LineSegment2d.from (Point2d.pixels 0 y) (Point2d.pixels 800 y)

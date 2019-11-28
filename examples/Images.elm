@@ -4,7 +4,6 @@ import BoundingBox2d
 import Color
 import CubicSpline2d
 import Drawing2d
-import Drawing2d.Attributes as Attributes
 import Frame2d
 import Html exposing (Html)
 import Pixels exposing (pixels)
@@ -72,27 +71,27 @@ main =
                 toImage ( point, direction ) =
                     let
                         rectangle =
-                            Rectangle2d.withAxes
+                            Rectangle2d.centeredOn
                                 (Frame2d.withXDirection direction point)
                                 ( imageWidth, imageWidth )
                     in
                     Drawing2d.group []
                         [ Drawing2d.rectangle
-                            [ Attributes.whiteFill, Attributes.noBorder ]
+                            [ Drawing2d.whiteFill, Drawing2d.noBorder ]
                             rectangle
                         , Drawing2d.image [] imageUrl rectangle
                         ]
             in
             Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-                [ Attributes.dropShadow
+                [ Drawing2d.dropShadow
                     { radius = pixels 6
                     , offset = Vector2d.pixels 2 -4
                     , color = Color.darkGrey
                     }
                 ]
                 [ Drawing2d.cubicSpline
-                    [ Attributes.strokeWidth (pixels 4)
-                    , Attributes.strokeColor Color.charcoal
+                    [ Drawing2d.strokeWidth (pixels 4)
+                    , Drawing2d.strokeColor Color.charcoal
                     ]
                     spline
                 , Drawing2d.group [] (List.map toImage samples)

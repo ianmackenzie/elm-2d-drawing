@@ -12,8 +12,6 @@ import Color
 import Common exposing (dot)
 import Direction2d
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Gradient as Gradient
 import Duration exposing (Duration, milliseconds, seconds)
 import Html exposing (Html)
 import Html.Events
@@ -95,8 +93,8 @@ diagonalAxis =
 
 diagonalGradientAttribute : Drawing2d.Attribute Pixels DrawingCoordinates event
 diagonalGradientAttribute =
-    Attributes.fillGradient <|
-        Gradient.along diagonalAxis
+    Drawing2d.fillGradient <|
+        Drawing2d.gradientAlong diagonalAxis
             [ ( pixels -101, Color.darkBlue )
             , ( pixels -100, Color.blue )
             , ( pixels 100, Color.green )
@@ -106,8 +104,7 @@ diagonalGradientAttribute =
 
 example1 : Html Msg
 example1 =
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        []
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
         [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
 
 
@@ -121,8 +118,8 @@ example2 =
 fillableCircle : Point2d Pixels DrawingCoordinates -> Drawing2d.Element Pixels DrawingCoordinates msg
 fillableCircle point =
     Drawing2d.circle
-        [ Attributes.blackStroke
-        , Attributes.strokeWidth (pixels 1)
+        [ Drawing2d.blackStroke
+        , Drawing2d.strokeWidth (pixels 1)
         ]
         (Circle2d.withRadius (pixels 64) point)
 
@@ -136,8 +133,7 @@ example3 angle =
         points =
             Parameter1d.trailing 12 (Arc2d.pointOn arc)
     in
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        []
+    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
         [ Drawing2d.rectangle [] square
         , Drawing2d.group [ diagonalGradientAttribute ]
             [ Drawing2d.group [] (List.map fillableCircle points)

@@ -7,9 +7,6 @@ import Browser.Events
 import Color exposing (Color)
 import Dict exposing (Dict)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Events as Events
-import Drawing2d.Gradient as Gradient
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Element
 import Element.Border
@@ -77,12 +74,12 @@ drawPolyline :
     -> ( LineColor, Polyline2d Pixels DrawingCoordinates )
     -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
 drawPolyline attributes ( lineColor, polyline ) =
-    Drawing2d.polyline (Attributes.strokeColor (toColor lineColor) :: attributes) polyline
+    Drawing2d.polyline (Drawing2d.strokeColor (toColor lineColor) :: attributes) polyline
 
 
 rightClickHandler : Int -> Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent
 rightClickHandler id =
-    Events.onRightClick (always (LineRightClick id))
+    Drawing2d.onRightClick (always (LineRightClick id))
 
 
 view : Model -> Html Msg
@@ -124,10 +121,10 @@ view model =
                         { viewBox = viewBox
                         , size = Drawing2d.fit
                         }
-                        [ Events.onLeftMouseDown (StartDrawing Blue)
-                        , Events.onRightMouseDown (StartDrawing Green)
-                        , Events.onRightClick (always DrawingRightClick)
-                        , Attributes.strokeWidth (pixels 5)
+                        [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
+                        , Drawing2d.onRightMouseDown (StartDrawing Green)
+                        , Drawing2d.onRightClick (always DrawingRightClick)
+                        , Drawing2d.strokeWidth (pixels 5)
                         ]
                         allLines
                 )

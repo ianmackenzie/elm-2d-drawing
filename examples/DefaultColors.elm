@@ -6,8 +6,6 @@ import Circle2d
 import Color
 import Common exposing (dot)
 import Drawing2d
-import Drawing2d.Attributes as Attributes
-import Drawing2d.Font as Font
 import Html exposing (Html)
 import Parameter1d
 import Pixels exposing (pixels)
@@ -28,7 +26,7 @@ main =
                 }
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        [ Attributes.fontFamily [ Font.sansSerif ] ]
+        [ Drawing2d.fontFamily [ "sans-serif" ] ]
         [ Drawing2d.rectangle [] <|
             Rectangle2d.with
                 { x1 = pixels 50
@@ -55,7 +53,7 @@ main =
                 |> Parameter1d.steps 32
                 |> List.map dot
         , Drawing2d.text
-            [ Attributes.dropShadow
+            [ Drawing2d.dropShadow
                 { color = Color.darkGrey
                 , offset = Vector2d.pixels 1 -2
                 , radius = pixels 2
@@ -64,12 +62,12 @@ main =
             (Point2d.pixels 50 750)
             "Test text"
         , Drawing2d.text
-            [ Attributes.fontFamily [ Font.sansSerif ]
-            , Attributes.fontSize (pixels 36)
-            , Attributes.textColor Color.darkGrey
-            , Attributes.fillColor Color.orange
-            , Attributes.strokeColor Color.blue
-            , Attributes.dropShadow
+            [ Drawing2d.fontFamily [ "sans-serif" ]
+            , Drawing2d.fontSize (pixels 36)
+            , Drawing2d.textColor Color.darkGrey
+            , Drawing2d.fillColor Color.orange
+            , Drawing2d.strokeColor Color.blue
+            , Drawing2d.dropShadow
                 { color = Color.blue
                 , offset = Vector2d.pixels -1 -2
                 , radius = pixels 4

@@ -1,39 +1,224 @@
 module Drawing2d exposing
-    ( Attribute
-    , Element
-    , Event
-    , Size
-    , addAttributes
-    , arc
-    , at
-    , at_
-    , circle
-    , cubicSpline
-    , ellipse
-    , ellipticalArc
-    , empty
-    , fit
-    , fitWidth
-    , fixed
-    , group
-    , image
-    , lineSegment
+    ( Element, Attribute
+    , toHtml, Size, fixed, fit, fitWidth
+    , empty, group, lineSegment, polyline, triangle, rectangle, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+    , add
+    , noFill, blackFill, whiteFill, fillColor, fillGradient
+    , Gradient, gradientFrom, gradientAlong, circularGradient
+    , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+    , miterStrokeJoins, roundStrokeJoins, bevelStrokeJoins
+    , noStrokeCaps, roundStrokeCaps, squareStrokeCaps
+    , dropShadow
+    , noBorder, strokedBorder
+    , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
+    , Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
+    , onLeftClick, onRightClick
+    , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
+    , onTouchStart
+    , scaleAbout, rotateAround, translateBy, translateIn, mirrorAcross
+    , at, at_
+    , relativeTo, placeIn
     , map
-    , mirrorAcross
-    , placeIn
-    , polygon
-    , polyline
-    , quadraticSpline
-    , rectangle
-    , relativeTo
-    , rotateAround
-    , scaleAbout
-    , text
-    , toHtml
-    , translateBy
-    , translateIn
-    , triangle
+    , decodeLeftClick, decodeRightClick
+    , decodeLeftMouseDown, decodeLeftMouseUp, decodeMiddleMouseDown, decodeMiddleMouseUp, decodeRightMouseDown, decodeRightMouseUp
+    , decodeTouchStart
+    , Event
     )
+
+{-|
+
+@docs Element, Attribute
+
+@docs toHtml, Size, fixed, fit, fitWidth
+
+
+# Drawing
+
+@docs empty, group, lineSegment, polyline, triangle, rectangle, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+
+
+# Attributes
+
+@docs add
+
+
+## Fill
+
+@docs noFill, blackFill, whiteFill, fillColor, fillGradient
+
+
+## Gradients
+
+@docs Gradient, gradientFrom, gradientAlong, circularGradient
+
+
+## Stroke
+
+@docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+
+
+### Stroke joins
+
+@docs miterStrokeJoins, roundStrokeJoins, bevelStrokeJoins
+
+
+### Stroke caps
+
+@docs noStrokeCaps, roundStrokeCaps, squareStrokeCaps
+
+
+## Shadows
+
+@docs dropShadow
+
+
+## Borders
+
+@docs noBorder, strokedBorder
+
+
+## Text
+
+@docs fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
+
+
+## Anchors
+
+@docs Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
+
+
+# Events
+
+All `Drawing2d` event handlers give you the event position in **drawing
+coordinates**. For example, if you draw a circle at the point (200,300), then if
+you click the center of the circle you'll get an event containing the point
+(200,300) regardless of where on the page your drawing is, whether it's been
+scaled to fit its container, or what `viewBox` you provided when calling
+[`toHtml`](#toHtml).
+
+Under the hood, [this function](https://package.elm-lang.org/packages/debois/elm-dom/latest/DOM#boundingClientRect)
+is used to help convert from mouse/touch event coordinates like `clientX` and
+`clientY` to drawing coordinates. It should work fine in relatively simple
+cases, but can get confused by things like thick margin/padding or scrolling. In
+a production build, I recommend adding the following to your HTML file
+somewhere:
+
+    <script>
+        Object.defineProperty(Element.prototype, 'boundingClientRect', {
+            "get": function () { return this.getBoundingClientRect(); }
+        });
+    </script>
+
+This makes it possible for JSON event decoders to access the
+`getBoundingClientRect()` function as a JavaScript property. The decoders in
+this package all attempt to access this property first and will fall back to the
+pure-Elm function above if the property isn't present. This means that you can
+add the above code to your HTML file if you ever notice inaccurate event
+positions (or slow performance), and everything should get faster/more accurate
+without you having to change any of your Elm code. For example, I use something
+like the following, where `main.js` is assumed to be your compiled Elm code
+containing a `Main` module:
+
+    <!DOCTYPE HTML>
+    <html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>My app title</title>
+        <script src="main.js"></script>
+    </head>
+
+    <body>
+        <div id="elm"></div>
+        <script>
+            Object.defineProperty(Element.prototype, 'boundingClientRect', {
+                "get": function () { return this.getBoundingClientRect(); }
+            });
+            var app = Elm.Main.init({ node: document.getElementById('elm') });
+        </script>
+    </body>
+
+    </html>
+
+
+## Clicks
+
+@docs onLeftClick, onRightClick
+
+
+## Mouse
+
+@docs onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
+
+
+## Touch
+
+@docs onTouchStart
+
+
+# Transformations
+
+@docs scaleAbout, rotateAround, translateBy, translateIn, mirrorAcross
+
+
+# Unit conversions
+
+@docs at, at_
+
+
+# Coordinate conversions
+
+@docs relativeTo, placeIn
+
+
+# Message conversion
+
+@docs map
+
+
+# Custom event handling
+
+The `decode*` functions are similar to [their `on*` counterparts](#events), but
+allow you also perform whatever decoding you want on the underlying
+[`MouseEvent`](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent) or
+[`TouchEvent`](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent). For
+example, if you wanted to get the `clientX` and `clientY` values from a click
+event as well as the computed drawing coordinates, you might have a message type
+something like
+
+    type Msg
+        = Click Float Float (Point2d Pixels DrawingCoordinates)
+
+(where the two `Float` values represent `clientX` and `clientY`) and then use
+
+    Drawing2d.decodeLeftClick
+        (Decode.map2 Click
+            (Decode.field "clientX" Decode.float)
+            (Decode.field "clientY" Decode.float)
+        )
+
+Note that the `Click` message constructor takes _three_ parameters but we're
+using `Decode.map2` to grab only _two_ fields from the mouse event. This means
+that the decoder will actually return a partially applied function; that is, the
+decoder will have the type
+
+    Decoder (Point2d Pixels DrawingCoordinates -> Msg)
+
+which is exactly what we need to pass to `decodeLeftClick`. When a click
+happens, the provided decoder will be run to get a partially applied function,
+a bunch of internal logic will be performed to compute the clicked drawing
+point, and then that computed drawing point will be passed to the partially
+applied function to finally return an actual message. Whew! It's a bit
+intricate, but if you follow the above pattern it should hopefully be fairly
+straightforward to use.
+
+@docs decodeLeftClick, decodeRightClick
+
+@docs decodeLeftMouseDown, decodeLeftMouseUp, decodeMiddleMouseDown, decodeMiddleMouseUp, decodeRightMouseDown, decodeRightMouseUp
+
+@docs decodeTouchStart
+
+-}
 
 import Angle exposing (Angle)
 import Arc2d exposing (Arc2d)
@@ -46,16 +231,17 @@ import DOM
 import Dict exposing (Dict)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attributes as Attributes
-import Drawing2d.Attributes.Protected as Attributes
     exposing
-        ( AttributeValues
+        ( Attribute(..)
+        , AttributeValues
         , Event(..)
         , Fill(..)
+        , LineCap(..)
+        , LineJoin(..)
         , Stroke(..)
         )
 import Drawing2d.Decode as Decode
-import Drawing2d.Gradient as Gradient exposing (Gradient)
-import Drawing2d.Gradient.Protected as Gradient
+import Drawing2d.Gradient as Gradient
 import Drawing2d.InteractionPoint as InteractionPoint
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Drawing2d.MouseInteraction.Protected as MouseInteraction
@@ -63,7 +249,6 @@ import Drawing2d.MouseMoveEvent as MouseMoveEvent exposing (MouseMoveEvent)
 import Drawing2d.MouseStartEvent as MouseStartEvent exposing (MouseStartEvent)
 import Drawing2d.Shadow as Shadow
 import Drawing2d.Svg as Svg
-import Drawing2d.Text as Text
 import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent)
 import Drawing2d.TouchEndEvent as TouchEndEvent
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
@@ -118,6 +303,10 @@ type alias Event drawingCoordinates msg =
     Attributes.Event drawingCoordinates msg
 
 
+type alias Gradient units coordinates =
+    Gradient.Gradient units coordinates
+
+
 type alias Renderer a event =
     List (Svg.Attribute event) -> a -> Svg event
 
@@ -144,15 +333,15 @@ svgStaticCss =
 
 defaultAttributes : List (Attribute Pixels coordinates event)
 defaultAttributes =
-    [ Attributes.blackStroke
-    , Attributes.strokeWidth (pixels 1)
-    , Attributes.bevelJoins
-    , Attributes.buttCaps
-    , Attributes.whiteFill
-    , Attributes.strokedBorder
-    , Attributes.fontSize (pixels 20)
-    , Attributes.textColor Color.black
-    , Attributes.textAnchor Text.bottomLeft
+    [ blackStroke
+    , strokeWidth (pixels 1)
+    , bevelStrokeJoins
+    , noStrokeCaps
+    , whiteFill
+    , strokedBorder
+    , fontSize (pixels 20)
+    , textColor Color.black
+    , textAnchor bottomLeft
     ]
 
 
@@ -348,8 +537,8 @@ render :
     -> String
     -> Element units coordinates event
     -> Svg event
-render bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke (Element function) =
-    function bordersVisible pixelSize strokeWidth fontSize gradientFill gradientStroke
+render arg1 arg2 arg3 arg4 arg5 arg6 (Element function) =
+    function arg1 arg2 arg3 arg4 arg5 arg6
 
 
 group :
@@ -433,11 +622,11 @@ groupLike tag extraSvgAttributes attributeValues childElements =
                 (defs ++ childSvgElements)
 
 
-addAttributes :
+add :
     List (Attribute units coordinates event)
     -> Element units coordinates event
     -> Element units coordinates event
-addAttributes attributes element =
+add attributes element =
     group attributes [ element ]
 
 
@@ -920,3 +1109,494 @@ addDefs defs svgElement =
 
         _ ->
             Svg.g [] (svgElement :: defs)
+
+
+fillColor : Color -> Attribute units coordinates event
+fillColor color =
+    FillStyle (FillColor (Color.toCssString color))
+
+
+noFill : Attribute units coordinates event
+noFill =
+    FillStyle (FillColor "none")
+
+
+blackFill : Attribute units coordinates event
+blackFill =
+    FillStyle (FillColor "black")
+
+
+whiteFill : Attribute units coordinates event
+whiteFill =
+    FillStyle (FillColor "white")
+
+
+fillGradient : Gradient units coordinates -> Attribute units coordinates event
+fillGradient gradient =
+    FillStyle (FillGradient gradient)
+
+
+strokeColor : Color -> Attribute units coordinates event
+strokeColor color =
+    StrokeStyle (StrokeColor (Color.toCssString color))
+
+
+blackStroke : Attribute units coordinates event
+blackStroke =
+    StrokeStyle (StrokeColor "black")
+
+
+whiteStroke : Attribute units coordinates event
+whiteStroke =
+    StrokeStyle (StrokeColor "white")
+
+
+strokeGradient : Gradient units coordinates -> Attribute units coordinates event
+strokeGradient gradient =
+    StrokeStyle (StrokeGradient gradient)
+
+
+noBorder : Attribute units coordinates event
+noBorder =
+    BorderVisibility False
+
+
+strokedBorder : Attribute units coordinates event
+strokedBorder =
+    BorderVisibility True
+
+
+strokeWidth : Quantity Float units -> Attribute units coordinates event
+strokeWidth (Quantity size) =
+    StrokeWidth size
+
+
+roundStrokeJoins : Attribute units coordinates event
+roundStrokeJoins =
+    StrokeLineJoin RoundJoin
+
+
+bevelStrokeJoins : Attribute units coordinates event
+bevelStrokeJoins =
+    StrokeLineJoin BevelJoin
+
+
+miterStrokeJoins : Attribute units coordinates event
+miterStrokeJoins =
+    StrokeLineJoin MiterJoin
+
+
+noStrokeCaps : Attribute units coordinates event
+noStrokeCaps =
+    StrokeLineCap NoCap
+
+
+roundStrokeCaps : Attribute units coordinates event
+roundStrokeCaps =
+    StrokeLineCap RoundCap
+
+
+squareStrokeCaps : Attribute units coordinates event
+squareStrokeCaps =
+    StrokeLineCap SquareCap
+
+
+dropShadow :
+    { radius : Quantity Float units
+    , offset : Vector2d units coordinates
+    , color : Color
+    }
+    -> Attribute units coordinates event
+dropShadow properties =
+    DropShadow (Shadow.with properties)
+
+
+textAnchor : Anchor -> Attribute units coordinates event
+textAnchor anchor =
+    case anchor of
+        TopLeft ->
+            TextAnchor { x = "start", y = "hanging" }
+
+        TopCenter ->
+            TextAnchor { x = "middle", y = "hanging" }
+
+        TopRight ->
+            TextAnchor { x = "end", y = "hanging" }
+
+        CenterLeft ->
+            TextAnchor { x = "start", y = "middle" }
+
+        Center ->
+            TextAnchor { x = "middle", y = "middle" }
+
+        CenterRight ->
+            TextAnchor { x = "end", y = "middle" }
+
+        BottomLeft ->
+            TextAnchor { x = "start", y = "alphabetic" }
+
+        BottomCenter ->
+            TextAnchor { x = "middle", y = "alphabetic" }
+
+        BottomRight ->
+            TextAnchor { x = "end", y = "alphabetic" }
+
+
+type Anchor
+    = TopLeft
+    | TopCenter
+    | TopRight
+    | CenterLeft
+    | Center
+    | CenterRight
+    | BottomLeft
+    | BottomCenter
+    | BottomRight
+
+
+topLeft : Anchor
+topLeft =
+    TopLeft
+
+
+topCenter : Anchor
+topCenter =
+    TopCenter
+
+
+topRight : Anchor
+topRight =
+    TopRight
+
+
+centerLeft : Anchor
+centerLeft =
+    CenterLeft
+
+
+center : Anchor
+center =
+    Center
+
+
+centerRight : Anchor
+centerRight =
+    CenterRight
+
+
+bottomLeft : Anchor
+bottomLeft =
+    BottomLeft
+
+
+bottomCenter : Anchor
+bottomCenter =
+    BottomCenter
+
+
+bottomRight : Anchor
+bottomRight =
+    BottomRight
+
+
+blackText : Attribute units coordinates event
+blackText =
+    TextColor "black"
+
+
+whiteText : Attribute units coordinates event
+whiteText =
+    TextColor "white"
+
+
+textColor : Color -> Attribute units coordinates event
+textColor color =
+    TextColor (Color.toCssString color)
+
+
+fontSize : Quantity Float units -> Attribute units coordinates event
+fontSize (Quantity size) =
+    FontSize size
+
+
+normalizeFont : String -> String
+normalizeFont font =
+    if String.contains " " font then
+        -- Font family name has spaces, should be quoted
+        if
+            (String.startsWith "\"" font && String.endsWith "\"" font)
+                || (String.startsWith "'" font && String.endsWith "'" font)
+        then
+            -- Font family name is already quoted, don't need to do anything
+            font
+
+        else
+            -- Font family name is not already quoted, add quotes
+            "\"" ++ font ++ "\""
+
+    else
+        -- Font family name has no spaces, don't need quotes (note that generic
+        -- font family names like 'sans-serif' *must not* be quoted, so we can't
+        -- just always add quotes)
+        font
+
+
+{-| Generic font family names: <https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#Values>
+-}
+fontFamily : List String -> Attribute units coordinates event
+fontFamily fonts =
+    FontFamily (fonts |> List.map normalizeFont |> String.join ",")
+
+
+leftButton : Int
+leftButton =
+    0
+
+
+middleButton : Int
+middleButton =
+    1
+
+
+rightButton : Int
+rightButton =
+    2
+
+
+onLeftClick :
+    (Point2d Pixels drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+onLeftClick callback =
+    decodeLeftClick (Decode.succeed callback)
+
+
+onRightClick :
+    (Point2d Pixels drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+onRightClick callback =
+    decodeRightClick (Decode.succeed callback)
+
+
+onLeftMouseDown :
+    (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+onLeftMouseDown callback =
+    decodeLeftMouseDown (Decode.succeed callback)
+
+
+onRightMouseDown :
+    (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+onRightMouseDown callback =
+    decodeRightMouseDown (Decode.succeed callback)
+
+
+onMiddleMouseDown :
+    (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+onMiddleMouseDown callback =
+    decodeMiddleMouseDown (Decode.succeed callback)
+
+
+onLeftMouseUp : msg -> Attribute units coordinates (Event drawingCoordinates msg)
+onLeftMouseUp message =
+    decodeLeftMouseUp (Decode.succeed message)
+
+
+onRightMouseUp : msg -> Attribute units coordinates (Event drawingCoordinates msg)
+onRightMouseUp message =
+    decodeRightMouseUp (Decode.succeed message)
+
+
+onMiddleMouseUp : msg -> Attribute units coordinates (Event drawingCoordinates msg)
+onMiddleMouseUp message =
+    decodeMiddleMouseUp (Decode.succeed message)
+
+
+onTouchStart :
+    (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+onTouchStart callback =
+    decodeTouchStart (Decode.succeed callback)
+
+
+decodeLeftClick :
+    Decoder (Point2d Pixels drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeLeftClick decoder =
+    Attributes.EventHandlers [ ( "click", clickDecoder decoder ) ]
+
+
+decodeRightClick :
+    Decoder (Point2d Pixels drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeRightClick decoder =
+    Attributes.EventHandlers [ ( "contextmenu", clickDecoder decoder ) ]
+
+
+decodeLeftMouseDown :
+    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeLeftMouseDown decoder =
+    Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder leftButton decoder ) ]
+
+
+decodeMiddleMouseDown :
+    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeMiddleMouseDown decoder =
+    Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder middleButton decoder ) ]
+
+
+decodeRightMouseDown :
+    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeRightMouseDown decoder =
+    Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder rightButton decoder ) ]
+
+
+decodeLeftMouseUp : Decoder msg -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeLeftMouseUp decoder =
+    Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder leftButton decoder ) ]
+
+
+decodeMiddleMouseUp : Decoder msg -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeMiddleMouseUp decoder =
+    Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder middleButton decoder ) ]
+
+
+decodeRightMouseUp : Decoder msg -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeRightMouseUp decoder =
+    Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder rightButton decoder ) ]
+
+
+decodeTouchStart :
+    Decoder
+        (Dict Int (Point2d Pixels drawingCoordinates)
+         -> TouchInteraction drawingCoordinates
+         -> msg
+        )
+    -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeTouchStart decoder =
+    Attributes.EventHandlers [ ( "touchstart", touchStartDecoder decoder ) ]
+
+
+wrapMessage : msg -> Event drawingCoordinates msg
+wrapMessage message =
+    Event (always message)
+
+
+filterByButton : Int -> Decoder a -> Decoder a
+filterByButton whichButton decoder =
+    Decode.button
+        |> Decode.andThen
+            (\button ->
+                if button == whichButton then
+                    decoder
+
+                else
+                    Decode.wrongButton
+            )
+
+
+clickDecoder :
+    Decoder (Point2d Pixels drawingCoordinates -> msg)
+    -> Decoder (Event drawingCoordinates msg)
+clickDecoder givenDecoder =
+    Decode.map2 handleClick MouseStartEvent.decoder givenDecoder
+
+
+handleClick :
+    MouseStartEvent
+    -> (Point2d Pixels drawingCoordinates -> msg)
+    -> Event drawingCoordinates msg
+handleClick mouseStartEvent userCallback =
+    Event
+        (\viewBox ->
+            let
+                drawingPoint =
+                    InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
+            in
+            userCallback drawingPoint
+        )
+
+
+mouseDownDecoder :
+    Int
+    -> Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Decoder (Event drawingCoordinates msg)
+mouseDownDecoder givenButton givenDecoder =
+    filterByButton givenButton (Decode.map2 handleMouseDown MouseStartEvent.decoder givenDecoder)
+
+
+handleMouseDown :
+    MouseStartEvent
+    -> (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
+    -> Event drawingCoordinates msg
+handleMouseDown mouseStartEvent userCallback =
+    Event
+        (\viewBox ->
+            let
+                drawingPoint =
+                    InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
+
+                mouseInteraction =
+                    MouseInteraction.start mouseStartEvent viewBox
+            in
+            userCallback drawingPoint mouseInteraction
+        )
+
+
+mouseUpDecoder : Int -> Decoder msg -> Decoder (Event drawingCoordinates msg)
+mouseUpDecoder givenButton givenDecoder =
+    filterByButton givenButton (Decode.map wrapMessage givenDecoder)
+
+
+touchStartDecoder :
+    Decoder
+        (Dict Int (Point2d Pixels drawingCoordinates)
+         -> TouchInteraction drawingCoordinates
+         -> msg
+        )
+    -> Decoder (Event drawingCoordinates msg)
+touchStartDecoder givenDecoder =
+    Decode.map2 handleTouchStart TouchStartEvent.decoder givenDecoder
+
+
+handleTouchStart :
+    TouchStartEvent
+    -> (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
+    -> Event drawingCoordinates msg
+handleTouchStart touchStartEvent userCallback =
+    Event
+        (\viewBox ->
+            let
+                ( touchInteraction, initialPoints ) =
+                    TouchInteraction.start touchStartEvent viewBox
+            in
+            userCallback initialPoints touchInteraction
+        )
+
+
+gradientFrom :
+    ( Point2d units coordinates, Color )
+    -> ( Point2d units coordinates, Color )
+    -> Gradient units coordinates
+gradientFrom start end =
+    Gradient.from start end
+
+
+gradientAlong :
+    Axis2d units coordinates
+    -> List ( Quantity Float units, Color )
+    -> Gradient units coordinates
+gradientAlong axis stops =
+    Gradient.along axis stops
+
+
+circularGradient :
+    ( Point2d units coordinates, Color )
+    -> ( Circle2d units coordinates, Color )
+    -> Gradient units coordinates
+circularGradient start end =
+    Gradient.circular start end

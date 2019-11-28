@@ -4,7 +4,6 @@ import BoundingBox2d
 import Color
 import Color.Interpolate
 import Drawing2d
-import Drawing2d.Attributes as Attributes
 import Element
 import Element.Border
 import Frame2d
@@ -40,12 +39,12 @@ main =
                         x =
                             swatchSize |> Quantity.multiplyBy (toFloat i)
                     in
-                    Rectangle2d.withAxes (Frame2d.atPoint (Point2d.xy x zero))
+                    Rectangle2d.centeredOn (Frame2d.atPoint (Point2d.xy x zero))
                         ( swatchSize, swatchSize )
                 )
 
         aggregate =
-            BoundingBox2d.hullN
+            BoundingBox2d.aggregateN
                 (List.map Rectangle2d.boundingBox rectangles)
     in
     case aggregate of
@@ -61,12 +60,11 @@ main =
                 elements =
                     List.map2
                         (\color rectangle ->
-                            Drawing2d.rectangle [ Attributes.fillColor color ]
+                            Drawing2d.rectangle [ Drawing2d.fillColor color ]
                                 rectangle
                         )
                         colors
                         rectangles
             in
-            Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-                []
+            Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
                 elements

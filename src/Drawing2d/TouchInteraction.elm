@@ -8,7 +8,7 @@ module Drawing2d.TouchInteraction exposing
 
 import BoundingBox2d exposing (BoundingBox2d)
 import Dict exposing (Dict)
-import Drawing2d.Attributes.Protected as Attributes exposing (Attribute, Event(..))
+import Drawing2d.Attributes as Attributes exposing (Attribute, Event(..))
 import Drawing2d.InteractionPoint as InteractionPoint exposing (ReferencePoint)
 import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent)
 import Drawing2d.TouchEndEvent as TouchEndEvent exposing (TouchEndEvent)
