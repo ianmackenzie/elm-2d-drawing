@@ -86,12 +86,7 @@ view : Model -> Html Msg
 view model =
     let
         viewBox =
-            BoundingBox2d.fromExtrema
-                { minX = pixels 0
-                , minY = pixels 0
-                , maxX = pixels 800
-                , maxY = pixels 400
-                }
+            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 400)
 
         activeLine =
             case model.drawState of

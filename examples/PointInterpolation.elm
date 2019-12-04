@@ -14,7 +14,7 @@ main : Html msg
 main =
     let
         viewBox =
-            BoundingBox2d.from (Point2d.pixels 0 0) (Point2d.pixels 300 150)
+            BoundingBox2d.from Point2d.origin (Point2d.pixels 300 150)
 
         points =
             Parameter1d.steps 20 <|

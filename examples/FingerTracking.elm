@@ -108,12 +108,7 @@ view : Model -> Html Msg
 view model =
     let
         viewBox =
-            BoundingBox2d.fromExtrema
-                { minX = pixels 0
-                , minY = pixels 0
-                , maxX = pixels 800
-                , maxY = pixels 600
-                }
+            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 600)
 
         attributes =
             case model.touchInteraction of

@@ -55,11 +55,6 @@ main =
             ]
 
         viewBox =
-            BoundingBox2d.fromExtrema
-                { minX = pixels 0
-                , minY = pixels 0
-                , maxX = pixels 600
-                , maxY = pixels 600
-                }
+            BoundingBox2d.from Point2d.origin (Point2d.pixels 600 600)
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] elements

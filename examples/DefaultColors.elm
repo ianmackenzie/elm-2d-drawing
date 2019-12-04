@@ -18,12 +18,7 @@ main : Html Never
 main =
     let
         viewBox =
-            BoundingBox2d.fromExtrema
-                { minX = pixels 0
-                , maxX = pixels 800
-                , minY = pixels 0
-                , maxY = pixels 800
-                }
+            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 800)
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
         [ Drawing2d.fontFamily [ "sans-serif" ] ]

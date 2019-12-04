@@ -63,12 +63,7 @@ update message model =
 
 viewBox : BoundingBox2d Pixels DrawingCoordinates
 viewBox =
-    BoundingBox2d.fromExtrema
-        { minX = pixels 0
-        , minY = pixels 0
-        , maxX = pixels 500
-        , maxY = pixels 500
-        }
+    BoundingBox2d.from Point2d.origin (Point2d.pixels 500 500)
 
 
 square : Rectangle2d Pixels DrawingCoordinates
