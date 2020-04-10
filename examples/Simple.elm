@@ -1,12 +1,12 @@
 module Simple exposing (main)
 
-import BoundingBox2d exposing (BoundingBox2d)
 import Color
 import Drawing2d
 import Html exposing (Html)
 import LineSegment2d
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d
+import Rectangle2d exposing (Rectangle2d)
 import Triangle2d
 import Vector2d
 
@@ -41,6 +41,6 @@ main =
             ]
 
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 500 500)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 500 500)
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] elements

@@ -56,6 +56,7 @@ main =
                 viewBox =
                     overallBounds
                         |> BoundingBox2d.expandBy (pixels 0.5)
+                        |> Rectangle2d.fromBoundingBox
 
                 elements =
                     List.map2

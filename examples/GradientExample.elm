@@ -33,7 +33,7 @@ view : Model -> Html Msg
 view model =
     let
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 800)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 800 800)
 
         lowerLeftCorner =
             Point2d.pixels 100 100

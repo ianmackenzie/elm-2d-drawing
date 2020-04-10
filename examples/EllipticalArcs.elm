@@ -1,7 +1,6 @@
 module EllipticalArcs exposing (main)
 
 import Angle exposing (Angle)
-import BoundingBox2d exposing (BoundingBox2d)
 import Color
 import Common exposing (dot)
 import Direction2d exposing (Direction2d)
@@ -10,6 +9,7 @@ import EllipticalArc2d
 import Html exposing (Html)
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d
+import Rectangle2d exposing (Rectangle2d)
 
 
 degrees =
@@ -55,6 +55,6 @@ main =
             ]
 
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 600 600)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 600 600)
     in
     Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] elements

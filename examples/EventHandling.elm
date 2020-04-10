@@ -117,7 +117,7 @@ view model =
                 |> Drawing2d.scaleAbout Point2d.origin (2 / 3)
 
         viewBox =
-            BoundingBox2d.from (Point2d.pixels -10 -10) (Point2d.pixels 800 400)
+            Rectangle2d.from (Point2d.pixels -10 -10) (Point2d.pixels 800 400)
 
         messageLine message =
             Html.div [] [ Html.text message ]

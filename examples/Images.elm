@@ -17,7 +17,7 @@ main : Html msg
 main =
     let
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 600)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 800 600)
 
         spline =
             CubicSpline2d.fromControlPoints

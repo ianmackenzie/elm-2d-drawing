@@ -1,6 +1,5 @@
 module PointInterpolation exposing (main)
 
-import BoundingBox2d
 import Circle2d
 import Drawing2d
 import Html exposing (Html)
@@ -8,13 +7,14 @@ import Parameter1d
 import Pixels exposing (pixels)
 import Point2d
 import Quantity exposing (zero)
+import Rectangle2d
 
 
 main : Html msg
 main =
     let
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 300 150)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 300 150)
 
         points =
             Parameter1d.steps 20 <|

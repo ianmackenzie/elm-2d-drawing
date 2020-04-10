@@ -3,10 +3,10 @@ module Drawing2d.MouseInteraction.Protected exposing
     , start
     )
 
-import BoundingBox2d exposing (BoundingBox2d)
 import Drawing2d.InteractionPoint as InteractionPoint exposing (ReferencePoint)
 import Drawing2d.MouseStartEvent exposing (MouseStartEvent)
 import Pixels exposing (Pixels)
+import Rectangle2d exposing (Rectangle2d)
 
 
 type MouseInteraction drawingCoordinates
@@ -16,7 +16,7 @@ type MouseInteraction drawingCoordinates
         }
 
 
-start : MouseStartEvent -> BoundingBox2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates
+start : MouseStartEvent -> Rectangle2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates
 start mouseStartEvent viewBox =
     MouseInteraction
         { button = mouseStartEvent.button

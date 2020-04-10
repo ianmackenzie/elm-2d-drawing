@@ -346,7 +346,7 @@ defaultAttributes =
 
 
 toHtml :
-    { viewBox : BoundingBox2d Pixels drawingCoordinates
+    { viewBox : Rectangle2d Pixels drawingCoordinates
     , size : Size
     }
     -> List (Attribute Pixels drawingCoordinates (Event drawingCoordinates msg))
@@ -355,19 +355,13 @@ toHtml :
 toHtml { viewBox, size } attributes elements =
     let
         ( viewBoxWidth, viewBoxHeight ) =
-            BoundingBox2d.dimensions viewBox
-
-        viewBoxExtrema =
-            BoundingBox2d.extrema viewBox
-
-        { minX, maxX, minY, maxY } =
-            viewBoxExtrema
+            Rectangle2d.dimensions viewBox
 
         viewBoxAttribute =
             Svg.Attributes.viewBox <|
                 String.join " "
-                    [ String.fromFloat (inPixels minX)
-                    , String.fromFloat -(inPixels maxY)
+                    [ String.fromFloat (-0.5 * inPixels viewBoxWidth)
+                    , String.fromFloat (-0.5 * inPixels viewBoxHeight)
                     , String.fromFloat (inPixels viewBoxWidth)
                     , String.fromFloat (inPixels viewBoxHeight)
                     ]
@@ -416,7 +410,9 @@ toHtml { viewBox, size } attributes elements =
                 |> Attributes.assignAttributes attributes
 
         (Element svgElement) =
-            groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues elements
+            groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues <|
+                [ group [] elements |> relativeTo (Rectangle2d.axes viewBox)
+                ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
         [ svgElement False 1 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]

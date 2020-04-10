@@ -6,11 +6,11 @@ module Drawing2d.InteractionPoint exposing
     , updatedPosition
     )
 
-import BoundingBox2d exposing (BoundingBox2d)
 import DOM
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d exposing (Point2d)
+import Rectangle2d exposing (Rectangle2d)
 import Vector2d exposing (Vector2d)
 
 
@@ -25,14 +25,14 @@ type ReferencePoint drawingCoordinates
 
 referencePoint :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
-    -> BoundingBox2d Pixels drawingCoordinates
+    -> Rectangle2d Pixels drawingCoordinates
     -> DOM.Rectangle
     -> ReferencePoint drawingCoordinates
 referencePoint startEvent viewBox container =
     let
         -- Dimensions of the displayed portion of the drawing, in drawing units
         ( drawingWidth, drawingHeight ) =
-            BoundingBox2d.dimensions viewBox
+            Rectangle2d.dimensions viewBox
 
         -- Drawing scale assuming the drawing is the full width of its
         -- container
@@ -49,12 +49,6 @@ referencePoint startEvent viewBox container =
         drawingScale =
             min xScale yScale
 
-        -- Center point of the displayed portion of the drawing, in drawing
-        -- units; note that since the drawing is centered within its container,
-        -- this will be coincident with the center point of the container
-        drawingCenterPoint =
-            BoundingBox2d.centerPoint viewBox
-
         -- clientX coordinate of the center point of the container
         centerPointClientX =
             container.left + container.width / 2
@@ -63,15 +57,11 @@ referencePoint startEvent viewBox container =
         centerPointClientY =
             container.top + container.height / 2
 
-        -- displacement from the center point to the reference, in drawing units
-        displacementToReference =
-            Vector2d.pixels
-                ((startEvent.clientX - centerPointClientX) / drawingScale)
-                ((centerPointClientY - startEvent.clientY) / drawingScale)
-
         -- position of the reference point, in drawing units
         drawingPoint =
-            drawingCenterPoint |> Point2d.translateBy displacementToReference
+            Point2d.xyIn (Rectangle2d.axes viewBox)
+                (pixels ((startEvent.clientX - centerPointClientX) / drawingScale))
+                (pixels ((centerPointClientY - startEvent.clientY) / drawingScale))
     in
     ReferencePoint
         { pageX = startEvent.pageX
@@ -88,7 +78,7 @@ startPosition (ReferencePoint reference) =
 
 position :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
-    -> BoundingBox2d Pixels drawingCoordinates
+    -> Rectangle2d Pixels drawingCoordinates
     -> DOM.Rectangle
     -> Point2d Pixels drawingCoordinates
 position startEvent viewBox container =

@@ -61,9 +61,9 @@ update message model =
             ( { model | running = not model.running }, Cmd.none )
 
 
-viewBox : BoundingBox2d Pixels DrawingCoordinates
+viewBox : Rectangle2d Pixels DrawingCoordinates
 viewBox =
-    BoundingBox2d.from Point2d.origin (Point2d.pixels 500 500)
+    Rectangle2d.from Point2d.origin (Point2d.pixels 500 500)
 
 
 square : Rectangle2d Pixels DrawingCoordinates

@@ -3,7 +3,6 @@ module Example exposing (main)
 import Angle
 import Arc2d
 import Axis2d
-import BoundingBox2d
 import Color
 import Common exposing (dot)
 import Direction2d
@@ -13,13 +12,14 @@ import LineSegment2d
 import Parameter1d
 import Pixels exposing (pixels)
 import Point2d
+import Rectangle2d
 
 
 main : Html Never
 main =
     let
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 800)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 800 800)
 
         lineSegment =
             LineSegment2d.fromEndpoints

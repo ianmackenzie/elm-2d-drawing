@@ -1,6 +1,5 @@
 module FingerPainting exposing (main)
 
-import BoundingBox2d exposing (BoundingBox2d)
 import Browser
 import Color exposing (Color)
 import Dict exposing (Dict)
@@ -16,6 +15,7 @@ import Point2d exposing (Point2d)
 import Polyline2d exposing (Polyline2d)
 import Quantity exposing (Quantity)
 import Random
+import Rectangle2d exposing (Rectangle2d)
 
 
 type DrawingCoordinates
@@ -193,7 +193,7 @@ view : Model -> Html Msg
 view model =
     let
         viewBox =
-            BoundingBox2d.from Point2d.origin (Point2d.pixels 800 600)
+            Rectangle2d.from Point2d.origin (Point2d.pixels 800 600)
 
         currentMouseLine =
             case model.currentMouseSession of

@@ -17,7 +17,6 @@ module Drawing2d.Attributes exposing
     , emptyAttributeValues
     )
 
-import BoundingBox2d exposing (BoundingBox2d)
 import Dict exposing (Dict)
 import Drawing2d.Gradient as Gradient exposing (Gradient)
 import Drawing2d.MouseInteraction.Protected exposing (MouseInteraction(..))
@@ -29,6 +28,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Quantity exposing (Quantity)
+import Rectangle2d exposing (Rectangle2d)
 import Svg
 import Svg.Attributes
 import Svg.Events
@@ -59,7 +59,7 @@ type LineCap
 
 
 type Event drawingCoordinates msg
-    = Event (BoundingBox2d Pixels drawingCoordinates -> msg)
+    = Event (Rectangle2d Pixels drawingCoordinates -> msg)
 
 
 type Attribute units coordinates event
