@@ -36,6 +36,9 @@ main =
                 , x2 = pixels 200
                 , y2 = pixels 200
                 }
+        , Drawing2d.boundingBox [ Drawing2d.fillColor Color.blue ] <|
+            BoundingBox2d.withDimensions ( pixels 150, pixels 150 )
+                (Point2d.pixels 200 400)
         , Drawing2d.group [] <|
             let
                 circle =

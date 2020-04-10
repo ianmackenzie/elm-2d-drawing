@@ -1,7 +1,7 @@
 module Drawing2d exposing
     ( Element, Attribute
     , toHtml, Size, fixed, fit, fitWidth
-    , empty, group, lineSegment, polyline, triangle, rectangle, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+    , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
     , noFill, blackFill, whiteFill, fillColor, fillGradient
     , Gradient, gradientFrom, gradientAlong, circularGradient
@@ -34,7 +34,7 @@ module Drawing2d exposing
 
 # Drawing
 
-@docs empty, group, lineSegment, polyline, triangle, rectangle, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+@docs empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
 
 
 # Attributes
@@ -696,6 +696,14 @@ rectangle :
     -> Element units coordinates event
 rectangle attributes givenRectangle =
     drawRegion attributes Svg.rectangle2d givenRectangle
+
+
+boundingBox :
+    List (Attribute units coordinates event)
+    -> BoundingBox2d units coordinates
+    -> Element units coordinates event
+boundingBox attributes givenBox =
+    drawRegion attributes Svg.boundingBox2d givenBox
 
 
 text :
