@@ -131,60 +131,66 @@ arc2d attributes arc =
     let
         sweptAngle =
             Arc2d.sweptAngle arc
-
-        maxSegmentAngle =
-            Angle.turns (1 / 3)
-
-        numSegments =
-            1 + floor (abs (Quantity.ratio sweptAngle maxSegmentAngle))
-
-        sweepFlag =
-            if sweptAngle |> Quantity.greaterThanOrEqualTo Quantity.zero then
-                "0"
-
-            else
-                "1"
-
-        p0 =
-            Point2d.unwrap (Arc2d.startPoint arc)
-
-        (Quantity radius) =
-            Arc2d.radius arc
-
-        radiusString =
-            String.fromFloat radius
-
-        moveCommand =
-            [ "M"
-            , String.fromFloat p0.x
-            , String.fromFloat -p0.y
-            ]
-
-        arcSegment parameterValue =
-            let
-                { x, y } =
-                    Point2d.unwrap (Arc2d.pointOn arc parameterValue)
-            in
-            [ "A"
-            , radiusString
-            , radiusString
-            , "0"
-            , "0"
-            , sweepFlag
-            , String.fromFloat x
-            , String.fromFloat -y
-            ]
-
-        arcSegments =
-            Parameter1d.trailing numSegments arcSegment
-
-        pathComponents =
-            moveCommand ++ List.concat arcSegments
-
-        pathAttribute =
-            Svg.Attributes.d (String.join " " pathComponents)
     in
-    Svg.path (pathAttribute :: attributes) []
+    if sweptAngle == Quantity.zero then
+        lineSegment2d attributes
+            (LineSegment2d.from (Arc2d.startPoint arc) (Arc2d.endPoint arc))
+
+    else
+        let
+            maxSegmentAngle =
+                Angle.turns (1 / 3)
+
+            numSegments =
+                1 + floor (abs (Quantity.ratio sweptAngle maxSegmentAngle))
+
+            sweepFlag =
+                if sweptAngle |> Quantity.greaterThanOrEqualTo Quantity.zero then
+                    "0"
+
+                else
+                    "1"
+
+            p0 =
+                Point2d.unwrap (Arc2d.startPoint arc)
+
+            (Quantity radius) =
+                Arc2d.radius arc
+
+            radiusString =
+                String.fromFloat radius
+
+            moveCommand =
+                [ "M"
+                , String.fromFloat p0.x
+                , String.fromFloat -p0.y
+                ]
+
+            arcSegment parameterValue =
+                let
+                    { x, y } =
+                        Point2d.unwrap (Arc2d.pointOn arc parameterValue)
+                in
+                [ "A"
+                , radiusString
+                , radiusString
+                , "0"
+                , "0"
+                , sweepFlag
+                , String.fromFloat x
+                , String.fromFloat -y
+                ]
+
+            arcSegments =
+                Parameter1d.trailing numSegments arcSegment
+
+            pathComponents =
+                moveCommand ++ List.concat arcSegments
+
+            pathAttribute =
+                Svg.Attributes.d (String.join " " pathComponents)
+        in
+        Svg.path (pathAttribute :: attributes) []
 
 
 ellipticalArc2d : List (Svg.Attribute msg) -> EllipticalArc2d units coordinates -> Svg msg
