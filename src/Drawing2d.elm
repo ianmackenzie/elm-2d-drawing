@@ -262,7 +262,6 @@ import Html.Attributes
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import LineSegment2d exposing (LineSegment2d)
-import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Polyline2d exposing (Polyline2d)
@@ -280,7 +279,6 @@ import VirtualDom
 type Element units coordinates event
     = Element
         (Bool -- borders visible
-         -> Float -- pixel size in current units
          -> Float -- stroke width in current units
          -> Float -- font size in current units
          -> String -- encoded gradient fill in current units
@@ -299,8 +297,8 @@ type alias Attribute units coordinates event =
     Attributes.Attribute units coordinates event
 
 
-type alias Event drawingCoordinates msg =
-    Attributes.Event drawingCoordinates msg
+type alias Event drawingUnits drawingCoordinates msg =
+    Attributes.Event drawingUnits drawingCoordinates msg
 
 
 type alias Gradient units coordinates =
@@ -331,39 +329,39 @@ svgStaticCss =
     ]
 
 
-defaultAttributes : List (Attribute Pixels coordinates event)
+defaultAttributes : List (Attribute units coordinates event)
 defaultAttributes =
     [ blackStroke
-    , strokeWidth (pixels 1)
+    , strokeWidth (Quantity 1)
     , bevelStrokeJoins
     , noStrokeCaps
     , whiteFill
     , strokedBorder
-    , fontSize (pixels 20)
+    , fontSize (Quantity 16)
     , textColor Color.black
     , textAnchor bottomLeft
     ]
 
 
 toHtml :
-    { viewBox : Rectangle2d Pixels drawingCoordinates
+    { viewBox : Rectangle2d units coordinates
     , size : Size
+    , attributes : List (Attribute units coordinates (Event units coordinates msg))
+    , elements : List (Element units coordinates (Event units coordinates msg))
     }
-    -> List (Attribute Pixels drawingCoordinates (Event drawingCoordinates msg))
-    -> List (Element Pixels drawingCoordinates (Event drawingCoordinates msg))
     -> Html msg
-toHtml { viewBox, size } attributes elements =
+toHtml { viewBox, size, attributes, elements } =
     let
-        ( viewBoxWidth, viewBoxHeight ) =
+        ( Quantity viewBoxWidth, Quantity viewBoxHeight ) =
             Rectangle2d.dimensions viewBox
 
         viewBoxAttribute =
             Svg.Attributes.viewBox <|
                 String.join " "
-                    [ String.fromFloat (-0.5 * inPixels viewBoxWidth)
-                    , String.fromFloat (-0.5 * inPixels viewBoxHeight)
-                    , String.fromFloat (inPixels viewBoxWidth)
-                    , String.fromFloat (inPixels viewBoxHeight)
+                    [ String.fromFloat (-0.5 * viewBoxWidth)
+                    , String.fromFloat (-0.5 * viewBoxHeight)
+                    , String.fromFloat viewBoxWidth
+                    , String.fromFloat viewBoxHeight
                     ]
 
         -- Based on https://css-tricks.com/scale-svg/
@@ -377,10 +375,10 @@ toHtml { viewBox, size } attributes elements =
                 Fixed ->
                     let
                         widthString =
-                            String.fromFloat (inPixels viewBoxWidth) ++ "px"
+                            String.fromFloat viewBoxWidth ++ "px"
 
                         heightString =
-                            String.fromFloat (inPixels viewBoxHeight) ++ "px"
+                            String.fromFloat viewBoxHeight ++ "px"
                     in
                     [ Html.Attributes.style "width" widthString
                     , Html.Attributes.style "height" heightString
@@ -392,8 +390,7 @@ toHtml { viewBox, size } attributes elements =
                             "1px"
 
                         heightAsPercentOfWidth =
-                            String.fromFloat (100 * Quantity.ratio viewBoxHeight viewBoxWidth)
-                                ++ "%"
+                            String.fromFloat (100 * viewBoxHeight / viewBoxWidth) ++ "%"
 
                         bottomPadding =
                             "calc(" ++ heightAsPercentOfWidth ++ " - " ++ dummyHeight ++ ")"
@@ -415,7 +412,7 @@ toHtml { viewBox, size } attributes elements =
                 ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement False 1 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]
+        [ svgElement False 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]
 
 
 fit : Size
@@ -435,7 +432,7 @@ fixed =
 
 empty : Element units coordinates event
 empty =
-    Element (\_ _ _ _ _ _ -> Svg.text "")
+    Element (\_ _ _ _ _ -> Svg.text "")
 
 
 drawCurve :
@@ -449,7 +446,7 @@ drawCurve attributes renderer curve =
             Attributes.collectAttributeValues attributes
     in
     Element <|
-        \_ _ _ _ _ _ ->
+        \_ _ _ _ _ ->
             let
                 givenAttributes =
                     [] |> Attributes.addCurveAttributes attributeValues
@@ -479,7 +476,7 @@ drawRegion attributes renderer region =
             Attributes.collectAttributeValues attributes
     in
     Element <|
-        \currentBordersVisible _ _ _ _ _ ->
+        \currentBordersVisible _ _ _ _ ->
             let
                 bordersVisible =
                     attributeValues.borderVisibility
@@ -528,13 +525,12 @@ render :
     Bool
     -> Float
     -> Float
-    -> Float
     -> String
     -> String
     -> Element units coordinates event
     -> Svg event
-render arg1 arg2 arg3 arg4 arg5 arg6 (Element function) =
-    function arg1 arg2 arg3 arg4 arg5 arg6
+render arg1 arg2 arg3 arg4 arg5 (Element function) =
+    function arg1 arg2 arg3 arg4 arg5
 
 
 group :
@@ -553,7 +549,7 @@ groupLike :
     -> Element units coordinates event
 groupLike tag extraSvgAttributes attributeValues childElements =
     Element <|
-        \currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 updatedBordersVisible =
                     attributeValues.borderVisibility
@@ -597,7 +593,6 @@ groupLike tag extraSvgAttributes attributeValues childElements =
                         |> List.map
                             (render
                                 updatedBordersVisible
-                                currentPixelSize
                                 updatedStrokeWidth
                                 updatedFontSize
                                 updatedFillGradient
@@ -720,7 +715,7 @@ text attributes position string =
             Point2d.unwrap position
     in
     Element <|
-        \_ _ _ _ _ _ ->
+        \_ _ _ _ _ ->
             let
                 svgAttributes =
                     [ Svg.Attributes.x (String.fromFloat x)
@@ -748,7 +743,7 @@ image attributes givenUrl givenRectangle =
             Rectangle2d.dimensions givenRectangle
     in
     Element <|
-        \_ _ _ _ _ _ ->
+        \_ _ _ _ _ ->
             let
                 svgAttributes =
                     [ Svg.Attributes.xlinkHref givenUrl
@@ -798,7 +793,7 @@ placeIn :
     -> Element units globalCoordinates event
 placeIn frame (Element function) =
     Element
-        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 toLocalGradient =
                     Gradient.relativeTo frame
@@ -836,7 +831,6 @@ placeIn frame (Element function) =
                 localSvgElement =
                     function
                         currentBordersVisible
-                        currentPixelSize
                         currentStrokeWidth
                         currentFontSize
                         updatedFillGradient
@@ -886,7 +880,7 @@ scaleImpl point scale (Element function) =
             "matrix(" ++ String.join " " matrixComponents ++ ")"
     in
     Element
-        (\currentBordersVisible currentPixelSize currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 transformation =
                     Gradient.scaleAbout point (1 / scale)
@@ -908,9 +902,6 @@ scaleImpl point scale (Element function) =
                     transformedStrokeGradient
                         |> Maybe.map Gradient.encode
                         |> Maybe.withDefault ""
-
-                updatedPixelSize =
-                    currentPixelSize / scale
 
                 updatedStrokeWidth =
                     currentStrokeWidth / scale
@@ -938,7 +929,6 @@ scaleImpl point scale (Element function) =
                 childSvgElement =
                     function
                         currentBordersVisible
-                        updatedPixelSize
                         updatedStrokeWidth
                         updatedFontSize
                         updatedFillGradient
@@ -1014,19 +1004,22 @@ at_ (Quantity scale) element =
     scaleImpl Point2d.origin (1 / scale) element
 
 
-mapEvent : (a -> b) -> Event drawingCoordinates a -> Event drawingCoordinates b
+mapEvent :
+    (a -> b)
+    -> Event drawingUnits drawingCoordinates a
+    -> Event drawingUnits drawingCoordinates b
 mapEvent function (Event callback) =
     Event (callback >> function)
 
 
 map :
     (a -> b)
-    -> Element units coordinates (Event drawingCoordinates a)
-    -> Element units coordinates (Event drawingCoordinates b)
+    -> Element units coordinates (Event drawingUnits drawingCoordinates a)
+    -> Element units coordinates (Event drawingUnits drawingCoordinates b)
 map mapFunction (Element drawFunction) =
     Element
-        (\arg1 arg2 arg3 arg4 arg5 arg6 ->
-            Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
+        (\arg1 arg2 arg3 arg4 arg5 ->
+            Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5)
         )
 
 
@@ -1368,124 +1361,154 @@ rightButton =
 
 
 onLeftClick :
-    (Point2d Pixels drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    (Point2d drawingUnits drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onLeftClick callback =
     decodeLeftClick (Decode.succeed callback)
 
 
 onRightClick :
-    (Point2d Pixels drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    (Point2d drawingUnits drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onRightClick callback =
     decodeRightClick (Decode.succeed callback)
 
 
 onLeftMouseDown :
-    (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    (Point2d drawingUnits drawingCoordinates
+     -> MouseInteraction drawingUnits drawingCoordinates
+     -> msg
+    )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onLeftMouseDown callback =
     decodeLeftMouseDown (Decode.succeed callback)
 
 
 onRightMouseDown :
-    (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    (Point2d drawingUnits drawingCoordinates
+     -> MouseInteraction drawingUnits drawingCoordinates
+     -> msg
+    )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onRightMouseDown callback =
     decodeRightMouseDown (Decode.succeed callback)
 
 
 onMiddleMouseDown :
-    (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    (Point2d drawingUnits drawingCoordinates
+     -> MouseInteraction drawingUnits drawingCoordinates
+     -> msg
+    )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onMiddleMouseDown callback =
     decodeMiddleMouseDown (Decode.succeed callback)
 
 
-onLeftMouseUp : msg -> Attribute units coordinates (Event drawingCoordinates msg)
+onLeftMouseUp : msg -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onLeftMouseUp message =
     decodeLeftMouseUp (Decode.succeed message)
 
 
-onRightMouseUp : msg -> Attribute units coordinates (Event drawingCoordinates msg)
+onRightMouseUp : msg -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onRightMouseUp message =
     decodeRightMouseUp (Decode.succeed message)
 
 
-onMiddleMouseUp : msg -> Attribute units coordinates (Event drawingCoordinates msg)
+onMiddleMouseUp : msg -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onMiddleMouseUp message =
     decodeMiddleMouseUp (Decode.succeed message)
 
 
 onTouchStart :
-    (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    (Dict Int (Point2d drawingUnits drawingCoordinates)
+     -> TouchInteraction drawingUnits drawingCoordinates
+     -> msg
+    )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 onTouchStart callback =
     decodeTouchStart (Decode.succeed callback)
 
 
 decodeLeftClick :
-    Decoder (Point2d Pixels drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeLeftClick decoder =
     Attributes.EventHandlers [ ( "click", clickDecoder decoder ) ]
 
 
 decodeRightClick :
-    Decoder (Point2d Pixels drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeRightClick decoder =
     Attributes.EventHandlers [ ( "contextmenu", clickDecoder decoder ) ]
 
 
 decodeLeftMouseDown :
-    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    Decoder
+        (Point2d drawingUnits drawingCoordinates
+         -> MouseInteraction drawingUnits drawingCoordinates
+         -> msg
+        )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeLeftMouseDown decoder =
     Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder leftButton decoder ) ]
 
 
 decodeMiddleMouseDown :
-    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    Decoder
+        (Point2d drawingUnits drawingCoordinates
+         -> MouseInteraction drawingUnits drawingCoordinates
+         -> msg
+        )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeMiddleMouseDown decoder =
     Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder middleButton decoder ) ]
 
 
 decodeRightMouseDown :
-    Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    Decoder
+        (Point2d drawingUnits drawingCoordinates
+         -> MouseInteraction drawingUnits drawingCoordinates
+         -> msg
+        )
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeRightMouseDown decoder =
     Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder rightButton decoder ) ]
 
 
-decodeLeftMouseUp : Decoder msg -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeLeftMouseUp :
+    Decoder msg
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeLeftMouseUp decoder =
     Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder leftButton decoder ) ]
 
 
-decodeMiddleMouseUp : Decoder msg -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeMiddleMouseUp :
+    Decoder msg
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeMiddleMouseUp decoder =
     Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder middleButton decoder ) ]
 
 
-decodeRightMouseUp : Decoder msg -> Attribute units coordinates (Event drawingCoordinates msg)
+decodeRightMouseUp :
+    Decoder msg
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeRightMouseUp decoder =
     Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder rightButton decoder ) ]
 
 
 decodeTouchStart :
     Decoder
-        (Dict Int (Point2d Pixels drawingCoordinates)
-         -> TouchInteraction drawingCoordinates
+        (Dict Int (Point2d drawingUnits drawingCoordinates)
+         -> TouchInteraction drawingUnits drawingCoordinates
          -> msg
         )
-    -> Attribute units coordinates (Event drawingCoordinates msg)
+    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
 decodeTouchStart decoder =
     Attributes.EventHandlers [ ( "touchstart", touchStartDecoder decoder ) ]
 
 
-wrapMessage : msg -> Event drawingCoordinates msg
+wrapMessage : msg -> Event drawingUnits drawingCoordinates msg
 wrapMessage message =
     Event (always message)
 
@@ -1504,16 +1527,16 @@ filterByButton whichButton decoder =
 
 
 clickDecoder :
-    Decoder (Point2d Pixels drawingCoordinates -> msg)
-    -> Decoder (Event drawingCoordinates msg)
+    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
+    -> Decoder (Event drawingUnits drawingCoordinates msg)
 clickDecoder givenDecoder =
     Decode.map2 handleClick MouseStartEvent.decoder givenDecoder
 
 
 handleClick :
     MouseStartEvent
-    -> (Point2d Pixels drawingCoordinates -> msg)
-    -> Event drawingCoordinates msg
+    -> (Point2d drawingUnits drawingCoordinates -> msg)
+    -> Event drawingUnits drawingCoordinates msg
 handleClick mouseStartEvent userCallback =
     Event
         (\viewBox ->
@@ -1527,16 +1550,16 @@ handleClick mouseStartEvent userCallback =
 
 mouseDownDecoder :
     Int
-    -> Decoder (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Decoder (Event drawingCoordinates msg)
+    -> Decoder (Point2d drawingUnits drawingCoordinates -> MouseInteraction drawingUnits drawingCoordinates -> msg)
+    -> Decoder (Event drawingUnits drawingCoordinates msg)
 mouseDownDecoder givenButton givenDecoder =
     filterByButton givenButton (Decode.map2 handleMouseDown MouseStartEvent.decoder givenDecoder)
 
 
 handleMouseDown :
     MouseStartEvent
-    -> (Point2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates -> msg)
-    -> Event drawingCoordinates msg
+    -> (Point2d drawingUnits drawingCoordinates -> MouseInteraction drawingUnits drawingCoordinates -> msg)
+    -> Event drawingUnits drawingCoordinates msg
 handleMouseDown mouseStartEvent userCallback =
     Event
         (\viewBox ->
@@ -1551,26 +1574,26 @@ handleMouseDown mouseStartEvent userCallback =
         )
 
 
-mouseUpDecoder : Int -> Decoder msg -> Decoder (Event drawingCoordinates msg)
+mouseUpDecoder : Int -> Decoder msg -> Decoder (Event drawingUnits drawingCoordinates msg)
 mouseUpDecoder givenButton givenDecoder =
     filterByButton givenButton (Decode.map wrapMessage givenDecoder)
 
 
 touchStartDecoder :
     Decoder
-        (Dict Int (Point2d Pixels drawingCoordinates)
-         -> TouchInteraction drawingCoordinates
+        (Dict Int (Point2d drawingUnits drawingCoordinates)
+         -> TouchInteraction drawingUnits drawingCoordinates
          -> msg
         )
-    -> Decoder (Event drawingCoordinates msg)
+    -> Decoder (Event drawingUnits drawingCoordinates msg)
 touchStartDecoder givenDecoder =
     Decode.map2 handleTouchStart TouchStartEvent.decoder givenDecoder
 
 
 handleTouchStart :
     TouchStartEvent
-    -> (Dict Int (Point2d Pixels drawingCoordinates) -> TouchInteraction drawingCoordinates -> msg)
-    -> Event drawingCoordinates msg
+    -> (Dict Int (Point2d drawingUnits drawingCoordinates) -> TouchInteraction drawingUnits drawingCoordinates -> msg)
+    -> Event drawingUnits drawingCoordinates msg
 handleTouchStart touchStartEvent userCallback =
     Event
         (\viewBox ->

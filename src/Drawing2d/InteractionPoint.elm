@@ -10,39 +10,40 @@ import DOM
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d exposing (Point2d)
+import Quantity exposing (Quantity(..))
 import Rectangle2d exposing (Rectangle2d)
 import Vector2d exposing (Vector2d)
 
 
-type ReferencePoint drawingCoordinates
+type ReferencePoint drawingUnits drawingCoordinates
     = ReferencePoint
         { pageX : Float
         , pageY : Float
-        , drawingPoint : Point2d Pixels drawingCoordinates
+        , drawingPoint : Point2d drawingUnits drawingCoordinates
         , drawingScale : Float
         }
 
 
 referencePoint :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
-    -> Rectangle2d Pixels drawingCoordinates
+    -> Rectangle2d drawingUnits drawingCoordinates
     -> DOM.Rectangle
-    -> ReferencePoint drawingCoordinates
+    -> ReferencePoint drawingUnits drawingCoordinates
 referencePoint startEvent viewBox container =
     let
         -- Dimensions of the displayed portion of the drawing, in drawing units
-        ( drawingWidth, drawingHeight ) =
+        ( Quantity drawingWidth, Quantity drawingHeight ) =
             Rectangle2d.dimensions viewBox
 
         -- Drawing scale assuming the drawing is the full width of its
         -- container
         xScale =
-            container.width / inPixels drawingWidth
+            container.width / drawingWidth
 
         -- Drawing scale assuming the drawing is the full height of its
         -- container
         yScale =
-            container.height / inPixels drawingHeight
+            container.height / drawingHeight
 
         -- Actual drawing scale is the minimum of those two (since the
         -- drawing fits within its container)
@@ -60,8 +61,8 @@ referencePoint startEvent viewBox container =
         -- position of the reference point, in drawing units
         drawingPoint =
             Point2d.xyIn (Rectangle2d.axes viewBox)
-                (pixels ((startEvent.clientX - centerPointClientX) / drawingScale))
-                (pixels ((centerPointClientY - startEvent.clientY) / drawingScale))
+                (Quantity ((startEvent.clientX - centerPointClientX) / drawingScale))
+                (Quantity ((centerPointClientY - startEvent.clientY) / drawingScale))
     in
     ReferencePoint
         { pageX = startEvent.pageX
@@ -71,16 +72,16 @@ referencePoint startEvent viewBox container =
         }
 
 
-startPosition : ReferencePoint drawingCoordinates -> Point2d Pixels drawingCoordinates
+startPosition : ReferencePoint drawingUnits drawingCoordinates -> Point2d drawingUnits drawingCoordinates
 startPosition (ReferencePoint reference) =
     reference.drawingPoint
 
 
 position :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
-    -> Rectangle2d Pixels drawingCoordinates
+    -> Rectangle2d drawingUnits drawingCoordinates
     -> DOM.Rectangle
-    -> Point2d Pixels drawingCoordinates
+    -> Point2d drawingUnits drawingCoordinates
 position startEvent viewBox container =
     let
         (ReferencePoint reference) =
@@ -90,14 +91,14 @@ position startEvent viewBox container =
 
 
 updatedPosition :
-    ReferencePoint drawingCoordinates
+    ReferencePoint drawingUnits drawingCoordinates
     -> { a | pageX : Float, pageY : Float }
-    -> Point2d Pixels drawingCoordinates
+    -> Point2d drawingUnits drawingCoordinates
 updatedPosition (ReferencePoint reference) { pageX, pageY } =
     let
         displacementFromReference =
-            Vector2d.pixels
-                ((pageX - reference.pageX) / reference.drawingScale)
-                ((reference.pageY - pageY) / reference.drawingScale)
+            Vector2d.xy
+                (Quantity ((pageX - reference.pageX) / reference.drawingScale))
+                (Quantity ((reference.pageY - pageY) / reference.drawingScale))
     in
     reference.drawingPoint |> Point2d.translateBy displacementFromReference

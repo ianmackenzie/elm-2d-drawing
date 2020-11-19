@@ -24,12 +24,12 @@ type DrawingCoordinates
 
 
 type alias DrawingEvent =
-    Drawing2d.Event DrawingCoordinates Msg
+    Drawing2d.Event Pixels DrawingCoordinates Msg
 
 
 type alias Model =
     { messages : List String
-    , touchInteraction : Maybe (TouchInteraction DrawingCoordinates)
+    , touchInteraction : Maybe (TouchInteraction Pixels DrawingCoordinates)
     }
 
 
@@ -40,7 +40,7 @@ type Msg
     | RightMouseUp Int
     | LeftMouseDown Int (Point2d Pixels DrawingCoordinates)
     | RightMouseDown Int (Point2d Pixels DrawingCoordinates)
-    | TouchStart Int (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction DrawingCoordinates)
+    | TouchStart Int (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction Pixels DrawingCoordinates)
     | TouchEnd Int Duration
     | TouchChange Int (Dict Int (Point2d Pixels DrawingCoordinates))
 
@@ -123,14 +123,19 @@ view model =
             Html.div [] [ Html.text message ]
     in
     Html.div []
-        [ Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-            [ Drawing2d.strokeColor Color.black
-            , Drawing2d.fillColor Color.white
-            ]
-            [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
-            , rectangle2 |> Drawing2d.add (dropShadow :: eventHandlers 2 model)
-            , rectangle3 |> Drawing2d.add (dropShadow :: eventHandlers 3 model)
-            ]
+        [ Drawing2d.toHtml
+            { viewBox = viewBox
+            , size = Drawing2d.fixed
+            , attributes =
+                [ Drawing2d.strokeColor Color.black
+                , Drawing2d.fillColor Color.white
+                ]
+            , elements =
+                [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
+                , rectangle2 |> Drawing2d.add (dropShadow :: eventHandlers 2 model)
+                , rectangle3 |> Drawing2d.add (dropShadow :: eventHandlers 3 model)
+                ]
+            }
         , Html.div [] (List.map messageLine model.messages)
         ]
 

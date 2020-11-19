@@ -17,13 +17,13 @@ import Point2d exposing (Point2d)
 import Vector2d
 
 
-type alias MouseInteraction drawingCoordinates =
-    Protected.MouseInteraction drawingCoordinates
+type alias MouseInteraction drawingUnits drawingCoordinates =
+    Protected.MouseInteraction drawingUnits drawingCoordinates
 
 
 decodeMove :
-    Decoder (Point2d Pixels drawingCoordinates -> msg)
-    -> MouseInteraction drawingCoordinates
+    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
+    -> MouseInteraction drawingUnits drawingCoordinates
     -> Sub msg
 decodeMove givenDecoder (Protected.MouseInteraction interaction) =
     let
@@ -34,12 +34,15 @@ decodeMove givenDecoder (Protected.MouseInteraction interaction) =
     Browser.Events.onMouseMove (Decode.map2 (<|) givenDecoder positionDecoder)
 
 
-onMove : (Point2d Pixels drawingCoordinates -> msg) -> MouseInteraction drawingCoordinates -> Sub msg
+onMove :
+    (Point2d drawingUnits drawingCoordinates -> msg)
+    -> MouseInteraction drawingUnits drawingCoordinates
+    -> Sub msg
 onMove callback mouseInteraction =
     decodeMove (Decode.succeed callback) mouseInteraction
 
 
-decodeEnd : Decoder msg -> MouseInteraction drawingCoordinates -> Sub msg
+decodeEnd : Decoder msg -> MouseInteraction drawingUnits drawingCoordinates -> Sub msg
 decodeEnd givenDecoder (Protected.MouseInteraction interaction) =
     Browser.Events.onMouseUp
         (Decode.button
@@ -54,6 +57,6 @@ decodeEnd givenDecoder (Protected.MouseInteraction interaction) =
         )
 
 
-onEnd : msg -> MouseInteraction drawingCoordinates -> Sub msg
+onEnd : msg -> MouseInteraction drawingUnits drawingCoordinates -> Sub msg
 onEnd message mouseInteraction =
     decodeEnd (Decode.succeed message) mouseInteraction

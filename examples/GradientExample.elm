@@ -82,9 +82,12 @@ view model =
                 box
     in
     Html.div [ Html.Events.onClick ToggleTransform ]
-        [ Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-            [ Drawing2d.fontSize (pixels 20) ]
-            [ rendered ]
+        [ Drawing2d.toHtml
+            { viewBox = viewBox
+            , size = Drawing2d.fixed
+            , attributes = [ Drawing2d.fontSize (pixels 20) ]
+            , elements = [ rendered ]
+            }
         ]
 
 

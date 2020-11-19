@@ -23,7 +23,7 @@ type DrawingCoordinates
 
 
 type alias DrawingEvent =
-    Drawing2d.Event DrawingCoordinates Msg
+    Drawing2d.Event Pixels DrawingCoordinates Msg
 
 
 type alias TouchPoint =
@@ -34,13 +34,13 @@ type alias TouchPoint =
 
 type alias Model =
     { touchPoints : Dict Int TouchPoint
-    , touchInteraction : Maybe (TouchInteraction DrawingCoordinates)
+    , touchInteraction : Maybe (TouchInteraction Pixels DrawingCoordinates)
     , randomSeed : Random.Seed
     }
 
 
 type Msg
-    = TouchStart (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction DrawingCoordinates)
+    = TouchStart (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction Pixels DrawingCoordinates)
     | TouchChange (Dict Int (Point2d Pixels DrawingCoordinates))
     | TouchEnd
 
@@ -68,7 +68,7 @@ update message model =
             { model | touchInteraction = Nothing, touchPoints = Dict.empty }
 
 
-startInteraction : TouchInteraction DrawingCoordinates -> Model -> Model
+startInteraction : TouchInteraction Pixels DrawingCoordinates -> Model -> Model
 startInteraction touchInteraction model =
     { model | touchInteraction = Just touchInteraction }
 
@@ -125,8 +125,12 @@ view model =
             [ Element.html (Html.h1 [] [ Html.text "Elm finger tracking" ])
             , Element.el [ Element.Border.width 16 ] <|
                 Element.html <|
-                    Drawing2d.toHtml { size = Drawing2d.fixed, viewBox = viewBox } attributes <|
-                        List.map drawPoint (Dict.values model.touchPoints)
+                    Drawing2d.toHtml
+                        { size = Drawing2d.fixed
+                        , viewBox = viewBox
+                        , attributes = attributes
+                        , elements = List.map drawPoint (Dict.values model.touchPoints)
+                        }
             , Element.html <|
                 Html.div [ Html.Attributes.style "max-width" "816px", Html.Attributes.style "overflow-wrap" "normal", Html.Attributes.style "white-space" "normal" ]
                     [ Html.h2 [] [ Html.text "What should work" ]

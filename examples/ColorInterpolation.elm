@@ -67,5 +67,9 @@ main =
                         colors
                         rectangles
             in
-            Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
-                elements
+            Drawing2d.toHtml
+                { viewBox = viewBox
+                , size = Drawing2d.fixed
+                , attributes = []
+                , elements = elements
+                }

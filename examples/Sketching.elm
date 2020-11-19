@@ -25,7 +25,7 @@ type DrawingCoordinates
 
 
 type alias DrawingEvent =
-    Drawing2d.Event DrawingCoordinates Msg
+    Drawing2d.Event Pixels DrawingCoordinates Msg
 
 
 type LineColor
@@ -34,7 +34,7 @@ type LineColor
 
 
 type Msg
-    = StartDrawing LineColor (Point2d Pixels DrawingCoordinates) (MouseInteraction DrawingCoordinates)
+    = StartDrawing LineColor (Point2d Pixels DrawingCoordinates) (MouseInteraction Pixels DrawingCoordinates)
     | MouseMove (Point2d Pixels DrawingCoordinates)
     | MouseUp
     | DrawingRightClick
@@ -46,7 +46,7 @@ type DrawState
         { lineColor : LineColor
         , lastPoint : Point2d Pixels DrawingCoordinates
         , accumulatedPoints : List (Point2d Pixels DrawingCoordinates)
-        , mouseInteraction : MouseInteraction DrawingCoordinates
+        , mouseInteraction : MouseInteraction Pixels DrawingCoordinates
         }
     | NotDrawing
 
@@ -98,9 +98,6 @@ view model =
         existingLines =
             Dict.toList model.linesById
                 |> List.map (\( id, line ) -> drawPolyline [ rightClickHandler id ] line)
-
-        allLines =
-            activeLine :: existingLines
     in
     Element.layout [ Element.width Element.fill ] <|
         Element.el [ Element.padding 20 ] <|
@@ -114,13 +111,14 @@ view model =
                     Drawing2d.toHtml
                         { viewBox = viewBox
                         , size = Drawing2d.fit
+                        , attributes =
+                            [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
+                            , Drawing2d.onRightMouseDown (StartDrawing Green)
+                            , Drawing2d.onRightClick (always DrawingRightClick)
+                            , Drawing2d.strokeWidth (pixels 5)
+                            ]
+                        , elements = activeLine :: existingLines
                         }
-                        [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
-                        , Drawing2d.onRightMouseDown (StartDrawing Green)
-                        , Drawing2d.onRightClick (always DrawingRightClick)
-                        , Drawing2d.strokeWidth (pixels 5)
-                        ]
-                        allLines
                 )
 
 

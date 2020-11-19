@@ -12,6 +12,7 @@ import Point2d
 import Rectangle2d exposing (Rectangle2d)
 
 
+degrees : Float -> Angle
 degrees =
     Angle.degrees
 
@@ -42,8 +43,12 @@ main =
             Drawing2d.gradientFrom
                 ( startPoint, Color.rgb 0 1 0 )
                 ( endPoint, Color.rgb 0 0 1 )
-
-        elements =
+    in
+    Drawing2d.toHtml
+        { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 600 600)
+        , size = Drawing2d.fixed
+        , attributes = []
+        , elements =
             [ Drawing2d.ellipticalArc
                 [ Drawing2d.strokeGradient gradient
                 , Drawing2d.strokeWidth (pixels 8)
@@ -53,8 +58,4 @@ main =
             , dot startPoint
             , dot endPoint
             ]
-
-        viewBox =
-            Rectangle2d.from Point2d.origin (Point2d.pixels 600 600)
-    in
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] elements
+        }

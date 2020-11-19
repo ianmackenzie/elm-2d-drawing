@@ -9,14 +9,14 @@ import Pixels exposing (Pixels)
 import Rectangle2d exposing (Rectangle2d)
 
 
-type MouseInteraction drawingCoordinates
+type MouseInteraction drawingUnits drawingCoordinates
     = MouseInteraction
         { button : Int
-        , referencePoint : ReferencePoint drawingCoordinates
+        , referencePoint : ReferencePoint drawingUnits drawingCoordinates
         }
 
 
-start : MouseStartEvent -> Rectangle2d Pixels drawingCoordinates -> MouseInteraction drawingCoordinates
+start : MouseStartEvent -> Rectangle2d drawingUnits drawingCoordinates -> MouseInteraction drawingUnits drawingCoordinates
 start mouseStartEvent viewBox =
     MouseInteraction
         { button = mouseStartEvent.button

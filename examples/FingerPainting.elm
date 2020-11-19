@@ -23,7 +23,7 @@ type DrawingCoordinates
 
 
 type alias DrawingEvent =
-    Drawing2d.Event DrawingCoordinates Msg
+    Drawing2d.Event Pixels DrawingCoordinates Msg
 
 
 type alias Line =
@@ -36,9 +36,9 @@ type alias Line =
 
 type alias Model =
     { currentTouchLines : Dict Int Line
-    , currentTouchInteraction : Maybe (TouchInteraction DrawingCoordinates)
+    , currentTouchInteraction : Maybe (TouchInteraction Pixels DrawingCoordinates)
     , currentMouseSession :
-        Maybe { line : Line, mouseInteraction : MouseInteraction DrawingCoordinates }
+        Maybe { line : Line, mouseInteraction : MouseInteraction Pixels DrawingCoordinates }
     , randomSeed : Random.Seed
     , lineIndex : Int
     , finishedLines : List Line
@@ -46,10 +46,10 @@ type alias Model =
 
 
 type Msg
-    = TouchStart (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction DrawingCoordinates)
+    = TouchStart (Dict Int (Point2d Pixels DrawingCoordinates)) (TouchInteraction Pixels DrawingCoordinates)
     | TouchChange (Dict Int (Point2d Pixels DrawingCoordinates))
     | TouchEnd
-    | MouseDown (Point2d Pixels DrawingCoordinates) (MouseInteraction DrawingCoordinates)
+    | MouseDown (Point2d Pixels DrawingCoordinates) (MouseInteraction Pixels DrawingCoordinates)
     | MouseMove (Point2d Pixels DrawingCoordinates)
     | MouseUp
 
@@ -170,7 +170,7 @@ endTouchLine identifier line model =
     }
 
 
-startTouchInteraction : TouchInteraction DrawingCoordinates -> Model -> Model
+startTouchInteraction : TouchInteraction Pixels DrawingCoordinates -> Model -> Model
 startTouchInteraction touchInteraction model =
     { model | currentTouchInteraction = Just touchInteraction, finishedLines = [] }
 
@@ -233,9 +233,11 @@ view model =
             , Element.el [ Element.Border.width 16 ] <|
                 Element.html <|
                     Drawing2d.toHtml
-                        { size = Drawing2d.fixed, viewBox = viewBox }
-                        (commonAttributes ++ touchInteractionAttributes)
-                        (List.map drawLine allLines)
+                        { size = Drawing2d.fixed
+                        , viewBox = viewBox
+                        , attributes = commonAttributes ++ touchInteractionAttributes
+                        , elements = List.map drawLine allLines
+                        }
             , Element.html <|
                 Html.div [ Html.Attributes.style "max-width" "816px", Html.Attributes.style "overflow-wrap" "normal", Html.Attributes.style "white-space" "normal" ]
                     [ Html.h2 [] [ Html.text "What should work" ]

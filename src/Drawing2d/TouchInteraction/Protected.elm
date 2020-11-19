@@ -13,14 +13,17 @@ import Point2d exposing (Point2d)
 import Rectangle2d exposing (Rectangle2d)
 
 
-type TouchInteraction drawingCoordinates
+type TouchInteraction drawingUnits drawingCoordinates
     = TouchInteraction
         { startTimeStamp : Duration
-        , referencePoint : ReferencePoint drawingCoordinates
+        , referencePoint : ReferencePoint drawingUnits drawingCoordinates
         }
 
 
-start : TouchStartEvent -> Rectangle2d Pixels drawingCoordinates -> ( TouchInteraction drawingCoordinates, Dict Int (Point2d Pixels drawingCoordinates) )
+start :
+    TouchStartEvent
+    -> Rectangle2d drawingUnits drawingCoordinates
+    -> ( TouchInteraction drawingUnits drawingCoordinates, Dict Int (Point2d drawingUnits drawingCoordinates) )
 start touchStartEvent viewBox =
     let
         ( firstTargetTouch, remainingTargetTouches ) =
@@ -48,6 +51,9 @@ start touchStartEvent viewBox =
     ( touchInteraction, Dict.fromList dictEntries )
 
 
-toDictEntry : ReferencePoint drawingCoordinates -> TouchStart -> ( Int, Point2d Pixels drawingCoordinates )
+toDictEntry :
+    ReferencePoint drawingUnits drawingCoordinates
+    -> TouchStart
+    -> ( Int, Point2d drawingUnits drawingCoordinates )
 toDictEntry referencePoint touchStart =
     ( touchStart.identifier, InteractionPoint.updatedPosition referencePoint touchStart )

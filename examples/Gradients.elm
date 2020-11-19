@@ -99,15 +99,22 @@ diagonalGradientAttribute =
 
 example1 : Html Msg
 example1 =
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
-        [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
+    Drawing2d.toHtml
+        { viewBox = viewBox
+        , size = Drawing2d.fixed
+        , attributes = []
+        , elements = [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
+        }
 
 
 example2 : Html Msg
 example2 =
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed }
-        [ diagonalGradientAttribute ]
-        [ Drawing2d.rectangle [] square ]
+    Drawing2d.toHtml
+        { viewBox = viewBox
+        , size = Drawing2d.fixed
+        , attributes = [ diagonalGradientAttribute ]
+        , elements = [ Drawing2d.rectangle [] square ]
+        }
 
 
 fillableCircle : Point2d Pixels DrawingCoordinates -> Drawing2d.Element Pixels DrawingCoordinates msg
@@ -128,13 +135,18 @@ example3 angle =
         points =
             Parameter1d.trailing 12 (Arc2d.pointOn arc)
     in
-    Drawing2d.toHtml { viewBox = viewBox, size = Drawing2d.fixed } [] <|
-        [ Drawing2d.rectangle [] square
-        , Drawing2d.group [ diagonalGradientAttribute ]
-            [ Drawing2d.group [] (List.map fillableCircle points)
-                |> Drawing2d.rotateAround centerPoint angle
+    Drawing2d.toHtml
+        { viewBox = viewBox
+        , size = Drawing2d.fixed
+        , attributes = []
+        , elements =
+            [ Drawing2d.rectangle [] square
+            , Drawing2d.group [ diagonalGradientAttribute ]
+                [ Drawing2d.group [] (List.map fillableCircle points)
+                    |> Drawing2d.rotateAround centerPoint angle
+                ]
             ]
-        ]
+        }
 
 
 view : Model -> Browser.Document Msg

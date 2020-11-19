@@ -58,8 +58,8 @@ type LineCap
     | RoundCap
 
 
-type Event drawingCoordinates msg
-    = Event (Rectangle2d Pixels drawingCoordinates -> msg)
+type Event units coordinates msg
+    = Event (Rectangle2d units coordinates -> msg)
 
 
 type Attribute units coordinates event
