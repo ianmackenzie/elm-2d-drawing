@@ -387,7 +387,7 @@ toHtml { viewBox, size, attributes, elements } =
                             value |> Quantity.per viewBoxWidth
 
                         computedHeight =
-                            viewBoxWidth |> Quantity.at factor
+                            viewBoxHeight |> Quantity.at factor
                     in
                     ( [ Html.Attributes.style "width" (px value)
                       , Html.Attributes.style "height" (px computedHeight)
