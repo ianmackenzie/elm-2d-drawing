@@ -1,6 +1,7 @@
 module Drawing2d exposing
     ( Element, Attribute
-    , toHtml, Size, fixed, fit, fitWidth
+    , toHtml
+    , Size, fixed, scale, width, height, fit, fitWidth, fitHeight
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
     , noFill, blackFill, whiteFill, fillColor, fillGradient
@@ -29,7 +30,12 @@ module Drawing2d exposing
 
 @docs Element, Attribute
 
-@docs toHtml, Size, fixed, fit, fitWidth
+@docs toHtml
+
+
+# Size
+
+@docs Size, fixed, scale, width, height, fit, fitWidth, fitHeight
 
 
 # Drawing
@@ -262,6 +268,7 @@ import Html.Attributes
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import LineSegment2d exposing (LineSegment2d)
+import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Polyline2d exposing (Polyline2d)
@@ -287,10 +294,13 @@ type Element units coordinates event
         )
 
 
-type Size
-    = Fixed
+type Size drawingUnits
+    = Scale (Quantity Float (Rate Pixels drawingUnits))
+    | Width (Quantity Float Pixels)
+    | Height (Quantity Float Pixels)
     | Fit
     | FitWidth
+    | FitHeight
 
 
 type alias Attribute units coordinates event =
@@ -329,60 +339,82 @@ svgStaticCss =
     ]
 
 
-defaultAttributes : List (Attribute units coordinates event)
-defaultAttributes =
-    [ blackStroke
-    , strokeWidth (Quantity 1)
-    , bevelStrokeJoins
-    , noStrokeCaps
-    , whiteFill
-    , strokedBorder
-    , fontSize (Quantity 16)
-    , textColor Color.black
-    , textAnchor bottomLeft
-    ]
+px : Quantity Float Pixels -> String
+px value =
+    String.fromFloat (Pixels.toFloat value) ++ "px"
 
 
 toHtml :
     { viewBox : Rectangle2d units coordinates
-    , size : Size
+    , size : Size units
     , attributes : List (Attribute units coordinates (Event units coordinates msg))
     , elements : List (Element units coordinates (Event units coordinates msg))
     }
     -> Html msg
 toHtml { viewBox, size, attributes, elements } =
     let
-        ( Quantity viewBoxWidth, Quantity viewBoxHeight ) =
+        ( viewBoxWidth, viewBoxHeight ) =
             Rectangle2d.dimensions viewBox
 
         viewBoxAttribute =
             Svg.Attributes.viewBox <|
                 String.join " "
-                    [ String.fromFloat (-0.5 * viewBoxWidth)
-                    , String.fromFloat (-0.5 * viewBoxHeight)
-                    , String.fromFloat viewBoxWidth
-                    , String.fromFloat viewBoxHeight
+                    [ String.fromFloat (-0.5 * Quantity.unwrap viewBoxWidth)
+                    , String.fromFloat (-0.5 * Quantity.unwrap viewBoxHeight)
+                    , String.fromFloat (Quantity.unwrap viewBoxWidth)
+                    , String.fromFloat (Quantity.unwrap viewBoxHeight)
                     ]
+
+        defaultStrokeWidth =
+            Pixels.float 1
+
+        defaultFontSize =
+            Pixels.float 16
 
         -- Based on https://css-tricks.com/scale-svg/
-        containerSizeCss =
+        ( containerSizeCss, scaleFactor ) =
             case size of
-                Fit ->
-                    [ Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "height" "100%"
-                    ]
+                Scale factor ->
+                    ( [ Html.Attributes.style "width" (px (viewBoxWidth |> Quantity.at factor))
+                      , Html.Attributes.style "height" (px (viewBoxHeight |> Quantity.at factor))
+                      ]
+                    , factor
+                    )
 
-                Fixed ->
+                Width value ->
                     let
-                        widthString =
-                            String.fromFloat viewBoxWidth ++ "px"
+                        factor =
+                            value |> Quantity.per viewBoxWidth
 
-                        heightString =
-                            String.fromFloat viewBoxHeight ++ "px"
+                        computedHeight =
+                            viewBoxWidth |> Quantity.at factor
                     in
-                    [ Html.Attributes.style "width" widthString
-                    , Html.Attributes.style "height" heightString
-                    ]
+                    ( [ Html.Attributes.style "width" (px value)
+                      , Html.Attributes.style "height" (px computedHeight)
+                      ]
+                    , factor
+                    )
+
+                Height value ->
+                    let
+                        factor =
+                            value |> Quantity.per viewBoxHeight
+
+                        computedWidth =
+                            viewBoxWidth |> Quantity.at factor
+                    in
+                    ( [ Html.Attributes.style "width" (px computedWidth)
+                      , Html.Attributes.style "height" (px value)
+                      ]
+                    , factor
+                    )
+
+                Fit ->
+                    ( [ Html.Attributes.style "width" "100%"
+                      , Html.Attributes.style "height" "100%"
+                      ]
+                    , Quantity 1
+                    )
 
                 FitWidth ->
                     let
@@ -390,16 +422,49 @@ toHtml { viewBox, size, attributes, elements } =
                             "1px"
 
                         heightAsPercentOfWidth =
-                            String.fromFloat (100 * viewBoxHeight / viewBoxWidth) ++ "%"
+                            String.fromFloat (100 * Quantity.ratio viewBoxHeight viewBoxWidth) ++ "%"
 
                         bottomPadding =
                             "calc(" ++ heightAsPercentOfWidth ++ " - " ++ dummyHeight ++ ")"
                     in
-                    [ Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "height" dummyHeight
-                    , Html.Attributes.style "padding-bottom" bottomPadding
-                    , Html.Attributes.style "overflow" "visible"
-                    ]
+                    ( [ Html.Attributes.style "width" "100%"
+                      , Html.Attributes.style "height" dummyHeight
+                      , Html.Attributes.style "padding-bottom" bottomPadding
+                      , Html.Attributes.style "overflow" "visible"
+                      ]
+                    , Quantity 1
+                    )
+
+                FitHeight ->
+                    let
+                        dummyWidth =
+                            "1px"
+
+                        widthAsPercentOfHeight =
+                            String.fromFloat (100 * Quantity.ratio viewBoxWidth viewBoxHeight) ++ "%"
+
+                        rightPadding =
+                            "calc(" ++ widthAsPercentOfHeight ++ " - " ++ dummyWidth ++ ")"
+                    in
+                    ( [ Html.Attributes.style "height" "100%"
+                      , Html.Attributes.style "width" dummyWidth
+                      , Html.Attributes.style "padding-right" rightPadding
+                      , Html.Attributes.style "overflow" "visible"
+                      ]
+                    , Quantity 1
+                    )
+
+        defaultAttributes =
+            [ blackStroke
+            , strokeWidth (defaultStrokeWidth |> Quantity.at_ scaleFactor)
+            , bevelStrokeJoins
+            , noStrokeCaps
+            , whiteFill
+            , strokedBorder
+            , fontSize (defaultFontSize |> Quantity.at_ scaleFactor)
+            , textColor Color.black
+            , textAnchor bottomLeft
+            ]
 
         rootAttributeValues =
             Attributes.emptyAttributeValues
@@ -415,19 +480,39 @@ toHtml { viewBox, size, attributes, elements } =
         [ svgElement False 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]
 
 
-fit : Size
+fixed : Size Pixels
+fixed =
+    Scale (Quantity 1)
+
+
+scale : Quantity Float (Rate Pixels units) -> Size units
+scale factor =
+    Scale factor
+
+
+width : Quantity Float Pixels -> Size units
+width value =
+    Width value
+
+
+height : Quantity Float Pixels -> Size units
+height value =
+    Height value
+
+
+fit : Size Pixels
 fit =
     Fit
 
 
-fitWidth : Size
+fitWidth : Size Pixels
 fitWidth =
     FitWidth
 
 
-fixed : Size
-fixed =
-    Fixed
+fitHeight : Size Pixels
+fitHeight =
+    FitHeight
 
 
 empty : Element units coordinates event
@@ -739,7 +824,7 @@ image attributes givenUrl givenRectangle =
         attributeValues =
             Attributes.collectAttributeValues attributes
 
-        ( Quantity width, Quantity height ) =
+        ( Quantity rectangleWidth, Quantity rectangleHeight ) =
             Rectangle2d.dimensions givenRectangle
     in
     Element <|
@@ -747,10 +832,10 @@ image attributes givenUrl givenRectangle =
             let
                 svgAttributes =
                     [ Svg.Attributes.xlinkHref givenUrl
-                    , Svg.Attributes.x (String.fromFloat (-width / 2))
-                    , Svg.Attributes.y (String.fromFloat (-height / 2))
-                    , Svg.Attributes.width (String.fromFloat width)
-                    , Svg.Attributes.height (String.fromFloat height)
+                    , Svg.Attributes.x (String.fromFloat (-rectangleWidth / 2))
+                    , Svg.Attributes.y (String.fromFloat (-rectangleHeight / 2))
+                    , Svg.Attributes.width (String.fromFloat rectangleWidth)
+                    , Svg.Attributes.height (String.fromFloat rectangleHeight)
                     , placementTransform (Rectangle2d.axes givenRectangle)
                     ]
                         |> Attributes.addShadowFilter attributeValues
@@ -853,8 +938,8 @@ scaleAbout :
     -> Float
     -> Element units coordinates event
     -> Element units coordinates event
-scaleAbout point scale element =
-    scaleImpl point scale element
+scaleAbout point factor element =
+    scaleImpl point factor element
 
 
 scaleImpl :
@@ -862,18 +947,18 @@ scaleImpl :
     -> Float
     -> Element units1 coordinates event
     -> Element units2 coordinates event
-scaleImpl point scale (Element function) =
+scaleImpl point factor (Element function) =
     let
         { x, y } =
             Point2d.unwrap point
 
         matrixComponents =
-            [ String.fromFloat scale
+            [ String.fromFloat factor
             , String.fromFloat 0
             , String.fromFloat 0
-            , String.fromFloat scale
-            , String.fromFloat (-(scale - 1) * x)
-            , String.fromFloat ((scale - 1) * y)
+            , String.fromFloat factor
+            , String.fromFloat (-(factor - 1) * x)
+            , String.fromFloat ((factor - 1) * y)
             ]
 
         transform =
@@ -883,7 +968,7 @@ scaleImpl point scale (Element function) =
         (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 transformation =
-                    Gradient.scaleAbout point (1 / scale)
+                    Gradient.scaleAbout point (1 / factor)
 
                 transformedFillGradient =
                     Gradient.decode currentFillGradient
@@ -904,10 +989,10 @@ scaleImpl point scale (Element function) =
                         |> Maybe.withDefault ""
 
                 updatedStrokeWidth =
-                    currentStrokeWidth / scale
+                    currentStrokeWidth / factor
 
                 updatedFontSize =
-                    currentFontSize / scale
+                    currentFontSize / factor
 
                 svgAttributes =
                     [ Svg.Attributes.transform transform
@@ -992,16 +1077,16 @@ at :
     Quantity Float (Rate units2 units1)
     -> Element units1 coordinates event
     -> Element units2 coordinates event
-at (Quantity scale) element =
-    scaleImpl Point2d.origin scale element
+at (Quantity factor) element =
+    scaleImpl Point2d.origin factor element
 
 
 at_ :
     Quantity Float (Rate units1 units2)
     -> Element units1 coordinates event
     -> Element units2 coordinates event
-at_ (Quantity scale) element =
-    scaleImpl Point2d.origin (1 / scale) element
+at_ (Quantity factor) element =
+    scaleImpl Point2d.origin (1 / factor) element
 
 
 mapEvent :

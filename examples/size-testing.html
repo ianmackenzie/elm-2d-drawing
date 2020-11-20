@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Size Testing</title>
+    <script src="size-testing.js"></script>
+</head>
+
+<body>
+    <div id="elm"></div>
+    <script>
+        Object.defineProperty(Element.prototype, 'boundingClientRect', {
+            "get": function () { return this.getBoundingClientRect(); }
+        });
+        var app = Elm.SizeTesting.init({ node: document.getElementById('elm') });
+    </script>
+</body>
+
+</html>
