@@ -425,7 +425,7 @@ toHtml given =
             , strokeWidth given.strokeWidth
             , bevelStrokeJoins
             , noStrokeCaps
-            , whiteFill
+            , noFill
             , strokedBorder
             , fontSize given.fontSize
             , textColor Color.black

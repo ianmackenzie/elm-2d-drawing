@@ -27,14 +27,14 @@ main =
         , fontSize = Pixels.float 16
         , attributes = []
         , elements =
-            [ Drawing2d.rectangle [] <|
+            [ Drawing2d.rectangle [ Drawing2d.whiteFill ] <|
                 Rectangle2d.with
                     { x1 = pixels 50
                     , y1 = pixels 50
                     , x2 = pixels 150
                     , y2 = pixels 150
                     }
-            , Drawing2d.rectangle [] <|
+            , Drawing2d.rectangle [ Drawing2d.whiteFill ] <|
                 Rectangle2d.with
                     { x1 = pixels 100
                     , y1 = pixels 100
