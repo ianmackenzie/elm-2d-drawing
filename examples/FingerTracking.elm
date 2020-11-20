@@ -129,7 +129,7 @@ view model =
                         { viewBox = viewBox
                         , background = Drawing2d.noBackground
                         , attributes = attributes
-                        , elements = List.map drawPoint (Dict.values model.touchPoints)
+                        , entities = List.map drawPoint (Dict.values model.touchPoints)
                         }
             , Element.html <|
                 Html.div [ Html.Attributes.style "max-width" "816px", Html.Attributes.style "overflow-wrap" "normal", Html.Attributes.style "white-space" "normal" ]
@@ -162,7 +162,7 @@ bullet text =
     Html.li [] [ Html.text text ]
 
 
-drawPoint : TouchPoint -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
+drawPoint : TouchPoint -> Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent
 drawPoint point =
     let
         { x, y } =

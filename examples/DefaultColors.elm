@@ -24,7 +24,7 @@ main =
         { viewBox = viewBox
         , background = Drawing2d.noBackground
         , attributes = []
-        , elements =
+        , entities =
             [ Drawing2d.rectangle [ Drawing2d.whiteFill ] <|
                 Rectangle2d.with
                     { x1 = pixels 50

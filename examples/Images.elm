@@ -87,7 +87,7 @@ main =
                         , color = Color.darkGrey
                         }
                     ]
-                , elements =
+                , entities =
                     [ Drawing2d.cubicSpline
                         [ Drawing2d.strokeWidth (pixels 4)
                         , Drawing2d.strokeColor Color.charcoal

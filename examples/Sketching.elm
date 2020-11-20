@@ -71,7 +71,7 @@ toColor lineColor =
 drawPolyline :
     List (Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent)
     -> ( LineColor, Polyline2d Pixels DrawingCoordinates )
-    -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
+    -> Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent
 drawPolyline attributes ( lineColor, polyline ) =
     Drawing2d.polyline (Drawing2d.strokeColor (toColor lineColor) :: attributes) polyline
 
@@ -119,7 +119,7 @@ view model =
                             , Drawing2d.onRightMouseDown (StartDrawing Green)
                             , Drawing2d.onRightClick (always DrawingRightClick)
                             ]
-                        , elements = activeLine :: existingLines
+                        , entities = activeLine :: existingLines
                         }
                 )
 

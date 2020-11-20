@@ -7,7 +7,7 @@ import Pixels exposing (Pixels, pixels)
 import Point2d exposing (Point2d)
 
 
-dot : Point2d Pixels coordinates -> Drawing2d.Element Pixels coordinates event
+dot : Point2d Pixels coordinates -> Drawing2d.Entity Pixels coordinates event
 dot point =
     Drawing2d.circle
         [ Drawing2d.blackStroke

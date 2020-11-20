@@ -58,7 +58,7 @@ main =
                         |> BoundingBox2d.expandBy (pixels 0.5)
                         |> Rectangle2d.fromBoundingBox
 
-                elements =
+                entities =
                     List.map2
                         (\color rectangle ->
                             Drawing2d.rectangle [ Drawing2d.fillColor color ]
@@ -71,5 +71,5 @@ main =
                 { viewBox = viewBox
                 , background = Drawing2d.noBackground
                 , attributes = []
-                , elements = elements
+                , entities = entities
                 }

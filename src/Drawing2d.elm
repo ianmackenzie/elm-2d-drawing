@@ -1,5 +1,5 @@
 module Drawing2d exposing
-    ( Element, Attribute
+    ( Entity, Attribute
     , draw, toHtml
     , Size, fixed, scale, width, height, fit, fitWidth
     , Background, noBackground, whiteBackground, blackBackground, backgroundColor, backgroundGradient
@@ -29,7 +29,7 @@ module Drawing2d exposing
 
 {-|
 
-@docs Element, Attribute
+@docs Entity, Attribute
 
 @docs draw, toHtml
 
@@ -289,8 +289,8 @@ import Vector2d exposing (Vector2d)
 import VirtualDom
 
 
-type Element units coordinates event
-    = Element
+type Entity units coordinates event
+    = Entity
         (Bool -- borders visible
          -> Float -- stroke width in current units
          -> Float -- font size in current units
@@ -353,10 +353,10 @@ draw :
     { viewBox : Rectangle2d Pixels coordinates
     , background : Background Pixels coordinates
     , attributes : List (Attribute Pixels coordinates (Event Pixels coordinates msg))
-    , elements : List (Element Pixels coordinates (Event Pixels coordinates msg))
+    , entities : List (Entity Pixels coordinates (Event Pixels coordinates msg))
     }
     -> Html msg
-draw { viewBox, background, attributes, elements } =
+draw { viewBox, background, attributes, entities } =
     toHtml
         { viewBox = viewBox
         , size = fixed
@@ -364,7 +364,7 @@ draw { viewBox, background, attributes, elements } =
         , fontSize = Pixels.float 16
         , background = background
         , attributes = attributes
-        , elements = elements
+        , entities = entities
         }
 
 
@@ -375,7 +375,7 @@ toHtml :
     , fontSize : Quantity Float units
     , background : Background units coordinates
     , attributes : List (Attribute units coordinates (Event units coordinates msg))
-    , elements : List (Element units coordinates (Event units coordinates msg))
+    , entities : List (Entity units coordinates (Event units coordinates msg))
     }
     -> Html msg
 toHtml given =
@@ -463,7 +463,7 @@ toHtml given =
                 |> Attributes.assignAttributes defaultAttributes
                 |> Attributes.assignAttributes given.attributes
 
-        backgroundElement =
+        backgroundEntity =
             if given.background == noBackground then
                 empty
 
@@ -478,9 +478,9 @@ toHtml given =
                 in
                 rectangle [ backgroundAttribute ] scaledViewBox |> map never
 
-        (Element svgElement) =
+        (Entity svgElement) =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues <|
-                [ group [] (backgroundElement :: given.elements) |> relativeTo (Rectangle2d.axes given.viewBox)
+                [ group [] (backgroundEntity :: given.entities) |> relativeTo (Rectangle2d.axes given.viewBox)
                 ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
@@ -546,22 +546,22 @@ backgroundGradient gradient =
     Background (fillGradient gradient)
 
 
-empty : Element units coordinates event
+empty : Entity units coordinates event
 empty =
-    Element (\_ _ _ _ _ -> Svg.text "")
+    Entity (\_ _ _ _ _ -> Svg.text "")
 
 
 drawCurve :
     List (Attribute units coordinates event)
     -> Renderer curve event
     -> curve
-    -> Element units coordinates event
+    -> Entity units coordinates event
 drawCurve attributes renderer curve =
     let
         attributeValues =
             Attributes.collectAttributeValues attributes
     in
-    Element <|
+    Entity <|
         \_ _ _ _ _ ->
             let
                 givenAttributes =
@@ -585,13 +585,13 @@ drawRegion :
     List (Attribute units coordinates event)
     -> Renderer region event
     -> region
-    -> Element units coordinates event
+    -> Entity units coordinates event
 drawRegion attributes renderer region =
     let
         attributeValues =
             Attributes.collectAttributeValues attributes
     in
-    Element <|
+    Entity <|
         \currentBordersVisible _ _ _ _ ->
             let
                 bordersVisible =
@@ -624,7 +624,7 @@ drawRegion attributes renderer region =
 lineSegment :
     List (Attribute units coordinates event)
     -> LineSegment2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 lineSegment attributes givenSegment =
     drawCurve attributes Svg.lineSegment2d givenSegment
 
@@ -632,7 +632,7 @@ lineSegment attributes givenSegment =
 triangle :
     List (Attribute units coordinates event)
     -> Triangle2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
 
@@ -643,28 +643,28 @@ render :
     -> Float
     -> String
     -> String
-    -> Element units coordinates event
+    -> Entity units coordinates event
     -> Svg event
-render arg1 arg2 arg3 arg4 arg5 (Element function) =
+render arg1 arg2 arg3 arg4 arg5 (Entity function) =
     function arg1 arg2 arg3 arg4 arg5
 
 
 group :
     List (Attribute units coordinates event)
-    -> List (Element units coordinates event)
-    -> Element units coordinates event
-group attributes childElements =
-    groupLike "g" [] (Attributes.collectAttributeValues attributes) childElements
+    -> List (Entity units coordinates event)
+    -> Entity units coordinates event
+group attributes childEntities =
+    groupLike "g" [] (Attributes.collectAttributeValues attributes) childEntities
 
 
 groupLike :
     String
     -> List (Svg.Attribute event)
     -> AttributeValues units coordinates event
-    -> List (Element units coordinates event)
-    -> Element units coordinates event
-groupLike tag extraSvgAttributes attributeValues childElements =
-    Element <|
+    -> List (Entity units coordinates event)
+    -> Entity units coordinates event
+groupLike tag extraSvgAttributes attributeValues childEntities =
+    Entity <|
         \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 updatedBordersVisible =
@@ -705,7 +705,7 @@ groupLike tag extraSvgAttributes attributeValues childElements =
                             Gradient.encode gradient
 
                 childSvgElements =
-                    childElements
+                    childEntities
                         |> List.map
                             (render
                                 updatedBordersVisible
@@ -731,16 +731,16 @@ groupLike tag extraSvgAttributes attributeValues childElements =
 
 add :
     List (Attribute units coordinates event)
-    -> Element units coordinates event
-    -> Element units coordinates event
-add attributes element =
-    group attributes [ element ]
+    -> Entity units coordinates event
+    -> Entity units coordinates event
+add attributes entity =
+    group attributes [ entity ]
 
 
 arc :
     List (Attribute units coordinates event)
     -> Arc2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 arc attributes givenArc =
     drawCurve attributes Svg.arc2d givenArc
 
@@ -748,7 +748,7 @@ arc attributes givenArc =
 quadraticSpline :
     List (Attribute units coordinates event)
     -> QuadraticSpline2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 quadraticSpline attributes givenSpline =
     drawCurve attributes Svg.quadraticSpline2d givenSpline
 
@@ -756,7 +756,7 @@ quadraticSpline attributes givenSpline =
 cubicSpline :
     List (Attribute units coordinates event)
     -> CubicSpline2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 cubicSpline attributes givenSpline =
     drawCurve attributes Svg.cubicSpline2d givenSpline
 
@@ -764,7 +764,7 @@ cubicSpline attributes givenSpline =
 polyline :
     List (Attribute units coordinates event)
     -> Polyline2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 polyline attributes givenPolyline =
     drawCurve attributes Svg.polyline2d givenPolyline
 
@@ -772,7 +772,7 @@ polyline attributes givenPolyline =
 polygon :
     List (Attribute units coordinates event)
     -> Polygon2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 polygon attributes givenPolygon =
     drawRegion attributes Svg.polygon2d givenPolygon
 
@@ -780,7 +780,7 @@ polygon attributes givenPolygon =
 circle :
     List (Attribute units coordinates event)
     -> Circle2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 circle attributes givenCircle =
     drawRegion attributes Svg.circle2d givenCircle
 
@@ -788,7 +788,7 @@ circle attributes givenCircle =
 ellipticalArc :
     List (Attribute units coordinates event)
     -> EllipticalArc2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 ellipticalArc attributes givenArc =
     drawCurve attributes Svg.ellipticalArc2d givenArc
 
@@ -796,7 +796,7 @@ ellipticalArc attributes givenArc =
 ellipse :
     List (Attribute units coordinates event)
     -> Ellipse2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 ellipse attributes givenEllipse =
     drawRegion attributes Svg.ellipse2d givenEllipse
 
@@ -804,7 +804,7 @@ ellipse attributes givenEllipse =
 rectangle :
     List (Attribute units coordinates event)
     -> Rectangle2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 rectangle attributes givenRectangle =
     drawRegion attributes Svg.rectangle2d givenRectangle
 
@@ -812,7 +812,7 @@ rectangle attributes givenRectangle =
 boundingBox :
     List (Attribute units coordinates event)
     -> BoundingBox2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 boundingBox attributes givenBox =
     drawRegion attributes Svg.boundingBox2d givenBox
 
@@ -821,7 +821,7 @@ text :
     List (Attribute units coordinates event)
     -> Point2d units coordinates
     -> String
-    -> Element units coordinates event
+    -> Entity units coordinates event
 text attributes position string =
     let
         attributeValues =
@@ -830,7 +830,7 @@ text attributes position string =
         { x, y } =
             Point2d.unwrap position
     in
-    Element <|
+    Entity <|
         \_ _ _ _ _ ->
             let
                 svgAttributes =
@@ -849,7 +849,7 @@ image :
     List (Attribute units coordinates event)
     -> String
     -> Rectangle2d units coordinates
-    -> Element units coordinates event
+    -> Entity units coordinates event
 image attributes givenUrl givenRectangle =
     let
         attributeValues =
@@ -858,7 +858,7 @@ image attributes givenUrl givenRectangle =
         ( Quantity rectangleWidth, Quantity rectangleHeight ) =
             Rectangle2d.dimensions givenRectangle
     in
-    Element <|
+    Entity <|
         \_ _ _ _ _ ->
             let
                 svgAttributes =
@@ -905,10 +905,10 @@ placementTransform frame =
 
 placeIn :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Element units localCoordinates event
-    -> Element units globalCoordinates event
-placeIn frame (Element function) =
-    Element
+    -> Entity units localCoordinates event
+    -> Entity units globalCoordinates event
+placeIn frame (Entity function) =
+    Entity
         (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 toLocalGradient =
@@ -967,18 +967,18 @@ placeIn frame (Element function) =
 scaleAbout :
     Point2d units coordinates
     -> Float
-    -> Element units coordinates event
-    -> Element units coordinates event
-scaleAbout point factor element =
-    scaleImpl point factor element
+    -> Entity units coordinates event
+    -> Entity units coordinates event
+scaleAbout point factor entity =
+    scaleImpl point factor entity
 
 
 scaleImpl :
     Point2d units1 coordinates
     -> Float
-    -> Element units1 coordinates event
-    -> Element units2 coordinates event
-scaleImpl point factor (Element function) =
+    -> Entity units1 coordinates event
+    -> Entity units2 coordinates event
+scaleImpl point factor (Entity function) =
     let
         { x, y } =
             Point2d.unwrap point
@@ -995,7 +995,7 @@ scaleImpl point factor (Element function) =
         transform =
             "matrix(" ++ String.join " " matrixComponents ++ ")"
     in
-    Element
+    Entity
         (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
             let
                 transformation =
@@ -1064,60 +1064,60 @@ scaleImpl point factor (Element function) =
 
 relativeTo :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Element units globalCoordinates event
-    -> Element units localCoordinates event
-relativeTo frame element =
-    element |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
+    -> Entity units globalCoordinates event
+    -> Entity units localCoordinates event
+relativeTo frame entity =
+    entity |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
 
 
 translateBy :
     Vector2d units coordinates
-    -> Element units coordinates event
-    -> Element units coordinates event
-translateBy displacement element =
-    element |> placeIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
+    -> Entity units coordinates event
+    -> Entity units coordinates event
+translateBy displacement entity =
+    entity |> placeIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
 
 
 translateIn :
     Direction2d coordinates
     -> Quantity Float units
-    -> Element units coordinates event
-    -> Element units coordinates event
-translateIn direction distance element =
-    element |> translateBy (Vector2d.withLength distance direction)
+    -> Entity units coordinates event
+    -> Entity units coordinates event
+translateIn direction distance entity =
+    entity |> translateBy (Vector2d.withLength distance direction)
 
 
 rotateAround :
     Point2d units coordinates
     -> Angle
-    -> Element units coordinates event
-    -> Element units coordinates event
-rotateAround centerPoint angle element =
-    element |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
+    -> Entity units coordinates event
+    -> Entity units coordinates event
+rotateAround centerPoint angle entity =
+    entity |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
 
 
 mirrorAcross :
     Axis2d units coordinates
-    -> Element units coordinates event
-    -> Element units coordinates event
-mirrorAcross axis element =
-    element |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
+    -> Entity units coordinates event
+    -> Entity units coordinates event
+mirrorAcross axis entity =
+    entity |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
 
 
 at :
     Quantity Float (Rate units2 units1)
-    -> Element units1 coordinates event
-    -> Element units2 coordinates event
-at (Quantity factor) element =
-    scaleImpl Point2d.origin factor element
+    -> Entity units1 coordinates event
+    -> Entity units2 coordinates event
+at (Quantity factor) entity =
+    scaleImpl Point2d.origin factor entity
 
 
 at_ :
     Quantity Float (Rate units1 units2)
-    -> Element units1 coordinates event
-    -> Element units2 coordinates event
-at_ (Quantity factor) element =
-    scaleImpl Point2d.origin (1 / factor) element
+    -> Entity units1 coordinates event
+    -> Entity units2 coordinates event
+at_ (Quantity factor) entity =
+    scaleImpl Point2d.origin (1 / factor) entity
 
 
 mapEvent :
@@ -1130,10 +1130,10 @@ mapEvent function (Event callback) =
 
 map :
     (a -> b)
-    -> Element units coordinates (Event drawingUnits drawingCoordinates a)
-    -> Element units coordinates (Event drawingUnits drawingCoordinates b)
-map mapFunction (Element drawFunction) =
-    Element
+    -> Entity units coordinates (Event drawingUnits drawingCoordinates a)
+    -> Entity units coordinates (Event drawingUnits drawingCoordinates b)
+map mapFunction (Entity drawFunction) =
+    Entity
         (\arg1 arg2 arg3 arg4 arg5 ->
             Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5)
         )

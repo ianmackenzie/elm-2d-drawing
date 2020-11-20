@@ -53,7 +53,7 @@ viewBox =
         (Point2d.pixels 100 100)
 
 
-scene : List (Point2d Pixels DrawingCoordinates) -> List (Drawing2d.Element Pixels DrawingCoordinates DrawingEvent)
+scene : List (Point2d Pixels DrawingCoordinates) -> List (Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent)
 scene points =
     [ Drawing2d.circle [] (Circle2d.atOrigin (Pixels.float 90))
     , Drawing2d.text [ Drawing2d.textAnchor Drawing2d.center ] Point2d.origin "Text"
@@ -208,7 +208,7 @@ view model =
                                     , viewBox = viewBox
                                     , background = background
                                     , attributes = [ onClick ]
-                                    , elements = scene model.points
+                                    , entities = scene model.points
                                     }
                   }
                 , { header = Element.text "Large"
@@ -223,7 +223,7 @@ view model =
                                     , fontSize = Pixels.float 32
                                     , background = background
                                     , attributes = [ onClick ]
-                                    , elements = scene model.points
+                                    , entities = scene model.points
                                     }
                   }
                 ]

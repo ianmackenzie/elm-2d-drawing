@@ -30,7 +30,7 @@ main =
         { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 500 500)
         , background = Drawing2d.noBackground
         , attributes = []
-        , elements =
+        , entities =
             [ Drawing2d.triangle
                 [ Drawing2d.fillGradient gradient
                 , Drawing2d.strokeWidth (pixels 4)

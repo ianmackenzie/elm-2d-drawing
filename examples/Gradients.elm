@@ -106,7 +106,7 @@ example1 =
         , fontSize = Pixels.float 16
         , background = Drawing2d.noBackground
         , attributes = []
-        , elements = [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
+        , entities = [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
         }
 
 
@@ -119,11 +119,11 @@ example2 =
         , fontSize = Pixels.float 16
         , background = Drawing2d.noBackground
         , attributes = [ diagonalGradientAttribute ]
-        , elements = [ Drawing2d.rectangle [] square ]
+        , entities = [ Drawing2d.rectangle [] square ]
         }
 
 
-fillableCircle : Point2d Pixels DrawingCoordinates -> Drawing2d.Element Pixels DrawingCoordinates msg
+fillableCircle : Point2d Pixels DrawingCoordinates -> Drawing2d.Entity Pixels DrawingCoordinates msg
 fillableCircle point =
     Drawing2d.circle
         [ Drawing2d.blackStroke
@@ -145,7 +145,7 @@ example3 angle =
         { viewBox = viewBox
         , background = Drawing2d.noBackground
         , attributes = []
-        , elements =
+        , entities =
             [ Drawing2d.rectangle [] square
             , Drawing2d.group [ diagonalGradientAttribute ]
                 [ Drawing2d.group [] (List.map fillableCircle points)

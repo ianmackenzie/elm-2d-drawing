@@ -236,7 +236,7 @@ view model =
                         { viewBox = viewBox
                         , background = Drawing2d.noBackground
                         , attributes = commonAttributes ++ touchInteractionAttributes
-                        , elements = List.map drawLine allLines
+                        , entities = List.map drawLine allLines
                         }
             , Element.html <|
                 Html.div [ Html.Attributes.style "max-width" "816px", Html.Attributes.style "overflow-wrap" "normal", Html.Attributes.style "white-space" "normal" ]
@@ -275,7 +275,7 @@ bullet text =
     Html.li [] [ Html.text text ]
 
 
-drawLine : Line -> Drawing2d.Element Pixels DrawingCoordinates DrawingEvent
+drawLine : Line -> Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent
 drawLine line =
     Drawing2d.polyline
         [ Drawing2d.strokeColor line.color, Drawing2d.strokeWidth line.width ]

@@ -78,7 +78,7 @@ main =
             [ Drawing2d.fontSize (Pixels.float 12)
             , Drawing2d.fontFamily [ "monospace" ]
             ]
-        , elements =
+        , entities =
             [ Drawing2d.group [ Drawing2d.strokeColor Color.darkGrey ] lines
             , Drawing2d.group [ Drawing2d.strokeColor Color.charcoal ] vertices
             ]

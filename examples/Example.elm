@@ -58,7 +58,7 @@ main =
             , Drawing2d.strokeColor Color.blue
             , Drawing2d.fontSize (Pixels.float 20)
             ]
-        , elements =
+        , entities =
             [ Drawing2d.group [ Drawing2d.strokeWidth (pixels 2) ]
                 (List.map (Drawing2d.lineSegment []) [ lineSegment, mirroredSegment ])
             , Drawing2d.group

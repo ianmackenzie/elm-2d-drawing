@@ -91,7 +91,7 @@ view model =
             { viewBox = viewBox
             , background = Drawing2d.backgroundGradient backgroundGradient
             , attributes = [ Drawing2d.fontSize (Pixels.float 20) ]
-            , elements = [ rendered ]
+            , entities = [ rendered ]
             }
         ]
 

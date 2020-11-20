@@ -127,7 +127,7 @@ view model =
             { viewBox = viewBox
             , background = Drawing2d.noBackground
             , attributes = [ Drawing2d.fillColor Color.white ]
-            , elements =
+            , entities =
                 [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
                 , rectangle2 |> Drawing2d.add (dropShadow :: eventHandlers 2 model)
                 , rectangle3 |> Drawing2d.add (dropShadow :: eventHandlers 3 model)
