@@ -20,11 +20,8 @@ main =
         viewBox =
             Rectangle2d.from Point2d.origin (Point2d.pixels 800 800)
     in
-    Drawing2d.toHtml
+    Drawing2d.draw
         { viewBox = viewBox
-        , size = Drawing2d.fixed
-        , strokeWidth = Pixels.float 1
-        , fontSize = Pixels.float 16
         , attributes = []
         , elements =
             [ Drawing2d.rectangle [ Drawing2d.whiteFill ] <|

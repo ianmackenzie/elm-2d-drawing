@@ -26,11 +26,8 @@ main =
         gradient =
             Drawing2d.gradientFrom ( p1, Color.rgb 0 0 0.75 ) ( p2, Color.rgb 0 0.75 1 )
     in
-    Drawing2d.toHtml
+    Drawing2d.draw
         { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 500 500)
-        , size = Drawing2d.fixed
-        , strokeWidth = Pixels.float 1
-        , fontSize = Pixels.float 16
         , attributes = []
         , elements =
             [ Drawing2d.triangle

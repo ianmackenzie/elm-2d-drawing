@@ -50,14 +50,12 @@ main =
                 , dot position
                 ]
     in
-    Drawing2d.toHtml
+    Drawing2d.draw
         { viewBox = viewBox
-        , size = Drawing2d.fixed
-        , strokeWidth = Pixels.float 1
-        , fontSize = Pixels.float 20
         , attributes =
             [ Drawing2d.fillColor Color.orange
             , Drawing2d.strokeColor Color.blue
+            , Drawing2d.fontSize (Pixels.float 20)
             ]
         , elements =
             [ Drawing2d.group [ Drawing2d.strokeWidth (pixels 2) ]

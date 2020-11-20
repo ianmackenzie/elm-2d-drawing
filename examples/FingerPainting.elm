@@ -232,11 +232,8 @@ view model =
             [ Element.html (Html.h1 [] [ Html.text "Elm finger painting" ])
             , Element.el [ Element.Border.width 16 ] <|
                 Element.html <|
-                    Drawing2d.toHtml
-                        { size = Drawing2d.fixed
-                        , strokeWidth = Pixels.float 1
-                        , fontSize = Pixels.float 16
-                        , viewBox = viewBox
+                    Drawing2d.draw
+                        { viewBox = viewBox
                         , attributes = commonAttributes ++ touchInteractionAttributes
                         , elements = List.map drawLine allLines
                         }

@@ -139,11 +139,8 @@ example3 angle =
         points =
             Parameter1d.trailing 12 (Arc2d.pointOn arc)
     in
-    Drawing2d.toHtml
+    Drawing2d.draw
         { viewBox = viewBox
-        , size = Drawing2d.fixed
-        , strokeWidth = Pixels.float 1
-        , fontSize = Pixels.float 16
         , attributes = []
         , elements =
             [ Drawing2d.rectangle [] square

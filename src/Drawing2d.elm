@@ -1,6 +1,6 @@
 module Drawing2d exposing
     ( Element, Attribute
-    , toHtml
+    , draw, toHtml
     , Size, fixed, scale, width, height, fit, fitWidth
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
@@ -30,7 +30,7 @@ module Drawing2d exposing
 
 @docs Element, Attribute
 
-@docs toHtml
+@docs draw, toHtml
 
 
 # Size
@@ -341,6 +341,23 @@ svgStaticCss =
 px : Quantity Float Pixels -> String
 px value =
     String.fromFloat (Pixels.toFloat value) ++ "px"
+
+
+draw :
+    { viewBox : Rectangle2d Pixels Coordinates
+    , attributes : List (Attribute Pixels Coordinates (Event Pixels Coordinates msg))
+    , elements : List (Element Pixels Coordinates (Event Pixels Coordinates msg))
+    }
+    -> Html msg
+draw { viewBox, attributes, elements } =
+    toHtml
+        { viewBox = viewBox
+        , size = fixed
+        , strokeWidth = Pixels.float 1
+        , fontSize = Pixels.float 16
+        , attributes = attributes
+        , elements = elements
+        }
 
 
 toHtml :
