@@ -85,7 +85,9 @@ view model =
         [ Drawing2d.toHtml
             { viewBox = viewBox
             , size = Drawing2d.fixed
-            , attributes = [ Drawing2d.fontSize (pixels 20) ]
+            , strokeWidth = Pixels.float 1
+            , fontSize = Pixels.float 20
+            , attributes = []
             , elements = [ rendered ]
             }
         ]

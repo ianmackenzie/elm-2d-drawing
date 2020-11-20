@@ -47,6 +47,8 @@ main =
     Drawing2d.toHtml
         { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 600 600)
         , size = Drawing2d.fixed
+        , strokeWidth = Pixels.float 1
+        , fontSize = Pixels.float 16
         , attributes = []
         , elements =
             [ Drawing2d.ellipticalArc

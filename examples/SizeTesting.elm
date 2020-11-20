@@ -94,9 +94,6 @@ cell size html =
 
                 FitWidth ->
                     Element.shrink
-
-                FitHeight ->
-                    Element.px 400
         , Element.Border.width 1
         , Element.Border.color (Element.rgb255 192 192 192)
         ]
@@ -112,7 +109,6 @@ type Size
     | Width400
     | Fit
     | FitWidth
-    | FitHeight
 
 
 toDrawingSize : Size -> Drawing2d.Size Pixels
@@ -142,9 +138,6 @@ toDrawingSize size =
         FitWidth ->
             Drawing2d.fitWidth
 
-        FitHeight ->
-            Drawing2d.fitHeight
-
 
 view : Model -> Html Msg
 view model =
@@ -159,7 +152,6 @@ view model =
                 , Width400
                 , Fit
                 , FitWidth
-                , FitHeight
                 ]
             , columns =
                 [ { header = Element.none
@@ -191,35 +183,18 @@ view model =
 
                                     FitWidth ->
                                         "Drawing2d.fitWidth"
-
-                                    FitHeight ->
-                                        "Drawing2d.fitHeight"
                   }
-                , { header = Element.text "None"
+                , { header = Element.text "Small"
                   , width = Element.px 500
                   , view =
                         \size ->
                             cell size <|
                                 Drawing2d.toHtml
                                     { size = toDrawingSize size
+                                    , strokeWidth = Pixels.float 1
+                                    , fontSize = Pixels.float 16
                                     , viewBox = viewBox
                                     , attributes = [ onClick ]
-                                    , elements = scene model.points
-                                    }
-                  }
-                , { header = Element.text "Default"
-                  , width = Element.px 500
-                  , view =
-                        \size ->
-                            cell size <|
-                                Drawing2d.toHtml
-                                    { size = toDrawingSize size
-                                    , viewBox = viewBox
-                                    , attributes =
-                                        [ Drawing2d.strokeWidth (Pixels.float 1)
-                                        , Drawing2d.fontSize (Pixels.float 16)
-                                        , onClick
-                                        ]
                                     , elements = scene model.points
                                     }
                   }
@@ -231,11 +206,9 @@ view model =
                                 Drawing2d.toHtml
                                     { size = toDrawingSize size
                                     , viewBox = viewBox
-                                    , attributes =
-                                        [ Drawing2d.strokeWidth (Pixels.float 5)
-                                        , Drawing2d.fontSize (Pixels.float 32)
-                                        , onClick
-                                        ]
+                                    , strokeWidth = Pixels.float 5
+                                    , fontSize = Pixels.float 32
+                                    , attributes = [ onClick ]
                                     , elements = scene model.points
                                     }
                   }

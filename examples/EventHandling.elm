@@ -126,10 +126,9 @@ view model =
         [ Drawing2d.toHtml
             { viewBox = viewBox
             , size = Drawing2d.fixed
-            , attributes =
-                [ Drawing2d.strokeColor Color.black
-                , Drawing2d.fillColor Color.white
-                ]
+            , strokeWidth = Pixels.float 1
+            , fontSize = Pixels.float 16
+            , attributes = [ Drawing2d.fillColor Color.white ]
             , elements =
                 [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
                 , rectangle2 |> Drawing2d.add (dropShadow :: eventHandlers 2 model)

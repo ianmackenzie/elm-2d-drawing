@@ -234,6 +234,8 @@ view model =
                 Element.html <|
                     Drawing2d.toHtml
                         { size = Drawing2d.fixed
+                        , strokeWidth = Pixels.float 1
+                        , fontSize = Pixels.float 16
                         , viewBox = viewBox
                         , attributes = commonAttributes ++ touchInteractionAttributes
                         , elements = List.map drawLine allLines

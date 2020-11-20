@@ -102,6 +102,8 @@ example1 =
     Drawing2d.toHtml
         { viewBox = viewBox
         , size = Drawing2d.fixed
+        , strokeWidth = Pixels.float 1
+        , fontSize = Pixels.float 16
         , attributes = []
         , elements = [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
         }
@@ -112,6 +114,8 @@ example2 =
     Drawing2d.toHtml
         { viewBox = viewBox
         , size = Drawing2d.fixed
+        , strokeWidth = Pixels.float 1
+        , fontSize = Pixels.float 16
         , attributes = [ diagonalGradientAttribute ]
         , elements = [ Drawing2d.rectangle [] square ]
         }
@@ -138,6 +142,8 @@ example3 angle =
     Drawing2d.toHtml
         { viewBox = viewBox
         , size = Drawing2d.fixed
+        , strokeWidth = Pixels.float 1
+        , fontSize = Pixels.float 16
         , attributes = []
         , elements =
             [ Drawing2d.rectangle [] square

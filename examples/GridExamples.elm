@@ -73,10 +73,9 @@ main =
     Drawing2d.toHtml
         { size = Drawing2d.fixed
         , viewBox = viewBox
-        , attributes =
-            [ Drawing2d.fontSize (Pixels.float 12)
-            , Drawing2d.fontFamily [ "monospace" ]
-            ]
+        , strokeWidth = Pixels.float 1
+        , fontSize = Pixels.float 12
+        , attributes = [ Drawing2d.fontFamily [ "monospace" ] ]
         , elements =
             [ Drawing2d.group [ Drawing2d.strokeColor Color.darkGrey ] lines
             , Drawing2d.group [ Drawing2d.strokeColor Color.charcoal ] vertices

@@ -111,11 +111,12 @@ view model =
                     Drawing2d.toHtml
                         { viewBox = viewBox
                         , size = Drawing2d.fit
+                        , strokeWidth = Pixels.float 5
+                        , fontSize = Pixels.float 16
                         , attributes =
                             [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
                             , Drawing2d.onRightMouseDown (StartDrawing Green)
                             , Drawing2d.onRightClick (always DrawingRightClick)
-                            , Drawing2d.strokeWidth (pixels 5)
                             ]
                         , elements = activeLine :: existingLines
                         }

@@ -1,7 +1,7 @@
 module Drawing2d exposing
     ( Element, Attribute
     , toHtml
-    , Size, fixed, scale, width, height, fit, fitWidth, fitHeight
+    , Size, fixed, scale, width, height, fit, fitWidth
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
     , noFill, blackFill, whiteFill, fillColor, fillGradient
@@ -35,7 +35,7 @@ module Drawing2d exposing
 
 # Size
 
-@docs Size, fixed, scale, width, height, fit, fitWidth, fitHeight
+@docs Size, fixed, scale, width, height, fit, fitWidth
 
 
 # Drawing
@@ -300,7 +300,6 @@ type Size drawingUnits
     | Height (Quantity Float Pixels)
     | Fit
     | FitWidth
-    | FitHeight
 
 
 type alias Attribute units coordinates event =
@@ -347,14 +346,16 @@ px value =
 toHtml :
     { viewBox : Rectangle2d units coordinates
     , size : Size units
+    , strokeWidth : Quantity Float units
+    , fontSize : Quantity Float units
     , attributes : List (Attribute units coordinates (Event units coordinates msg))
     , elements : List (Element units coordinates (Event units coordinates msg))
     }
     -> Html msg
-toHtml { viewBox, size, attributes, elements } =
+toHtml given =
     let
         ( viewBoxWidth, viewBoxHeight ) =
-            Rectangle2d.dimensions viewBox
+            Rectangle2d.dimensions given.viewBox
 
         viewBoxAttribute =
             Svg.Attributes.viewBox <|
@@ -365,21 +366,13 @@ toHtml { viewBox, size, attributes, elements } =
                     , String.fromFloat (Quantity.unwrap viewBoxHeight)
                     ]
 
-        defaultStrokeWidth =
-            Pixels.float 1
-
-        defaultFontSize =
-            Pixels.float 16
-
         -- Based on https://css-tricks.com/scale-svg/
-        ( containerSizeCss, scaleFactor ) =
-            case size of
+        containerSizeCss =
+            case given.size of
                 Scale factor ->
-                    ( [ Html.Attributes.style "width" (px (viewBoxWidth |> Quantity.at factor))
-                      , Html.Attributes.style "height" (px (viewBoxHeight |> Quantity.at factor))
-                      ]
-                    , factor
-                    )
+                    [ Html.Attributes.style "width" (px (viewBoxWidth |> Quantity.at factor))
+                    , Html.Attributes.style "height" (px (viewBoxHeight |> Quantity.at factor))
+                    ]
 
                 Width value ->
                     let
@@ -389,11 +382,9 @@ toHtml { viewBox, size, attributes, elements } =
                         computedHeight =
                             viewBoxHeight |> Quantity.at factor
                     in
-                    ( [ Html.Attributes.style "width" (px value)
-                      , Html.Attributes.style "height" (px computedHeight)
-                      ]
-                    , factor
-                    )
+                    [ Html.Attributes.style "width" (px value)
+                    , Html.Attributes.style "height" (px computedHeight)
+                    ]
 
                 Height value ->
                     let
@@ -403,18 +394,14 @@ toHtml { viewBox, size, attributes, elements } =
                         computedWidth =
                             viewBoxWidth |> Quantity.at factor
                     in
-                    ( [ Html.Attributes.style "width" (px computedWidth)
-                      , Html.Attributes.style "height" (px value)
-                      ]
-                    , factor
-                    )
+                    [ Html.Attributes.style "width" (px computedWidth)
+                    , Html.Attributes.style "height" (px value)
+                    ]
 
                 Fit ->
-                    ( [ Html.Attributes.style "width" "100%"
-                      , Html.Attributes.style "height" "100%"
-                      ]
-                    , Quantity 1
-                    )
+                    [ Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "height" "100%"
+                    ]
 
                 FitWidth ->
                     let
@@ -427,41 +414,20 @@ toHtml { viewBox, size, attributes, elements } =
                         bottomPadding =
                             "calc(" ++ heightAsPercentOfWidth ++ " - " ++ dummyHeight ++ ")"
                     in
-                    ( [ Html.Attributes.style "width" "100%"
-                      , Html.Attributes.style "height" dummyHeight
-                      , Html.Attributes.style "padding-bottom" bottomPadding
-                      , Html.Attributes.style "overflow" "visible"
-                      ]
-                    , Quantity 1
-                    )
-
-                FitHeight ->
-                    let
-                        dummyWidth =
-                            "1px"
-
-                        widthAsPercentOfHeight =
-                            String.fromFloat (100 * Quantity.ratio viewBoxWidth viewBoxHeight) ++ "%"
-
-                        rightPadding =
-                            "calc(" ++ widthAsPercentOfHeight ++ " - " ++ dummyWidth ++ ")"
-                    in
-                    ( [ Html.Attributes.style "height" "100%"
-                      , Html.Attributes.style "width" dummyWidth
-                      , Html.Attributes.style "padding-right" rightPadding
-                      , Html.Attributes.style "overflow" "visible"
-                      ]
-                    , Quantity 1
-                    )
+                    [ Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "height" dummyHeight
+                    , Html.Attributes.style "padding-bottom" bottomPadding
+                    , Html.Attributes.style "overflow" "visible"
+                    ]
 
         defaultAttributes =
             [ blackStroke
-            , strokeWidth (defaultStrokeWidth |> Quantity.at_ scaleFactor)
+            , strokeWidth given.strokeWidth
             , bevelStrokeJoins
             , noStrokeCaps
             , whiteFill
             , strokedBorder
-            , fontSize (defaultFontSize |> Quantity.at_ scaleFactor)
+            , fontSize given.fontSize
             , textColor Color.black
             , textAnchor bottomLeft
             ]
@@ -469,15 +435,15 @@ toHtml { viewBox, size, attributes, elements } =
         rootAttributeValues =
             Attributes.emptyAttributeValues
                 |> Attributes.assignAttributes defaultAttributes
-                |> Attributes.assignAttributes attributes
+                |> Attributes.assignAttributes given.attributes
 
         (Element svgElement) =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues <|
-                [ group [] elements |> relativeTo (Rectangle2d.axes viewBox)
+                [ group [] given.elements |> relativeTo (Rectangle2d.axes given.viewBox)
                 ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement False 0 0 "" "" |> Svg.map (\(Event callback) -> callback viewBox) ]
+        [ svgElement False 0 0 "" "" |> Svg.map (\(Event callback) -> callback given.viewBox) ]
 
 
 fixed : Size Pixels
@@ -500,19 +466,14 @@ height value =
     Height value
 
 
-fit : Size Pixels
+fit : Size units
 fit =
     Fit
 
 
-fitWidth : Size Pixels
+fitWidth : Size units
 fitWidth =
     FitWidth
-
-
-fitHeight : Size Pixels
-fitHeight =
-    FitHeight
 
 
 empty : Element units coordinates event

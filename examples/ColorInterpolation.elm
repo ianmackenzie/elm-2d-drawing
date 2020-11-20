@@ -70,6 +70,8 @@ main =
             Drawing2d.toHtml
                 { viewBox = viewBox
                 , size = Drawing2d.fixed
+                , strokeWidth = Pixels.float 1
+                , fontSize = Pixels.float 16
                 , attributes = []
                 , elements = elements
                 }
