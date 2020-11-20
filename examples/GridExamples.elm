@@ -73,6 +73,7 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
+        , background = Drawing2d.noBackground
         , attributes =
             [ Drawing2d.fontSize (Pixels.float 12)
             , Drawing2d.fontFamily [ "monospace" ]

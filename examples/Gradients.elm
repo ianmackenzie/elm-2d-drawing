@@ -104,6 +104,7 @@ example1 =
         , size = Drawing2d.fixed
         , strokeWidth = Pixels.float 1
         , fontSize = Pixels.float 16
+        , background = Drawing2d.noBackground
         , attributes = []
         , elements = [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
         }
@@ -116,6 +117,7 @@ example2 =
         , size = Drawing2d.fixed
         , strokeWidth = Pixels.float 1
         , fontSize = Pixels.float 16
+        , background = Drawing2d.noBackground
         , attributes = [ diagonalGradientAttribute ]
         , elements = [ Drawing2d.rectangle [] square ]
         }
@@ -141,6 +143,7 @@ example3 angle =
     in
     Drawing2d.draw
         { viewBox = viewBox
+        , background = Drawing2d.noBackground
         , attributes = []
         , elements =
             [ Drawing2d.rectangle [] square

@@ -52,6 +52,7 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
+        , background = Drawing2d.noBackground
         , attributes =
             [ Drawing2d.fillColor Color.orange
             , Drawing2d.strokeColor Color.blue

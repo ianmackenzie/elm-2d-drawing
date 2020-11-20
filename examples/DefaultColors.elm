@@ -22,6 +22,7 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
+        , background = Drawing2d.noBackground
         , attributes = []
         , elements =
             [ Drawing2d.rectangle [ Drawing2d.whiteFill ] <|

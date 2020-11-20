@@ -127,6 +127,7 @@ view model =
                 Element.html <|
                     Drawing2d.draw
                         { viewBox = viewBox
+                        , background = Drawing2d.noBackground
                         , attributes = attributes
                         , elements = List.map drawPoint (Dict.values model.touchPoints)
                         }

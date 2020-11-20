@@ -1,5 +1,6 @@
 module SizeTesting exposing (main)
 
+import Axis2d
 import Browser
 import Circle2d
 import Color
@@ -59,6 +60,17 @@ scene points =
     , Drawing2d.group [] <|
         (points |> List.map (\point -> Drawing2d.circle [ Drawing2d.fillColor Color.blue ] (Circle2d.atPoint point (Pixels.float 3))))
     ]
+
+
+background : Drawing2d.Background Pixels DrawingCoordinates
+background =
+    Drawing2d.backgroundGradient <|
+        Drawing2d.gradientAlong Axis2d.x <|
+            [ ( Pixels.float -51, Color.orange )
+            , ( Pixels.float -50, Color.lightBlue )
+            , ( Pixels.float 50, Color.lightGreen )
+            , ( Pixels.float 51, Color.yellow )
+            ]
 
 
 onClick : Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent
@@ -194,6 +206,7 @@ view model =
                                     , strokeWidth = Pixels.float 1
                                     , fontSize = Pixels.float 16
                                     , viewBox = viewBox
+                                    , background = background
                                     , attributes = [ onClick ]
                                     , elements = scene model.points
                                     }
@@ -208,6 +221,7 @@ view model =
                                     , viewBox = viewBox
                                     , strokeWidth = Pixels.float 5
                                     , fontSize = Pixels.float 32
+                                    , background = background
                                     , attributes = [ onClick ]
                                     , elements = scene model.points
                                     }

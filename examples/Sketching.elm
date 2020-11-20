@@ -113,6 +113,7 @@ view model =
                         , size = Drawing2d.fit
                         , strokeWidth = Pixels.float 5
                         , fontSize = Pixels.float 16
+                        , background = Drawing2d.backgroundColor Color.lightBlue
                         , attributes =
                             [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
                             , Drawing2d.onRightMouseDown (StartDrawing Green)

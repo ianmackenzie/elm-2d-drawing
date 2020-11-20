@@ -2,6 +2,7 @@ module Drawing2d exposing
     ( Element, Attribute
     , draw, toHtml
     , Size, fixed, scale, width, height, fit, fitWidth
+    , Background, noBackground, whiteBackground, blackBackground, backgroundColor, backgroundGradient
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
     , noFill, blackFill, whiteFill, fillColor, fillGradient
@@ -36,6 +37,11 @@ module Drawing2d exposing
 # Size
 
 @docs Size, fixed, scale, width, height, fit, fitWidth
+
+
+# Background
+
+@docs Background, noBackground, whiteBackground, blackBackground, backgroundColor, backgroundGradient
 
 
 # Drawing
@@ -345,16 +351,18 @@ px value =
 
 draw :
     { viewBox : Rectangle2d Pixels coordinates
+    , background : Background Pixels coordinates
     , attributes : List (Attribute Pixels coordinates (Event Pixels coordinates msg))
     , elements : List (Element Pixels coordinates (Event Pixels coordinates msg))
     }
     -> Html msg
-draw { viewBox, attributes, elements } =
+draw { viewBox, background, attributes, elements } =
     toHtml
         { viewBox = viewBox
         , size = fixed
         , strokeWidth = Pixels.float 1
         , fontSize = Pixels.float 16
+        , background = background
         , attributes = attributes
         , elements = elements
         }
@@ -365,6 +373,7 @@ toHtml :
     , size : Size units
     , strokeWidth : Quantity Float units
     , fontSize : Quantity Float units
+    , background : Background units coordinates
     , attributes : List (Attribute units coordinates (Event units coordinates msg))
     , elements : List (Element units coordinates (Event units coordinates msg))
     }
@@ -454,9 +463,24 @@ toHtml given =
                 |> Attributes.assignAttributes defaultAttributes
                 |> Attributes.assignAttributes given.attributes
 
+        backgroundElement =
+            if given.background == noBackground then
+                empty
+
+            else
+                let
+                    scaledViewBox =
+                        given.viewBox
+                            |> Rectangle2d.scaleAbout (Rectangle2d.centerPoint given.viewBox) 1.0e6
+
+                    (Background backgroundAttribute) =
+                        given.background
+                in
+                rectangle [ backgroundAttribute ] scaledViewBox |> map never
+
         (Element svgElement) =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues <|
-                [ group [] given.elements |> relativeTo (Rectangle2d.axes given.viewBox)
+                [ group [] (backgroundElement :: given.elements) |> relativeTo (Rectangle2d.axes given.viewBox)
                 ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
@@ -491,6 +515,35 @@ fit =
 fitWidth : Size units
 fitWidth =
     FitWidth
+
+
+type Background units coordinates
+    = Background (Attribute units coordinates (Event units coordinates Never))
+
+
+noBackground : Background units coordinates
+noBackground =
+    Background noFill
+
+
+blackBackground : Background units coordinates
+blackBackground =
+    Background blackFill
+
+
+whiteBackground : Background units coordinates
+whiteBackground =
+    Background whiteFill
+
+
+backgroundColor : Color -> Background units coordinates
+backgroundColor color =
+    Background (fillColor color)
+
+
+backgroundGradient : Gradient units coordinates -> Background units coordinates
+backgroundGradient gradient =
+    Background (fillGradient gradient)
 
 
 empty : Element units coordinates event

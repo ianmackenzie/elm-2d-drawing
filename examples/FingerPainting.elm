@@ -234,6 +234,7 @@ view model =
                 Element.html <|
                     Drawing2d.draw
                         { viewBox = viewBox
+                        , background = Drawing2d.noBackground
                         , attributes = commonAttributes ++ touchInteractionAttributes
                         , elements = List.map drawLine allLines
                         }

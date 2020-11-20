@@ -27,6 +27,7 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
+        , background = Drawing2d.noBackground
         , attributes = []
         , elements = List.map (Drawing2d.circle []) circles
         }

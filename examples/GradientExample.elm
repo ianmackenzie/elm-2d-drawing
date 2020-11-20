@@ -80,10 +80,16 @@ view model =
 
             else
                 box
+
+        backgroundGradient =
+            Drawing2d.gradientFrom
+                ( Point2d.origin, Color.green )
+                ( Point2d.pixels 0 800, Color.blue )
     in
     Html.div [ Html.Events.onClick ToggleTransform ]
         [ Drawing2d.draw
             { viewBox = viewBox
+            , background = Drawing2d.backgroundGradient backgroundGradient
             , attributes = [ Drawing2d.fontSize (Pixels.float 20) ]
             , elements = [ rendered ]
             }

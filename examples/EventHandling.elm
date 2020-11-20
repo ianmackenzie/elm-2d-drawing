@@ -125,6 +125,7 @@ view model =
     Html.div []
         [ Drawing2d.draw
             { viewBox = viewBox
+            , background = Drawing2d.noBackground
             , attributes = [ Drawing2d.fillColor Color.white ]
             , elements =
                 [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
