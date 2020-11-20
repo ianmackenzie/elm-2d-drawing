@@ -344,9 +344,9 @@ px value =
 
 
 draw :
-    { viewBox : Rectangle2d Pixels Coordinates
-    , attributes : List (Attribute Pixels Coordinates (Event Pixels Coordinates msg))
-    , elements : List (Element Pixels Coordinates (Event Pixels Coordinates msg))
+    { viewBox : Rectangle2d Pixels coordinates
+    , attributes : List (Attribute Pixels coordinates (Event Pixels coordinates msg))
+    , elements : List (Element Pixels coordinates (Event Pixels coordinates msg))
     }
     -> Html msg
 draw { viewBox, attributes, elements } =
