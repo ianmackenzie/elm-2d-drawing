@@ -106,7 +106,7 @@ coordinates**. For example, if you draw a circle at the point (200,300), then if
 you click the center of the circle you'll get an event containing the point
 (200,300) regardless of where on the page your drawing is, whether it's been
 scaled to fit its container, or what `viewBox` you provided when calling
-[`toHtml`](#toHtml).
+[`draw`](#draw).
 
 Under the hood, [this function](https://package.elm-lang.org/packages/debois/elm-dom/latest/DOM#boundingClientRect)
 is used to help convert from mouse/touch event coordinates like `clientX` and
