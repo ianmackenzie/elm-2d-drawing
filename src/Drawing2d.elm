@@ -1,6 +1,6 @@
 module Drawing2d exposing
     ( Entity, Attribute
-    , draw, toHtml
+    , draw, custom
     , Size, fixed, scale, width, height, fit, fitWidth
     , Background, noBackground, whiteBackground, blackBackground, backgroundColor, backgroundGradient
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
@@ -31,7 +31,7 @@ module Drawing2d exposing
 
 @docs Entity, Attribute
 
-@docs draw, toHtml
+@docs draw, custom
 
 
 # Size
@@ -358,7 +358,7 @@ draw :
     }
     -> Html msg
 draw { viewBox, background, attributes, entities } =
-    toHtml
+    custom
         { viewBox = viewBox
         , size = fixed
         , strokeWidth = Pixels.float 1
@@ -369,7 +369,7 @@ draw { viewBox, background, attributes, entities } =
         }
 
 
-toHtml :
+custom :
     { viewBox : Rectangle2d units coordinates
     , size : Size units
     , strokeWidth : Quantity Float units
@@ -379,7 +379,7 @@ toHtml :
     , entities : List (Entity units coordinates (Event units coordinates msg))
     }
     -> Html msg
-toHtml given =
+custom given =
     let
         ( viewBoxWidth, viewBoxHeight ) =
             Rectangle2d.dimensions given.viewBox

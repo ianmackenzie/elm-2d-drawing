@@ -108,7 +108,7 @@ view model =
                 , Element.height (Element.px 300)
                 ]
                 (Element.html <|
-                    Drawing2d.toHtml
+                    Drawing2d.custom
                         { viewBox = viewBox
                         , size = Drawing2d.fit
                         , strokeWidth = Pixels.float 5

@@ -201,7 +201,7 @@ view model =
                   , view =
                         \size ->
                             cell size <|
-                                Drawing2d.toHtml
+                                Drawing2d.custom
                                     { size = toDrawingSize size
                                     , strokeWidth = Pixels.float 1
                                     , fontSize = Pixels.float 16
@@ -216,7 +216,7 @@ view model =
                   , view =
                         \size ->
                             cell size <|
-                                Drawing2d.toHtml
+                                Drawing2d.custom
                                     { size = toDrawingSize size
                                     , viewBox = viewBox
                                     , strokeWidth = Pixels.float 5
