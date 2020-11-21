@@ -7,7 +7,7 @@ module Drawing2d exposing
     , add
     , noFill, blackFill, whiteFill, fillColor, fillGradient
     , Gradient, gradientFrom, gradientAlong, circularGradient
-    , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+    , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
     , miterStrokeJoins, roundStrokeJoins, bevelStrokeJoins
     , noStrokeCaps, roundStrokeCaps, squareStrokeCaps
     , dropShadow
@@ -66,7 +66,7 @@ module Drawing2d exposing
 
 ## Stroke
 
-@docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient
+@docs strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
 
 
 ### Stroke joins
@@ -296,6 +296,7 @@ type Entity units coordinates event
          -> Float -- font size in current units
          -> String -- encoded gradient fill in current units
          -> String -- encoded gradient stroke in current units
+         -> String -- encoded dash pattern in current units
          -> Svg event
         )
 
@@ -484,7 +485,7 @@ toHtml given =
                 ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement False 0 0 "" "" |> Svg.map (\(Event callback) -> callback given.viewBox) ]
+        [ svgElement False 0 0 "" "" "[]" |> Svg.map (\(Event callback) -> callback given.viewBox) ]
 
 
 fixed : Size Pixels
@@ -548,7 +549,7 @@ backgroundGradient gradient =
 
 empty : Entity units coordinates event
 empty =
-    Entity (\_ _ _ _ _ -> Svg.text "")
+    Entity (\_ _ _ _ _ _ -> Svg.text "")
 
 
 drawCurve :
@@ -562,7 +563,7 @@ drawCurve attributes renderer curve =
             Attributes.collectAttributeValues attributes
     in
     Entity <|
-        \_ _ _ _ _ ->
+        \_ _ _ _ _ _ ->
             let
                 givenAttributes =
                     [] |> Attributes.addCurveAttributes attributeValues
@@ -592,7 +593,7 @@ drawRegion attributes renderer region =
             Attributes.collectAttributeValues attributes
     in
     Entity <|
-        \currentBordersVisible _ _ _ _ ->
+        \currentBordersVisible _ _ _ _ _ ->
             let
                 bordersVisible =
                     attributeValues.borderVisibility
@@ -643,10 +644,11 @@ render :
     -> Float
     -> String
     -> String
+    -> String
     -> Entity units coordinates event
     -> Svg event
-render arg1 arg2 arg3 arg4 arg5 (Entity function) =
-    function arg1 arg2 arg3 arg4 arg5
+render arg1 arg2 arg3 arg4 arg5 arg6 (Entity function) =
+    function arg1 arg2 arg3 arg4 arg5 arg6
 
 
 group :
@@ -657,6 +659,23 @@ group attributes childEntities =
     groupLike "g" [] (Attributes.collectAttributeValues attributes) childEntities
 
 
+encodeDashPattern : List Float -> String
+encodeDashPattern dashPattern =
+    Encode.list Encode.float dashPattern
+        |> Encode.encode 0
+
+
+dashPatternDecoder : Decoder (List Float)
+dashPatternDecoder =
+    Decode.list Decode.float
+
+
+decodeDashPattern : String -> List Float
+decodeDashPattern json =
+    Decode.decodeString dashPatternDecoder json
+        |> Result.withDefault []
+
+
 groupLike :
     String
     -> List (Svg.Attribute event)
@@ -665,7 +684,7 @@ groupLike :
     -> Entity units coordinates event
 groupLike tag extraSvgAttributes attributeValues childEntities =
     Entity <|
-        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
             let
                 updatedBordersVisible =
                     attributeValues.borderVisibility
@@ -704,6 +723,14 @@ groupLike tag extraSvgAttributes attributeValues childEntities =
                         Just (StrokeGradient gradient) ->
                             Gradient.encode gradient
 
+                updatedDashPattern =
+                    case attributeValues.strokeDashPattern of
+                        Nothing ->
+                            currentDashPattern
+
+                        Just dashPattern ->
+                            encodeDashPattern dashPattern
+
                 childSvgElements =
                     childEntities
                         |> List.map
@@ -713,6 +740,7 @@ groupLike tag extraSvgAttributes attributeValues childEntities =
                                 updatedFontSize
                                 updatedFillGradient
                                 updatedStrokeGradient
+                                updatedDashPattern
                             )
 
                 defs =
@@ -831,7 +859,7 @@ text attributes position string =
             Point2d.unwrap position
     in
     Entity <|
-        \_ _ _ _ _ ->
+        \_ _ _ _ _ _ ->
             let
                 svgAttributes =
                     [ Svg.Attributes.x (String.fromFloat x)
@@ -859,7 +887,7 @@ image attributes givenUrl givenRectangle =
             Rectangle2d.dimensions givenRectangle
     in
     Entity <|
-        \_ _ _ _ _ ->
+        \_ _ _ _ _ _ ->
             let
                 svgAttributes =
                     [ Svg.Attributes.xlinkHref givenUrl
@@ -909,7 +937,7 @@ placeIn :
     -> Entity units globalCoordinates event
 placeIn frame (Entity function) =
     Entity
-        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
             let
                 toLocalGradient =
                     Gradient.relativeTo frame
@@ -951,6 +979,7 @@ placeIn frame (Entity function) =
                         currentFontSize
                         updatedFillGradient
                         updatedStrokeGradient
+                        currentDashPattern
 
                 localElement =
                     case localGradientElements of
@@ -996,7 +1025,7 @@ scaleImpl point factor (Entity function) =
             "matrix(" ++ String.join " " matrixComponents ++ ")"
     in
     Entity
-        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient ->
+        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
             let
                 transformation =
                     Gradient.scaleAbout point (1 / factor)
@@ -1025,6 +1054,13 @@ scaleImpl point factor (Entity function) =
                 updatedFontSize =
                     currentFontSize / factor
 
+                scaledDashPattern =
+                    decodeDashPattern currentDashPattern
+                        |> List.map (\value -> value / factor)
+
+                updatedDashPattern =
+                    encodeDashPattern scaledDashPattern
+
                 svgAttributes =
                     [ Svg.Attributes.transform transform
                     , Svg.Attributes.fontSize
@@ -1032,10 +1068,9 @@ scaleImpl point factor (Entity function) =
                     , Svg.Attributes.strokeWidth
                         (String.fromFloat updatedStrokeWidth)
                     ]
-                        |> addTransformedFillGradientReference
-                            transformedFillGradient
-                        |> addTransformedStrokeGradientReference
-                            transformedStrokeGradient
+                        |> addTransformedFillGradientReference transformedFillGradient
+                        |> addTransformedStrokeGradientReference transformedStrokeGradient
+                        |> addScaledStrokeDashPattern scaledDashPattern
 
                 transformedGradientElements =
                     []
@@ -1049,6 +1084,7 @@ scaleImpl point factor (Entity function) =
                         updatedFontSize
                         updatedFillGradient
                         updatedStrokeGradient
+                        updatedDashPattern
 
                 groupElement =
                     case transformedGradientElements of
@@ -1134,8 +1170,8 @@ map :
     -> Entity units coordinates (Event drawingUnits drawingCoordinates b)
 map mapFunction (Entity drawFunction) =
     Entity
-        (\arg1 arg2 arg3 arg4 arg5 ->
-            Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5)
+        (\arg1 arg2 arg3 arg4 arg5 arg6 ->
+            Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
         )
 
 
@@ -1204,6 +1240,17 @@ addTransformedStrokeGradientReference maybeGradient svgAttributes =
             Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes
 
 
+addScaledStrokeDashPattern : List Float -> List (Svg.Attribute event) -> List (Svg.Attribute event)
+addScaledStrokeDashPattern dashPattern svgAttributes =
+    case dashPattern of
+        [] ->
+            -- No need to set dash pattern to 'none' again
+            svgAttributes
+
+        _ ->
+            Attributes.dashPatternSvgAttribute dashPattern :: svgAttributes
+
+
 addDropShadow : AttributeValues units coordinates event -> List (Svg event) -> List (Svg event)
 addDropShadow attributeValues svgElements =
     case attributeValues.dropShadow of
@@ -1267,6 +1314,16 @@ whiteStroke =
 strokeGradient : Gradient units coordinates -> Attribute units coordinates event
 strokeGradient gradient =
     StrokeStyle (StrokeGradient gradient)
+
+
+dashedStroke : List (Quantity Float units) -> Attribute units coordinates event
+dashedStroke dashPattern =
+    StrokeDashPattern (List.map Quantity.unwrap dashPattern)
+
+
+solidStroke : Attribute units coordinates event
+solidStroke =
+    StrokeDashPattern []
 
 
 noBorder : Attribute units coordinates event

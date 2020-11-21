@@ -14,6 +14,7 @@ module Drawing2d.Attributes exposing
     , addTextAttributes
     , assignAttributes
     , collectAttributeValues
+    , dashPatternSvgAttribute
     , emptyAttributeValues
     )
 
@@ -69,6 +70,7 @@ type Attribute units coordinates event
     | StrokeWidth Float
     | StrokeLineJoin LineJoin
     | StrokeLineCap LineCap
+    | StrokeDashPattern (List Float)
     | BorderVisibility Bool
     | DropShadow (Shadow units coordinates)
     | TextColor String -- Svg.Attributes.color
@@ -84,6 +86,7 @@ type alias AttributeValues units coordinates event =
     , strokeWidth : Maybe Float
     , strokeLineJoin : Maybe LineJoin
     , strokeLineCap : Maybe LineCap
+    , strokeDashPattern : Maybe (List Float)
     , borderVisibility : Maybe Bool
     , dropShadow : Maybe (Shadow units coordinates)
     , textColor : Maybe String
@@ -101,6 +104,7 @@ emptyAttributeValues =
     , strokeWidth = Nothing
     , strokeLineJoin = Nothing
     , strokeLineCap = Nothing
+    , strokeDashPattern = Nothing
     , borderVisibility = Nothing
     , dropShadow = Nothing
     , textColor = Nothing
@@ -133,6 +137,9 @@ setAttribute attribute attributeValues =
 
         StrokeLineCap lineCap ->
             { attributeValues | strokeLineCap = Just lineCap }
+
+        StrokeDashPattern dashPattern ->
+            { attributeValues | strokeDashPattern = Just dashPattern }
 
         BorderVisibility bordersVisible ->
             { attributeValues | borderVisibility = Just bordersVisible }
@@ -319,6 +326,29 @@ addStrokeLineCap attributeValues svgAttributes =
             Svg.Attributes.strokeLinecap (lineCapString lineCap) :: svgAttributes
 
 
+addStrokeDashPattern :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addStrokeDashPattern attributeValues svgAttributes =
+    case attributeValues.strokeDashPattern of
+        Nothing ->
+            svgAttributes
+
+        Just dashPattern ->
+            dashPatternSvgAttribute dashPattern :: svgAttributes
+
+
+dashPatternSvgAttribute : List Float -> Svg.Attribute event
+dashPatternSvgAttribute dashPattern =
+    case dashPattern of
+        [] ->
+            Svg.Attributes.strokeDasharray "none"
+
+        _ ->
+            Svg.Attributes.strokeDasharray (String.join " " (List.map String.fromFloat dashPattern))
+
+
 addTextColor :
     AttributeValues units coordinates event
     -> List (Svg.Attribute event)
@@ -370,6 +400,7 @@ addCurveAttributes attributeValues svgAttributes =
         |> addStrokeWidth attributeValues
         |> addStrokeLineJoin attributeValues
         |> addStrokeLineCap attributeValues
+        |> addStrokeDashPattern attributeValues
         |> addShadowFilter attributeValues
         |> addEventHandlers attributeValues
 
@@ -407,6 +438,7 @@ addGroupAttributes attributeValues svgAttributes =
         |> addStrokeWidth attributeValues
         |> addStrokeLineJoin attributeValues
         |> addStrokeLineCap attributeValues
+        |> addStrokeDashPattern attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
         |> addShadowFilter attributeValues
