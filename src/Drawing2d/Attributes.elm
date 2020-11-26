@@ -276,6 +276,7 @@ addShadowFilter attributeValues svgAttributes =
             Svg.Attributes.filter (Shadow.reference shadow) :: svgAttributes
 
 
+lineJoinString : LineJoin -> String
 lineJoinString lineJoin =
     case lineJoin of
         BevelJoin ->
@@ -288,6 +289,7 @@ lineJoinString lineJoin =
             "miter"
 
 
+lineCapString : LineCap -> String
 lineCapString lineJoin =
     case lineJoin of
         NoCap ->
