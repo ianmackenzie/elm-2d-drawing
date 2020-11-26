@@ -12,8 +12,8 @@ module Drawing2d exposing
     , noStrokeCaps, roundStrokeCaps, squareStrokeCaps
     , dropShadow
     , noBorder, strokedBorder
-    , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
     , Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
+    , fontSize, fontFamily, blackText, whiteText, textColor
     , autoCursor, defaultCursor, noCursor
     , contextMenuCursor, helpCursor, pointerCursor, progressCursor, waitCursor
     , cellCursor, crosshairCursor, textCursor, verticalTextCursor
@@ -98,7 +98,7 @@ module Drawing2d exposing
 
 ## Text
 
-@docs fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
+@docs fontSize, fontFamily, blackText, whiteText, textColor
 
 
 ## Anchors
