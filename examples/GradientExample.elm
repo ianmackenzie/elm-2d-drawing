@@ -67,7 +67,7 @@ view model =
                 , Drawing2d.lineSegment [] gradientLine
                 , dot gradientStartPoint
                 , dot gradientEndPoint
-                , Drawing2d.text [ Drawing2d.textAnchor Drawing2d.topLeft ]
+                , Drawing2d.text [ Drawing2d.anchorAtTopLeft ]
                     lowerLeftCorner
                     "Click to toggle transform"
                 ]

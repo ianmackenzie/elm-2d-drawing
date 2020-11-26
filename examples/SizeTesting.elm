@@ -56,7 +56,7 @@ viewBox =
 scene : List (Point2d Pixels DrawingCoordinates) -> List (Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent)
 scene points =
     [ Drawing2d.circle [] (Circle2d.atOrigin (Pixels.float 90))
-    , Drawing2d.text [ Drawing2d.textAnchor Drawing2d.center ] Point2d.origin "Text"
+    , Drawing2d.text [ Drawing2d.anchorAtCenter ] Point2d.origin "Text"
     , Drawing2d.group [] <|
         (points |> List.map (\point -> Drawing2d.circle [ Drawing2d.fillColor Color.blue ] (Circle2d.atPoint point (Pixels.float 3))))
     ]

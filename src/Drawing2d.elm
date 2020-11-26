@@ -12,8 +12,8 @@ module Drawing2d exposing
     , noStrokeCaps, roundStrokeCaps, squareStrokeCaps
     , dropShadow
     , noBorder, strokedBorder
-    , Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
     , fontSize, fontFamily, blackText, whiteText, textColor
+    , anchorAtTopLeft, anchorAtTopCenter, anchorAtTopRight, anchorAtCenterLeft, anchorAtCenter, anchorAtCenterRight, anchorAtBottomLeft, anchorAtBottomCenter, anchorAtBottomRight
     , autoCursor, defaultCursor, noCursor
     , contextMenuCursor, helpCursor, pointerCursor, progressCursor, waitCursor
     , cellCursor, crosshairCursor, textCursor, verticalTextCursor
@@ -103,7 +103,7 @@ module Drawing2d exposing
 
 ## Anchors
 
-@docs Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
+@docs anchorAtTopLeft, anchorAtTopCenter, anchorAtTopRight, anchorAtCenterLeft, anchorAtCenter, anchorAtCenterRight, anchorAtBottomLeft, anchorAtBottomCenter, anchorAtBottomRight
 
 
 ## Cursors
@@ -479,8 +479,8 @@ custom given =
             , noFill
             , strokedBorder
             , fontSize given.fontSize
-            , textAnchor bottomLeft
             , blackText
+            , anchorAtBottomLeft
             ]
 
         rootAttributeValues =
@@ -1397,92 +1397,49 @@ dropShadow properties =
     DropShadow (Shadow.with properties)
 
 
-textAnchor : Anchor -> Attribute units coordinates event
-textAnchor anchor =
-    case anchor of
-        TopLeft ->
-            TextAnchor { x = "start", y = "hanging" }
-
-        TopCenter ->
-            TextAnchor { x = "middle", y = "hanging" }
-
-        TopRight ->
-            TextAnchor { x = "end", y = "hanging" }
-
-        CenterLeft ->
-            TextAnchor { x = "start", y = "middle" }
-
-        Center ->
-            TextAnchor { x = "middle", y = "middle" }
-
-        CenterRight ->
-            TextAnchor { x = "end", y = "middle" }
-
-        BottomLeft ->
-            TextAnchor { x = "start", y = "alphabetic" }
-
-        BottomCenter ->
-            TextAnchor { x = "middle", y = "alphabetic" }
-
-        BottomRight ->
-            TextAnchor { x = "end", y = "alphabetic" }
+anchorAtTopLeft : Attribute units coordinates event
+anchorAtTopLeft =
+    TextAnchor { x = "start", y = "hanging" }
 
 
-type Anchor
-    = TopLeft
-    | TopCenter
-    | TopRight
-    | CenterLeft
-    | Center
-    | CenterRight
-    | BottomLeft
-    | BottomCenter
-    | BottomRight
+anchorAtTopCenter : Attribute units coordinates event
+anchorAtTopCenter =
+    TextAnchor { x = "middle", y = "hanging" }
 
 
-topLeft : Anchor
-topLeft =
-    TopLeft
+anchorAtTopRight : Attribute units coordinates event
+anchorAtTopRight =
+    TextAnchor { x = "end", y = "hanging" }
 
 
-topCenter : Anchor
-topCenter =
-    TopCenter
+anchorAtCenterLeft : Attribute units coordinates event
+anchorAtCenterLeft =
+    TextAnchor { x = "start", y = "middle" }
 
 
-topRight : Anchor
-topRight =
-    TopRight
+anchorAtCenter : Attribute units coordinates event
+anchorAtCenter =
+    TextAnchor { x = "middle", y = "middle" }
 
 
-centerLeft : Anchor
-centerLeft =
-    CenterLeft
+anchorAtCenterRight : Attribute units coordinates event
+anchorAtCenterRight =
+    TextAnchor { x = "end", y = "middle" }
 
 
-center : Anchor
-center =
-    Center
+anchorAtBottomLeft : Attribute units coordinates event
+anchorAtBottomLeft =
+    TextAnchor { x = "start", y = "alphabetic" }
 
 
-centerRight : Anchor
-centerRight =
-    CenterRight
+anchorAtBottomCenter : Attribute units coordinates event
+anchorAtBottomCenter =
+    TextAnchor { x = "middle", y = "alphabetic" }
 
 
-bottomLeft : Anchor
-bottomLeft =
-    BottomLeft
-
-
-bottomCenter : Anchor
-bottomCenter =
-    BottomCenter
-
-
-bottomRight : Anchor
-bottomRight =
-    BottomRight
+anchorAtBottomRight : Attribute units coordinates event
+anchorAtBottomRight =
+    TextAnchor { x = "end", y = "alphabetic" }
 
 
 blackText : Attribute units coordinates event

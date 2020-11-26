@@ -65,7 +65,7 @@ main =
                         Drawing2d.group []
                             [ Drawing2d.circle [ Drawing2d.whiteFill ] <|
                                 Circle2d.withRadius (Pixels.float 4) position
-                            , Drawing2d.text [ Drawing2d.textAnchor Drawing2d.topLeft ]
+                            , Drawing2d.text [ Drawing2d.anchorAtTopLeft ]
                                 (position |> Point2d.translateBy (Vector2d.pixels 2 -2))
                                 text
                             ]

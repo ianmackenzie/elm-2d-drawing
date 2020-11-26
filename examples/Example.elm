@@ -42,9 +42,9 @@ main =
         arcPoints =
             Parameter1d.steps 16 (Arc2d.pointOn arc)
 
-        text anchor position string =
+        text anchorAttribute position string =
             Drawing2d.group []
-                [ Drawing2d.text [ Drawing2d.textAnchor anchor ]
+                [ Drawing2d.text [ anchorAttribute ]
                     position
                     string
                 , dot position
@@ -66,15 +66,15 @@ main =
                 (List.map dot arcPoints)
             , dot (Arc2d.centerPoint arc)
             , Drawing2d.group []
-                [ text Drawing2d.topLeft (Point2d.pixels 300 200) "topLeft"
-                , text Drawing2d.topCenter (Point2d.pixels 500 200) "topCenter"
-                , text Drawing2d.topRight (Point2d.pixels 700 200) "topRight"
-                , text Drawing2d.centerLeft (Point2d.pixels 300 150) "centerLeft"
-                , text Drawing2d.center (Point2d.pixels 500 150) "center"
-                , text Drawing2d.centerRight (Point2d.pixels 700 150) "centerRight"
-                , text Drawing2d.bottomLeft (Point2d.pixels 300 100) "bottomLeft"
-                , text Drawing2d.bottomCenter (Point2d.pixels 500 100) "bottomCenter"
-                , text Drawing2d.bottomRight (Point2d.pixels 700 100) "bottomRight"
+                [ text Drawing2d.anchorAtTopLeft (Point2d.pixels 300 200) "top left"
+                , text Drawing2d.anchorAtTopCenter (Point2d.pixels 500 200) "top center"
+                , text Drawing2d.anchorAtTopRight (Point2d.pixels 700 200) "top right"
+                , text Drawing2d.anchorAtCenterLeft (Point2d.pixels 300 150) "center left"
+                , text Drawing2d.anchorAtCenter (Point2d.pixels 500 150) "center"
+                , text Drawing2d.anchorAtCenterRight (Point2d.pixels 700 150) "center right"
+                , text Drawing2d.anchorAtBottomLeft (Point2d.pixels 300 100) "bottom left"
+                , text Drawing2d.anchorAtBottomCenter (Point2d.pixels 500 100) "bottom center"
+                , text Drawing2d.anchorAtBottomRight (Point2d.pixels 700 100) "bottom right"
                 ]
             ]
         }
