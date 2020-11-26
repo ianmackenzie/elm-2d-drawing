@@ -14,6 +14,13 @@ module Drawing2d exposing
     , noBorder, strokedBorder
     , fontSize, blackText, whiteText, textColor, fontFamily, textAnchor
     , Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
+    , autoCursor, defaultCursor, noCursor
+    , contextMenuCursor, helpCursor, pointerCursor, progressCursor, waitCursor
+    , cellCursor, crosshairCursor, textCursor, verticalTextCursor
+    , aliasCursor, copyCursor, moveCursor, noDropCursor, notAllowedCursor, grabCursor, grabbingCursor
+    , allScrollCursor, colResizeCursor, rowResizeCursor
+    , nResizeCursor, eResizeCursor, sResizeCursor, wResizeCursor, neResizeCursor, nwResizeCursor, seResizeCursor, swResizeCursor, ewResizeCursor, nsResizeCursor, neswResizeCursor, nwseResizeCursor
+    , zoomInCursor, zoomOutCursor
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
     , onTouchStart
@@ -97,6 +104,23 @@ module Drawing2d exposing
 ## Anchors
 
 @docs Anchor, topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
+
+
+## Cursors
+
+@docs autoCursor, defaultCursor, noCursor
+
+@docs contextMenuCursor, helpCursor, pointerCursor, progressCursor, waitCursor
+
+@docs cellCursor, crosshairCursor, textCursor, verticalTextCursor
+
+@docs aliasCursor, copyCursor, moveCursor, noDropCursor, notAllowedCursor, grabCursor, grabbingCursor
+
+@docs allScrollCursor, colResizeCursor, rowResizeCursor
+
+@docs nResizeCursor, eResizeCursor, sResizeCursor, wResizeCursor, neResizeCursor, nwResizeCursor, seResizeCursor, swResizeCursor, ewResizeCursor, nsResizeCursor, neswResizeCursor, nwseResizeCursor
+
+@docs zoomInCursor, zoomOutCursor
 
 
 # Events
@@ -565,11 +589,8 @@ drawCurve attributes renderer curve =
     Entity <|
         \_ _ _ _ _ _ ->
             let
-                givenAttributes =
-                    [] |> Attributes.addCurveAttributes attributeValues
-
                 svgAttributes =
-                    Svg.Attributes.fill "none" :: givenAttributes
+                    Attributes.curveAttributes attributeValues
 
                 curveElement =
                     renderer svgAttributes curve
@@ -600,7 +621,7 @@ drawRegion attributes renderer region =
                         |> Maybe.withDefault currentBordersVisible
 
                 svgAttributes =
-                    [] |> Attributes.addRegionAttributes bordersVisible attributeValues
+                    Attributes.regionAttributes bordersVisible attributeValues
 
                 fillGradientElement =
                     addFillGradient attributeValues []
@@ -750,7 +771,7 @@ groupLike tag extraSvgAttributes attributeValues childEntities =
                         |> addDropShadow attributeValues
 
                 groupAttributes =
-                    Attributes.addGroupAttributes attributeValues []
+                    Attributes.groupAttributes attributeValues
             in
             Svg.node tag
                 (groupAttributes ++ extraSvgAttributes)
@@ -862,12 +883,9 @@ text attributes position string =
         \_ _ _ _ _ _ ->
             let
                 svgAttributes =
-                    [ Svg.Attributes.x (String.fromFloat x)
-                    , Svg.Attributes.y (String.fromFloat -y)
-                    , Svg.Attributes.fill "currentColor"
-                    , Svg.Attributes.stroke "none"
-                    ]
-                        |> Attributes.addTextAttributes attributeValues
+                    Svg.Attributes.x (String.fromFloat x)
+                        :: Svg.Attributes.y (String.fromFloat -y)
+                        :: Attributes.textAttributes attributeValues
             in
             Svg.text_ svgAttributes [ Svg.text string ]
                 |> addDefs (addDropShadow attributeValues [])
@@ -890,15 +908,13 @@ image attributes givenUrl givenRectangle =
         \_ _ _ _ _ _ ->
             let
                 svgAttributes =
-                    [ Svg.Attributes.xlinkHref givenUrl
-                    , Svg.Attributes.x (String.fromFloat (-rectangleWidth / 2))
-                    , Svg.Attributes.y (String.fromFloat (-rectangleHeight / 2))
-                    , Svg.Attributes.width (String.fromFloat rectangleWidth)
-                    , Svg.Attributes.height (String.fromFloat rectangleHeight)
-                    , placementTransform (Rectangle2d.axes givenRectangle)
-                    ]
-                        |> Attributes.addShadowFilter attributeValues
-                        |> Attributes.addEventHandlers attributeValues
+                    Svg.Attributes.xlinkHref givenUrl
+                        :: Svg.Attributes.x (String.fromFloat (-rectangleWidth / 2))
+                        :: Svg.Attributes.y (String.fromFloat (-rectangleHeight / 2))
+                        :: Svg.Attributes.width (String.fromFloat rectangleWidth)
+                        :: Svg.Attributes.height (String.fromFloat rectangleHeight)
+                        :: placementTransform (Rectangle2d.axes givenRectangle)
+                        :: Attributes.imageAttributes attributeValues
             in
             Svg.image svgAttributes []
                 |> addDefs (addDropShadow attributeValues [])
@@ -1516,6 +1532,222 @@ normalizeFont font =
 fontFamily : List String -> Attribute units coordinates event
 fontFamily fonts =
     FontFamily (fonts |> List.map normalizeFont |> String.join ",")
+
+
+{-| -}
+autoCursor : Attribute units coordinates event
+autoCursor =
+    Attributes.Cursor Attributes.AutoCursor
+
+
+{-| -}
+defaultCursor : Attribute units coordinates event
+defaultCursor =
+    Attributes.Cursor Attributes.DefaultCursor
+
+
+{-| -}
+noCursor : Attribute units coordinates event
+noCursor =
+    Attributes.Cursor Attributes.NoCursor
+
+
+{-| -}
+contextMenuCursor : Attribute units coordinates event
+contextMenuCursor =
+    Attributes.Cursor Attributes.ContextMenuCursor
+
+
+{-| -}
+helpCursor : Attribute units coordinates event
+helpCursor =
+    Attributes.Cursor Attributes.HelpCursor
+
+
+{-| -}
+pointerCursor : Attribute units coordinates event
+pointerCursor =
+    Attributes.Cursor Attributes.PointerCursor
+
+
+{-| -}
+progressCursor : Attribute units coordinates event
+progressCursor =
+    Attributes.Cursor Attributes.ProgressCursor
+
+
+{-| -}
+waitCursor : Attribute units coordinates event
+waitCursor =
+    Attributes.Cursor Attributes.WaitCursor
+
+
+{-| -}
+cellCursor : Attribute units coordinates event
+cellCursor =
+    Attributes.Cursor Attributes.CellCursor
+
+
+{-| -}
+crosshairCursor : Attribute units coordinates event
+crosshairCursor =
+    Attributes.Cursor Attributes.CrosshairCursor
+
+
+{-| -}
+textCursor : Attribute units coordinates event
+textCursor =
+    Attributes.Cursor Attributes.TextCursor
+
+
+{-| -}
+verticalTextCursor : Attribute units coordinates event
+verticalTextCursor =
+    Attributes.Cursor Attributes.VerticalTextCursor
+
+
+{-| -}
+aliasCursor : Attribute units coordinates event
+aliasCursor =
+    Attributes.Cursor Attributes.AliasCursor
+
+
+{-| -}
+copyCursor : Attribute units coordinates event
+copyCursor =
+    Attributes.Cursor Attributes.CopyCursor
+
+
+{-| -}
+moveCursor : Attribute units coordinates event
+moveCursor =
+    Attributes.Cursor Attributes.MoveCursor
+
+
+{-| -}
+noDropCursor : Attribute units coordinates event
+noDropCursor =
+    Attributes.Cursor Attributes.NoDropCursor
+
+
+{-| -}
+notAllowedCursor : Attribute units coordinates event
+notAllowedCursor =
+    Attributes.Cursor Attributes.NotAllowedCursor
+
+
+{-| -}
+grabCursor : Attribute units coordinates event
+grabCursor =
+    Attributes.Cursor Attributes.GrabCursor
+
+
+{-| -}
+grabbingCursor : Attribute units coordinates event
+grabbingCursor =
+    Attributes.Cursor Attributes.GrabbingCursor
+
+
+{-| -}
+allScrollCursor : Attribute units coordinates event
+allScrollCursor =
+    Attributes.Cursor Attributes.AllScrollCursor
+
+
+{-| -}
+colResizeCursor : Attribute units coordinates event
+colResizeCursor =
+    Attributes.Cursor Attributes.ColResizeCursor
+
+
+{-| -}
+rowResizeCursor : Attribute units coordinates event
+rowResizeCursor =
+    Attributes.Cursor Attributes.RowResizeCursor
+
+
+{-| -}
+nResizeCursor : Attribute units coordinates event
+nResizeCursor =
+    Attributes.Cursor Attributes.NResizeCursor
+
+
+{-| -}
+eResizeCursor : Attribute units coordinates event
+eResizeCursor =
+    Attributes.Cursor Attributes.EResizeCursor
+
+
+{-| -}
+sResizeCursor : Attribute units coordinates event
+sResizeCursor =
+    Attributes.Cursor Attributes.SResizeCursor
+
+
+{-| -}
+wResizeCursor : Attribute units coordinates event
+wResizeCursor =
+    Attributes.Cursor Attributes.WResizeCursor
+
+
+{-| -}
+neResizeCursor : Attribute units coordinates event
+neResizeCursor =
+    Attributes.Cursor Attributes.NeResizeCursor
+
+
+{-| -}
+nwResizeCursor : Attribute units coordinates event
+nwResizeCursor =
+    Attributes.Cursor Attributes.NwResizeCursor
+
+
+{-| -}
+seResizeCursor : Attribute units coordinates event
+seResizeCursor =
+    Attributes.Cursor Attributes.SeResizeCursor
+
+
+{-| -}
+swResizeCursor : Attribute units coordinates event
+swResizeCursor =
+    Attributes.Cursor Attributes.SwResizeCursor
+
+
+{-| -}
+ewResizeCursor : Attribute units coordinates event
+ewResizeCursor =
+    Attributes.Cursor Attributes.EwResizeCursor
+
+
+{-| -}
+nsResizeCursor : Attribute units coordinates event
+nsResizeCursor =
+    Attributes.Cursor Attributes.NsResizeCursor
+
+
+{-| -}
+neswResizeCursor : Attribute units coordinates event
+neswResizeCursor =
+    Attributes.Cursor Attributes.NeswResizeCursor
+
+
+{-| -}
+nwseResizeCursor : Attribute units coordinates event
+nwseResizeCursor =
+    Attributes.Cursor Attributes.NwseResizeCursor
+
+
+{-| -}
+zoomInCursor : Attribute units coordinates event
+zoomInCursor =
+    Attributes.Cursor Attributes.ZoomInCursor
+
+
+{-| -}
+zoomOutCursor : Attribute units coordinates event
+zoomOutCursor =
+    Attributes.Cursor Attributes.ZoomOutCursor
 
 
 leftButton : Int

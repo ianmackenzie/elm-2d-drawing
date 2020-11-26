@@ -1,21 +1,21 @@
 module Drawing2d.Attributes exposing
     ( Attribute(..)
     , AttributeValues
+    , Cursor(..)
     , Event(..)
     , Fill(..)
     , LineCap(..)
     , LineJoin(..)
     , Stroke(..)
-    , addCurveAttributes
-    , addEventHandlers
-    , addGroupAttributes
-    , addRegionAttributes
-    , addShadowFilter
-    , addTextAttributes
     , assignAttributes
     , collectAttributeValues
+    , curveAttributes
     , dashPatternSvgAttribute
     , emptyAttributeValues
+    , groupAttributes
+    , imageAttributes
+    , regionAttributes
+    , textAttributes
     )
 
 import Dict exposing (Dict)
@@ -63,6 +63,45 @@ type Event units coordinates msg
     = Event (Rectangle2d units coordinates -> msg)
 
 
+type Cursor
+    = AutoCursor
+    | DefaultCursor
+    | NoCursor
+    | ContextMenuCursor
+    | HelpCursor
+    | PointerCursor
+    | ProgressCursor
+    | WaitCursor
+    | CellCursor
+    | CrosshairCursor
+    | TextCursor
+    | VerticalTextCursor
+    | AliasCursor
+    | CopyCursor
+    | MoveCursor
+    | NoDropCursor
+    | NotAllowedCursor
+    | GrabCursor
+    | GrabbingCursor
+    | AllScrollCursor
+    | ColResizeCursor
+    | RowResizeCursor
+    | NResizeCursor
+    | EResizeCursor
+    | SResizeCursor
+    | WResizeCursor
+    | NeResizeCursor
+    | NwResizeCursor
+    | SeResizeCursor
+    | SwResizeCursor
+    | EwResizeCursor
+    | NsResizeCursor
+    | NeswResizeCursor
+    | NwseResizeCursor
+    | ZoomInCursor
+    | ZoomOutCursor
+
+
 type Attribute units coordinates event
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
@@ -76,6 +115,7 @@ type Attribute units coordinates event
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
+    | Cursor Cursor -- Svg.Attributes.cursor
     | EventHandlers (List ( String, Decoder event ))
 
 
@@ -92,6 +132,7 @@ type alias AttributeValues units coordinates event =
     , textColor : Maybe String
     , fontFamily : Maybe String
     , textAnchor : Maybe { x : String, y : String }
+    , cursor : Maybe Cursor
     , eventHandlers : Dict String (List (Decoder event))
     }
 
@@ -110,6 +151,7 @@ emptyAttributeValues =
     , textColor = Nothing
     , fontFamily = Nothing
     , textAnchor = Nothing
+    , cursor = Nothing
     , eventHandlers = Dict.empty
     }
 
@@ -155,6 +197,9 @@ setAttribute attribute attributeValues =
 
         TextAnchor position ->
             { attributeValues | textAnchor = Just position }
+
+        Cursor cursor ->
+            { attributeValues | cursor = Just cursor }
 
         EventHandlers eventHandlers ->
             List.foldl registerEventHandler attributeValues eventHandlers
@@ -392,59 +437,191 @@ addTextAnchor attributeValues svgAttributes =
                 :: svgAttributes
 
 
-addCurveAttributes :
+addCursor :
     AttributeValues units coordinates event
     -> List (Svg.Attribute event)
     -> List (Svg.Attribute event)
-addCurveAttributes attributeValues svgAttributes =
+addCursor attributeValues svgAttributes =
+    case attributeValues.cursor of
+        Nothing ->
+            svgAttributes
+
+        Just cursor ->
+            let
+                cursorAttribute =
+                    Svg.Attributes.cursor <|
+                        case cursor of
+                            AutoCursor ->
+                                "auto"
+
+                            DefaultCursor ->
+                                "default"
+
+                            NoCursor ->
+                                "none"
+
+                            ContextMenuCursor ->
+                                "context-menu"
+
+                            HelpCursor ->
+                                "help"
+
+                            PointerCursor ->
+                                "pointer"
+
+                            ProgressCursor ->
+                                "progress"
+
+                            WaitCursor ->
+                                "wait"
+
+                            CellCursor ->
+                                "cell"
+
+                            CrosshairCursor ->
+                                "crosshair"
+
+                            TextCursor ->
+                                "text"
+
+                            VerticalTextCursor ->
+                                "vertical-text"
+
+                            AliasCursor ->
+                                "alias"
+
+                            CopyCursor ->
+                                "copy"
+
+                            MoveCursor ->
+                                "move"
+
+                            NoDropCursor ->
+                                "no-drop"
+
+                            NotAllowedCursor ->
+                                "not-allowed"
+
+                            GrabCursor ->
+                                "grab"
+
+                            GrabbingCursor ->
+                                "grabbing"
+
+                            AllScrollCursor ->
+                                "all-scroll"
+
+                            ColResizeCursor ->
+                                "col-resize"
+
+                            RowResizeCursor ->
+                                "row-resize"
+
+                            NResizeCursor ->
+                                "n-resize"
+
+                            EResizeCursor ->
+                                "e-resize"
+
+                            SResizeCursor ->
+                                "s-resize"
+
+                            WResizeCursor ->
+                                "w-resize"
+
+                            NeResizeCursor ->
+                                "ne-resize"
+
+                            NwResizeCursor ->
+                                "nw-resize"
+
+                            SeResizeCursor ->
+                                "se-resize"
+
+                            SwResizeCursor ->
+                                "sw-resize"
+
+                            EwResizeCursor ->
+                                "ew-resize"
+
+                            NsResizeCursor ->
+                                "ns-resize"
+
+                            NeswResizeCursor ->
+                                "nesw-resize"
+
+                            NwseResizeCursor ->
+                                "nwse-resize"
+
+                            ZoomInCursor ->
+                                "zoom-in"
+
+                            ZoomOutCursor ->
+                                "zoom-out"
+            in
+            cursorAttribute :: svgAttributes
+
+
+addGenericAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addGenericAttributes attributeValues svgAttributes =
+    svgAttributes
+        |> addShadowFilter attributeValues
+        |> addCursor attributeValues
+        |> addEventHandlers attributeValues
+
+
+addStrokeAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addStrokeAttributes attributeValues svgAttributes =
     svgAttributes
         |> addStrokeStyle attributeValues
         |> addStrokeWidth attributeValues
         |> addStrokeLineJoin attributeValues
         |> addStrokeLineCap attributeValues
         |> addStrokeDashPattern attributeValues
-        |> addShadowFilter attributeValues
-        |> addEventHandlers attributeValues
 
 
-addRegionAttributes :
+curveAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+curveAttributes attributeValues =
+    [ noFill ]
+        |> addGenericAttributes attributeValues
+        |> addStrokeAttributes attributeValues
+
+
+regionAttributes :
     Bool
     -> AttributeValues units coordinates event
     -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
-addRegionAttributes bordersVisible attributeValues svgAttributes =
+regionAttributes bordersVisible attributeValues =
     let
         commonAttributes =
-            svgAttributes
+            []
+                |> addGenericAttributes attributeValues
                 |> addFillStyle attributeValues
-                |> addShadowFilter attributeValues
-                |> addEventHandlers attributeValues
     in
     if bordersVisible then
-        commonAttributes |> addCurveAttributes attributeValues
+        addStrokeAttributes attributeValues commonAttributes
 
     else
         noStroke :: commonAttributes
 
 
-addGroupAttributes :
+groupAttributes :
     AttributeValues units coordinates event
     -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
-addGroupAttributes attributeValues svgAttributes =
-    svgAttributes
+groupAttributes attributeValues =
+    []
+        |> addGenericAttributes attributeValues
+        |> addStrokeAttributes attributeValues
         |> addFillStyle attributeValues
-        |> addFontFamily attributeValues
-        |> addFontSize attributeValues
-        |> addStrokeStyle attributeValues
-        |> addStrokeWidth attributeValues
-        |> addStrokeLineJoin attributeValues
-        |> addStrokeLineCap attributeValues
-        |> addStrokeDashPattern attributeValues
-        |> addTextAnchor attributeValues
-        |> addTextColor attributeValues
-        |> addShadowFilter attributeValues
-        |> addEventHandlers attributeValues
+        |> addTextAttributes attributeValues
 
 
 addTextAttributes :
@@ -457,8 +634,25 @@ addTextAttributes attributeValues svgAttributes =
         |> addFontSize attributeValues
         |> addTextAnchor attributeValues
         |> addTextColor attributeValues
-        |> addShadowFilter attributeValues
-        |> addEventHandlers attributeValues
+
+
+currentColorFill : Svg.Attribute event
+currentColorFill =
+    Svg.Attributes.fill "currentColor"
+
+
+textAttributes :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+textAttributes attributeValues =
+    [ currentColorFill, noStroke ]
+        |> addGenericAttributes attributeValues
+        |> addTextAttributes attributeValues
+
+
+imageAttributes : AttributeValues units coordinates event -> List (Svg.Attribute event)
+imageAttributes attributeValues =
+    addGenericAttributes attributeValues []
 
 
 addEventHandlers :
