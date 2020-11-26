@@ -100,6 +100,7 @@ type Cursor
     | NwseResizeCursor
     | ZoomInCursor
     | ZoomOutCursor
+    | ImageCursor String
 
 
 type Attribute units coordinates event
@@ -558,6 +559,9 @@ addCursor attributeValues svgAttributes =
 
                             ZoomOutCursor ->
                                 "zoom-out"
+
+                            ImageCursor url ->
+                                "url(" ++ url ++ "), auto"
             in
             cursorAttribute :: svgAttributes
 

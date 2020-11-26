@@ -21,6 +21,7 @@ module Drawing2d exposing
     , allScrollCursor, colResizeCursor, rowResizeCursor
     , nResizeCursor, eResizeCursor, sResizeCursor, wResizeCursor, neResizeCursor, nwResizeCursor, seResizeCursor, swResizeCursor, ewResizeCursor, nsResizeCursor, neswResizeCursor, nwseResizeCursor
     , zoomInCursor, zoomOutCursor
+    , imageCursor, bestCursorEver
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
     , onTouchStart
@@ -121,6 +122,8 @@ module Drawing2d exposing
 @docs nResizeCursor, eResizeCursor, sResizeCursor, wResizeCursor, neResizeCursor, nwResizeCursor, seResizeCursor, swResizeCursor, ewResizeCursor, nsResizeCursor, neswResizeCursor, nwseResizeCursor
 
 @docs zoomInCursor, zoomOutCursor
+
+@docs imageCursor, bestCursorEver
 
 
 # Events
@@ -1705,6 +1708,20 @@ zoomInCursor =
 zoomOutCursor : Attribute units coordinates event
 zoomOutCursor =
     Attributes.Cursor Attributes.ZoomOutCursor
+
+
+{-| A custom cursor referring to an image by URL.
+-}
+imageCursor : String -> Attribute units coordinates event
+imageCursor url =
+    Attributes.Cursor (Attributes.ImageCursor url)
+
+
+{-| The best cursor ever.
+-}
+bestCursorEver : Attribute units coordinates event
+bestCursorEver =
+    imageCursor "https://ianmackenzie.github.io/elm-2d-drawing/cursors/cursor-dino.png"
 
 
 leftButton : Int
