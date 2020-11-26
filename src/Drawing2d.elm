@@ -479,8 +479,8 @@ custom given =
             , noFill
             , strokedBorder
             , fontSize given.fontSize
-            , textColor Color.black
             , textAnchor bottomLeft
+            , blackText
             ]
 
         rootAttributeValues =
