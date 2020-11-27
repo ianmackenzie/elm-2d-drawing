@@ -21,7 +21,8 @@ module Drawing2d exposing
     , allScrollCursor, colResizeCursor, rowResizeCursor
     , nResizeCursor, eResizeCursor, sResizeCursor, wResizeCursor, neResizeCursor, nwResizeCursor, seResizeCursor, swResizeCursor, ewResizeCursor, nsResizeCursor, neswResizeCursor, nwseResizeCursor
     , zoomInCursor, zoomOutCursor
-    , imageCursor, bestCursorEver
+    , cursor
+    , bestCursorEver
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
     , onTouchStart
@@ -123,7 +124,9 @@ module Drawing2d exposing
 
 @docs zoomInCursor, zoomOutCursor
 
-@docs imageCursor, bestCursorEver
+@docs cursor
+
+@docs bestCursorEver
 
 
 # Events
@@ -279,6 +282,7 @@ import Drawing2d.Attributes as Attributes
         , LineJoin(..)
         , Stroke(..)
         )
+import Drawing2d.Cursor as Cursor exposing (Cursor)
 import Drawing2d.Decode as Decode
 import Drawing2d.Gradient as Gradient
 import Drawing2d.InteractionPoint as InteractionPoint
@@ -1710,18 +1714,21 @@ zoomOutCursor =
     Attributes.Cursor Attributes.ZoomOutCursor
 
 
-{-| A custom cursor referring to an image by URL.
--}
-imageCursor : String -> Attribute units coordinates event
-imageCursor url =
-    Attributes.Cursor (Attributes.ImageCursor url)
+cursor : Cursor -> Attribute units coordinates event
+cursor givenCursor =
+    Attributes.Cursor givenCursor
 
 
 {-| The best cursor ever.
 -}
 bestCursorEver : Attribute units coordinates event
 bestCursorEver =
-    imageCursor "https://ianmackenzie.github.io/elm-2d-drawing/cursors/cursor-dino.png"
+    cursor <|
+        Cursor.image
+            { url = "https://ianmackenzie.github.io/elm-2d-drawing/cursors/cursor-dino.png"
+            , hotspot = Point2d.pixels 8 8
+            , fallback = Cursor.crosshair
+            }
 
 
 leftButton : Int

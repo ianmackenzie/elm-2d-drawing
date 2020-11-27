@@ -100,7 +100,7 @@ type Cursor
     | NwseResizeCursor
     | ZoomInCursor
     | ZoomOutCursor
-    | ImageCursor String
+    | ImageCursor String Float Float Cursor
 
 
 type Attribute units coordinates event
@@ -450,120 +450,132 @@ addCursor attributeValues svgAttributes =
         Just cursor ->
             let
                 cursorAttribute =
-                    Svg.Attributes.cursor <|
-                        case cursor of
-                            AutoCursor ->
-                                "auto"
-
-                            DefaultCursor ->
-                                "default"
-
-                            NoCursor ->
-                                "none"
-
-                            ContextMenuCursor ->
-                                "context-menu"
-
-                            HelpCursor ->
-                                "help"
-
-                            PointerCursor ->
-                                "pointer"
-
-                            ProgressCursor ->
-                                "progress"
-
-                            WaitCursor ->
-                                "wait"
-
-                            CellCursor ->
-                                "cell"
-
-                            CrosshairCursor ->
-                                "crosshair"
-
-                            TextCursor ->
-                                "text"
-
-                            VerticalTextCursor ->
-                                "vertical-text"
-
-                            AliasCursor ->
-                                "alias"
-
-                            CopyCursor ->
-                                "copy"
-
-                            MoveCursor ->
-                                "move"
-
-                            NoDropCursor ->
-                                "no-drop"
-
-                            NotAllowedCursor ->
-                                "not-allowed"
-
-                            GrabCursor ->
-                                "grab"
-
-                            GrabbingCursor ->
-                                "grabbing"
-
-                            AllScrollCursor ->
-                                "all-scroll"
-
-                            ColResizeCursor ->
-                                "col-resize"
-
-                            RowResizeCursor ->
-                                "row-resize"
-
-                            NResizeCursor ->
-                                "n-resize"
-
-                            EResizeCursor ->
-                                "e-resize"
-
-                            SResizeCursor ->
-                                "s-resize"
-
-                            WResizeCursor ->
-                                "w-resize"
-
-                            NeResizeCursor ->
-                                "ne-resize"
-
-                            NwResizeCursor ->
-                                "nw-resize"
-
-                            SeResizeCursor ->
-                                "se-resize"
-
-                            SwResizeCursor ->
-                                "sw-resize"
-
-                            EwResizeCursor ->
-                                "ew-resize"
-
-                            NsResizeCursor ->
-                                "ns-resize"
-
-                            NeswResizeCursor ->
-                                "nesw-resize"
-
-                            NwseResizeCursor ->
-                                "nwse-resize"
-
-                            ZoomInCursor ->
-                                "zoom-in"
-
-                            ZoomOutCursor ->
-                                "zoom-out"
-
-                            ImageCursor url ->
-                                "url(" ++ url ++ "), auto"
+                    Svg.Attributes.cursor (cursorString cursor)
             in
             cursorAttribute :: svgAttributes
+
+
+cursorString : Cursor -> String
+cursorString cursor =
+    case cursor of
+        AutoCursor ->
+            "auto"
+
+        DefaultCursor ->
+            "default"
+
+        NoCursor ->
+            "none"
+
+        ContextMenuCursor ->
+            "context-menu"
+
+        HelpCursor ->
+            "help"
+
+        PointerCursor ->
+            "pointer"
+
+        ProgressCursor ->
+            "progress"
+
+        WaitCursor ->
+            "wait"
+
+        CellCursor ->
+            "cell"
+
+        CrosshairCursor ->
+            "crosshair"
+
+        TextCursor ->
+            "text"
+
+        VerticalTextCursor ->
+            "vertical-text"
+
+        AliasCursor ->
+            "alias"
+
+        CopyCursor ->
+            "copy"
+
+        MoveCursor ->
+            "move"
+
+        NoDropCursor ->
+            "no-drop"
+
+        NotAllowedCursor ->
+            "not-allowed"
+
+        GrabCursor ->
+            "grab"
+
+        GrabbingCursor ->
+            "grabbing"
+
+        AllScrollCursor ->
+            "all-scroll"
+
+        ColResizeCursor ->
+            "col-resize"
+
+        RowResizeCursor ->
+            "row-resize"
+
+        NResizeCursor ->
+            "n-resize"
+
+        EResizeCursor ->
+            "e-resize"
+
+        SResizeCursor ->
+            "s-resize"
+
+        WResizeCursor ->
+            "w-resize"
+
+        NeResizeCursor ->
+            "ne-resize"
+
+        NwResizeCursor ->
+            "nw-resize"
+
+        SeResizeCursor ->
+            "se-resize"
+
+        SwResizeCursor ->
+            "sw-resize"
+
+        EwResizeCursor ->
+            "ew-resize"
+
+        NsResizeCursor ->
+            "ns-resize"
+
+        NeswResizeCursor ->
+            "nesw-resize"
+
+        NwseResizeCursor ->
+            "nwse-resize"
+
+        ZoomInCursor ->
+            "zoom-in"
+
+        ZoomOutCursor ->
+            "zoom-out"
+
+        ImageCursor url x y fallback ->
+            "url"
+                ++ "("
+                ++ url
+                ++ ") "
+                ++ String.fromFloat x
+                ++ " "
+                ++ String.fromFloat y
+                ++ ", "
+                ++ cursorString fallback
 
 
 addGenericAttributes :
