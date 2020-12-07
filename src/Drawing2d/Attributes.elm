@@ -106,6 +106,7 @@ type Cursor
 type Attribute units coordinates event
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
+    | Opacity Float
     | FontSize Float
     | StrokeWidth Float
     | StrokeLineJoin LineJoin
@@ -123,6 +124,7 @@ type Attribute units coordinates event
 type alias AttributeValues units coordinates event =
     { fillStyle : Maybe (Fill units coordinates)
     , strokeStyle : Maybe (Stroke units coordinates)
+    , opacity : Maybe Float
     , fontSize : Maybe Float
     , strokeWidth : Maybe Float
     , strokeLineJoin : Maybe LineJoin
@@ -142,6 +144,7 @@ emptyAttributeValues : AttributeValues units coordinates event
 emptyAttributeValues =
     { fillStyle = Nothing
     , strokeStyle = Nothing
+    , opacity = Nothing
     , fontSize = Nothing
     , strokeWidth = Nothing
     , strokeLineJoin = Nothing
@@ -168,6 +171,9 @@ setAttribute attribute attributeValues =
 
         StrokeStyle stroke ->
             { attributeValues | strokeStyle = Just stroke }
+
+        Opacity opacity ->
+            { attributeValues | opacity = Just opacity }
 
         FontSize size ->
             { attributeValues | fontSize = Just size }
@@ -281,6 +287,19 @@ addStrokeStyle attributeValues svgAttributes =
 
         Just (StrokeGradient gradient) ->
             Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes
+
+
+addOpacity :
+    AttributeValues units coordinates event
+    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute event)
+addOpacity attributeValues svgAttributes =
+    case attributeValues.opacity of
+        Nothing ->
+            svgAttributes
+
+        Just opacity ->
+            Svg.Attributes.opacity (String.fromFloat opacity) :: svgAttributes
 
 
 addFontSize :
@@ -586,6 +605,7 @@ addGenericAttributes attributeValues svgAttributes =
     svgAttributes
         |> addShadowFilter attributeValues
         |> addCursor attributeValues
+        |> addOpacity attributeValues
         |> addEventHandlers attributeValues
 
 

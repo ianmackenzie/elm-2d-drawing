@@ -10,6 +10,7 @@ module Drawing2d exposing
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
     , miterStrokeJoins, roundStrokeJoins, bevelStrokeJoins
     , noStrokeCaps, roundStrokeCaps, squareStrokeCaps
+    , opacity
     , dropShadow
     , noBorder, strokedBorder
     , fontSize, fontFamily, blackText, whiteText, textColor
@@ -86,6 +87,11 @@ module Drawing2d exposing
 ### Stroke caps
 
 @docs noStrokeCaps, roundStrokeCaps, squareStrokeCaps
+
+
+## Opacity
+
+@docs opacity
 
 
 ## Shadows
@@ -1392,6 +1398,11 @@ roundStrokeCaps =
 squareStrokeCaps : Attribute units coordinates event
 squareStrokeCaps =
     StrokeLineCap SquareCap
+
+
+opacity : Float -> Attribute units coordinates event
+opacity value =
+    Opacity value
 
 
 dropShadow :
