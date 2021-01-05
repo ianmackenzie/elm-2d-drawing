@@ -54,7 +54,7 @@ referencePoint startEvent viewBox container =
         centerPointClientX =
             container.left + container.width / 2
 
-        -- clientY coordinate o fthe center point of the container
+        -- clientY coordinate of the center point of the container
         centerPointClientY =
             container.top + container.height / 2
 
