@@ -22,10 +22,6 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
-type alias DrawingEvent =
-    Drawing2d.Event Pixels DrawingCoordinates Msg
-
-
 type alias Line =
     { index : Int
     , color : Color
@@ -275,7 +271,7 @@ bullet text =
     Html.li [] [ Html.text text ]
 
 
-drawLine : Line -> Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent
+drawLine : Line -> Drawing2d.Entity Pixels DrawingCoordinates Msg
 drawLine line =
     Drawing2d.polyline
         [ Drawing2d.strokeColor line.color, Drawing2d.strokeWidth line.width ]

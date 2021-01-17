@@ -22,10 +22,6 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
-type alias DrawingEvent =
-    Drawing2d.Event Pixels DrawingCoordinates Msg
-
-
 type alias TouchPoint =
     { color : Color
     , position : Point2d Pixels DrawingCoordinates
@@ -162,7 +158,7 @@ bullet text =
     Html.li [] [ Html.text text ]
 
 
-drawPoint : TouchPoint -> Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent
+drawPoint : TouchPoint -> Drawing2d.Entity Pixels DrawingCoordinates Msg
 drawPoint point =
     let
         { x, y } =

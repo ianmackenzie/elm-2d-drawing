@@ -20,14 +20,14 @@ import Point2d exposing (Point2d)
 import Quantity
 
 
-type alias TouchInteraction drawingUnits drawingCoordinates =
-    Protected.TouchInteraction drawingUnits drawingCoordinates
+type alias TouchInteraction units coordinates =
+    Protected.TouchInteraction units coordinates
 
 
 decodeChange :
-    Decoder (Dict Int (Point2d drawingUnits drawingCoordinates) -> msg)
-    -> TouchInteraction drawingUnits drawingCoordinates
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    Decoder (Dict Int (Point2d units coordinates) -> msg)
+    -> TouchInteraction units coordinates
+    -> Attribute units coordinates msg
 decodeChange decoder touchInteraction =
     let
         touchChangeDecoder =
@@ -42,18 +42,18 @@ decodeChange decoder touchInteraction =
 
 
 decodeTouchChange :
-    Decoder (Dict Int (Point2d drawingUnits drawingCoordinates) -> msg)
-    -> TouchInteraction drawingUnits drawingCoordinates
-    -> Decoder (Event drawingUnits drawingCoordinates msg)
+    Decoder (Dict Int (Point2d units coordinates) -> msg)
+    -> TouchInteraction units coordinates
+    -> Decoder (Event msg)
 decodeTouchChange givenDecoder touchInteraction =
     Decode.map2 (handleTouchChange touchInteraction) TouchChangeEvent.decoder givenDecoder
 
 
 handleTouchChange :
-    TouchInteraction drawingUnits drawingCoordinates
+    TouchInteraction units coordinates
     -> TouchChangeEvent
-    -> (Dict Int (Point2d drawingUnits drawingCoordinates) -> msg)
-    -> Event drawingUnits drawingCoordinates msg
+    -> (Dict Int (Point2d units coordinates) -> msg)
+    -> Event msg
 handleTouchChange touchInteraction touchChangeEvent userCallback =
     Event
         (\viewBox ->
@@ -69,8 +69,8 @@ handleTouchChange touchInteraction touchChangeEvent userCallback =
 
 decodeEnd :
     Decoder (Duration -> msg)
-    -> TouchInteraction drawingUnits drawingCoordinates
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    -> TouchInteraction units coordinates
+    -> Attribute units coordinates msg
 decodeEnd decoder touchInteraction =
     let
         touchEndDecoder =
@@ -84,45 +84,45 @@ decodeEnd decoder touchInteraction =
 
 decodeTouchEnd :
     Decoder (Duration -> msg)
-    -> TouchInteraction drawingUnits drawingCoordinates
-    -> Decoder (Event drawingUnits drawingCoordinates msg)
+    -> TouchInteraction units coordinates
+    -> Decoder (Event msg)
 decodeTouchEnd givenDecoder touchInteraction =
     Decode.map2 (handleTouchEnd touchInteraction) TouchEndEvent.decoder givenDecoder
 
 
 handleTouchEnd :
-    TouchInteraction drawingUnits drawingCoordinates
+    TouchInteraction units coordinates
     -> TouchEndEvent
     -> (Duration -> msg)
-    -> Event drawingUnits drawingCoordinates msg
+    -> Event msg
 handleTouchEnd touchInteraction touchEndEvent userCallback =
     Event (always (userCallback (duration touchInteraction touchEndEvent)))
 
 
 onChange :
-    (Dict Int (Point2d drawingUnits drawingCoordinates) -> msg)
-    -> TouchInteraction drawingUnits drawingCoordinates
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    (Dict Int (Point2d units coordinates) -> msg)
+    -> TouchInteraction units coordinates
+    -> Attribute units coordinates msg
 onChange callback touchInteraction =
     decodeChange (Decode.succeed callback) touchInteraction
 
 
 onEnd :
     (Duration -> msg)
-    -> TouchInteraction drawingUnits drawingCoordinates
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    -> TouchInteraction units coordinates
+    -> Attribute units coordinates msg
 onEnd callback touchInteraction =
     decodeEnd (Decode.succeed callback) touchInteraction
 
 
 updatedPoint :
-    TouchInteraction drawingUnits drawingCoordinates
+    TouchInteraction units coordinates
     -> { a | identifier : Int, pageX : Float, pageY : Float }
-    -> ( Int, Point2d drawingUnits drawingCoordinates )
+    -> ( Int, Point2d units coordinates )
 updatedPoint (TouchInteraction interaction) touch =
     ( touch.identifier, InteractionPoint.updatedPosition interaction.referencePoint touch )
 
 
-duration : TouchInteraction drawingUnits drawingCoordinates -> TouchEndEvent -> Duration
+duration : TouchInteraction units coordinates -> TouchEndEvent -> Duration
 duration (TouchInteraction interaction) touchEndEvent =
     touchEndEvent.timeStamp |> Quantity.minus interaction.startTimeStamp

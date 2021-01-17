@@ -18,10 +18,6 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
-type alias DrawingEvent =
-    Drawing2d.Event Pixels DrawingCoordinates Msg
-
-
 type alias Model =
     { points : List (Point2d Pixels DrawingCoordinates)
     }
@@ -53,7 +49,7 @@ viewBox =
         (Point2d.pixels 100 100)
 
 
-scene : List (Point2d Pixels DrawingCoordinates) -> List (Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent)
+scene : List (Point2d Pixels DrawingCoordinates) -> List (Drawing2d.Entity Pixels DrawingCoordinates Msg)
 scene points =
     [ Drawing2d.circle [] (Circle2d.atOrigin (Pixels.float 90))
     , Drawing2d.text [ Drawing2d.anchorAtCenter ] Point2d.origin "Text"
@@ -73,7 +69,7 @@ background =
             ]
 
 
-onClick : Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent
+onClick : Drawing2d.Attribute Pixels DrawingCoordinates Msg
 onClick =
     Drawing2d.onLeftClick NewPoint
 

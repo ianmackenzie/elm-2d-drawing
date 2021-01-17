@@ -24,10 +24,6 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
-type alias DrawingEvent =
-    Drawing2d.Event Pixels DrawingCoordinates Msg
-
-
 type LineColor
     = Blue
     | Green
@@ -69,14 +65,14 @@ toColor lineColor =
 
 
 drawPolyline :
-    List (Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent)
+    List (Drawing2d.Attribute Pixels DrawingCoordinates Msg)
     -> ( LineColor, Polyline2d Pixels DrawingCoordinates )
-    -> Drawing2d.Entity Pixels DrawingCoordinates DrawingEvent
+    -> Drawing2d.Entity Pixels DrawingCoordinates Msg
 drawPolyline attributes ( lineColor, polyline ) =
     Drawing2d.polyline (Drawing2d.strokeColor (toColor lineColor) :: attributes) polyline
 
 
-rightClickHandler : Int -> Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent
+rightClickHandler : Int -> Drawing2d.Attribute Pixels DrawingCoordinates Msg
 rightClickHandler id =
     Drawing2d.onRightClick (always (LineRightClick id))
 

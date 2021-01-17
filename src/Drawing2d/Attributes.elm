@@ -2,6 +2,8 @@ module Drawing2d.Attributes exposing
     ( Attribute(..)
     , AttributeValues
     , Cursor(..)
+    , DrawingCoordinates
+    , DrawingUnits
     , Event(..)
     , Fill(..)
     , LineCap(..)
@@ -59,8 +61,16 @@ type LineCap
     | RoundCap
 
 
-type Event units coordinates msg
-    = Event (Rectangle2d units coordinates -> msg)
+type DrawingUnits
+    = DrawingUnits
+
+
+type DrawingCoordinates
+    = DrawingCoordinates
+
+
+type Event msg
+    = Event (Rectangle2d DrawingUnits DrawingCoordinates -> msg)
 
 
 type Cursor
@@ -103,7 +113,7 @@ type Cursor
     | ImageCursor String Float Float Cursor
 
 
-type Attribute units coordinates event
+type Attribute units coordinates msg
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
     | Opacity Float
@@ -118,10 +128,10 @@ type Attribute units coordinates event
     | FontFamily String -- Svg.Attributes.fontFamily
     | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
     | Cursor Cursor -- Svg.Attributes.cursor
-    | EventHandlers (List ( String, Decoder event ))
+    | EventHandlers (List ( String, Decoder (Event msg) ))
 
 
-type alias AttributeValues units coordinates event =
+type alias AttributeValues units coordinates msg =
     { fillStyle : Maybe (Fill units coordinates)
     , strokeStyle : Maybe (Stroke units coordinates)
     , opacity : Maybe Float
@@ -136,11 +146,11 @@ type alias AttributeValues units coordinates event =
     , fontFamily : Maybe String
     , textAnchor : Maybe { x : String, y : String }
     , cursor : Maybe Cursor
-    , eventHandlers : Dict String (List (Decoder event))
+    , eventHandlers : Dict String (List (Decoder (Event msg)))
     }
 
 
-emptyAttributeValues : AttributeValues units coordinates event
+emptyAttributeValues : AttributeValues units coordinates msg
 emptyAttributeValues =
     { fillStyle = Nothing
     , strokeStyle = Nothing
@@ -161,9 +171,9 @@ emptyAttributeValues =
 
 
 setAttribute :
-    Attribute units coordinates event
-    -> AttributeValues units coordinates event
-    -> AttributeValues units coordinates event
+    Attribute units coordinates msg
+    -> AttributeValues units coordinates msg
+    -> AttributeValues units coordinates msg
 setAttribute attribute attributeValues =
     case attribute of
         FillStyle fill ->
@@ -212,7 +222,7 @@ setAttribute attribute attributeValues =
             List.foldl registerEventHandler attributeValues eventHandlers
 
 
-registerEventHandler : ( String, Decoder event ) -> AttributeValues units coordinates event -> AttributeValues units coordinates event
+registerEventHandler : ( String, Decoder (Event msg) ) -> AttributeValues units coordinates msg -> AttributeValues units coordinates msg
 registerEventHandler ( eventName, handler ) attributeValues =
     { attributeValues
         | eventHandlers =
@@ -230,34 +240,34 @@ registerEventHandler ( eventName, handler ) attributeValues =
 
 
 collectAttributeValues :
-    List (Attribute units coordinates event)
-    -> AttributeValues units coordinates event
+    List (Attribute units coordinates msg)
+    -> AttributeValues units coordinates msg
 collectAttributeValues attributeList =
     assignAttributes attributeList emptyAttributeValues
 
 
 assignAttributes :
-    List (Attribute units coordinates event)
-    -> AttributeValues units coordinates event
-    -> AttributeValues units coordinates event
+    List (Attribute units coordinates msg)
+    -> AttributeValues units coordinates msg
+    -> AttributeValues units coordinates msg
 assignAttributes attributeList attributeValues =
     List.foldr setAttribute attributeValues attributeList
 
 
-noStroke : Svg.Attribute event
+noStroke : Svg.Attribute (Event msg)
 noStroke =
     Svg.Attributes.stroke "none"
 
 
-noFill : Svg.Attribute event
+noFill : Svg.Attribute (Event msg)
 noFill =
     Svg.Attributes.fill "none"
 
 
 addFillStyle :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addFillStyle attributeValues svgAttributes =
     case attributeValues.fillStyle of
         Nothing ->
@@ -274,9 +284,9 @@ addFillStyle attributeValues svgAttributes =
 
 
 addStrokeStyle :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addStrokeStyle attributeValues svgAttributes =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -290,9 +300,9 @@ addStrokeStyle attributeValues svgAttributes =
 
 
 addOpacity :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addOpacity attributeValues svgAttributes =
     case attributeValues.opacity of
         Nothing ->
@@ -303,9 +313,9 @@ addOpacity attributeValues svgAttributes =
 
 
 addFontSize :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addFontSize attributeValues svgAttributes =
     case attributeValues.fontSize of
         Nothing ->
@@ -316,9 +326,9 @@ addFontSize attributeValues svgAttributes =
 
 
 addStrokeWidth :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addStrokeWidth attributeValues svgAttributes =
     case attributeValues.strokeWidth of
         Nothing ->
@@ -329,9 +339,9 @@ addStrokeWidth attributeValues svgAttributes =
 
 
 addShadowFilter :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addShadowFilter attributeValues svgAttributes =
     case attributeValues.dropShadow of
         Nothing ->
@@ -368,9 +378,9 @@ lineCapString lineJoin =
 
 
 addStrokeLineJoin :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addStrokeLineJoin attributeValues svgAttributes =
     case attributeValues.strokeLineJoin of
         Nothing ->
@@ -381,9 +391,9 @@ addStrokeLineJoin attributeValues svgAttributes =
 
 
 addStrokeLineCap :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addStrokeLineCap attributeValues svgAttributes =
     case attributeValues.strokeLineCap of
         Nothing ->
@@ -394,9 +404,9 @@ addStrokeLineCap attributeValues svgAttributes =
 
 
 addStrokeDashPattern :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addStrokeDashPattern attributeValues svgAttributes =
     case attributeValues.strokeDashPattern of
         Nothing ->
@@ -406,7 +416,7 @@ addStrokeDashPattern attributeValues svgAttributes =
             dashPatternSvgAttribute dashPattern :: svgAttributes
 
 
-dashPatternSvgAttribute : List Float -> Svg.Attribute event
+dashPatternSvgAttribute : List Float -> Svg.Attribute (Event msg)
 dashPatternSvgAttribute dashPattern =
     case dashPattern of
         [] ->
@@ -417,9 +427,9 @@ dashPatternSvgAttribute dashPattern =
 
 
 addTextColor :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addTextColor attributeValues svgAttributes =
     case attributeValues.textColor of
         Nothing ->
@@ -430,9 +440,9 @@ addTextColor attributeValues svgAttributes =
 
 
 addFontFamily :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addFontFamily attributeValues svgAttributes =
     case attributeValues.fontFamily of
         Nothing ->
@@ -443,9 +453,9 @@ addFontFamily attributeValues svgAttributes =
 
 
 addTextAnchor :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addTextAnchor attributeValues svgAttributes =
     case attributeValues.textAnchor of
         Nothing ->
@@ -458,9 +468,9 @@ addTextAnchor attributeValues svgAttributes =
 
 
 addCursor :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addCursor attributeValues svgAttributes =
     case attributeValues.cursor of
         Nothing ->
@@ -598,9 +608,9 @@ cursorString cursor =
 
 
 addGenericAttributes :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addGenericAttributes attributeValues svgAttributes =
     svgAttributes
         |> addShadowFilter attributeValues
@@ -610,9 +620,9 @@ addGenericAttributes attributeValues svgAttributes =
 
 
 addStrokeAttributes :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addStrokeAttributes attributeValues svgAttributes =
     svgAttributes
         |> addStrokeStyle attributeValues
@@ -623,8 +633,8 @@ addStrokeAttributes attributeValues svgAttributes =
 
 
 curveAttributes :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
 curveAttributes attributeValues =
     [ noFill ]
         |> addGenericAttributes attributeValues
@@ -633,8 +643,8 @@ curveAttributes attributeValues =
 
 regionAttributes :
     Bool
-    -> AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
+    -> AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
 regionAttributes bordersVisible attributeValues =
     let
         commonAttributes =
@@ -650,8 +660,8 @@ regionAttributes bordersVisible attributeValues =
 
 
 groupAttributes :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
 groupAttributes attributeValues =
     []
         |> addGenericAttributes attributeValues
@@ -661,9 +671,9 @@ groupAttributes attributeValues =
 
 
 addTextAttributes :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addTextAttributes attributeValues svgAttributes =
     svgAttributes
         |> addFontFamily attributeValues
@@ -672,43 +682,47 @@ addTextAttributes attributeValues svgAttributes =
         |> addTextColor attributeValues
 
 
-currentColorFill : Svg.Attribute event
+currentColorFill : Svg.Attribute (Event msg)
 currentColorFill =
     Svg.Attributes.fill "currentColor"
 
 
 textAttributes :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
 textAttributes attributeValues =
     [ currentColorFill, noStroke ]
         |> addGenericAttributes attributeValues
         |> addTextAttributes attributeValues
 
 
-imageAttributes : AttributeValues units coordinates event -> List (Svg.Attribute event)
+imageAttributes : AttributeValues units coordinates msg -> List (Svg.Attribute (Event msg))
 imageAttributes attributeValues =
     addGenericAttributes attributeValues []
 
 
 addEventHandlers :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addEventHandlers attributeValues svgAttributes =
     Dict.foldl addEventHandler svgAttributes attributeValues.eventHandlers
         |> suppressTouchActions attributeValues
 
 
-addEventHandler : String -> List (Decoder event) -> List (Svg.Attribute event) -> List (Svg.Attribute event)
+addEventHandler :
+    String
+    -> List (Decoder (Event msg))
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addEventHandler eventName decoders svgAttributes =
     on eventName (Decode.oneOf decoders) :: svgAttributes
 
 
 suppressTouchActions :
-    AttributeValues units coordinates event
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 suppressTouchActions attributeValues svgAttributes =
     if
         Dict.member "touchstart" attributeValues.eventHandlers
@@ -721,7 +735,7 @@ suppressTouchActions attributeValues svgAttributes =
         svgAttributes
 
 
-on : String -> Decoder event -> Svg.Attribute event
+on : String -> Decoder (Event msg) -> Svg.Attribute (Event msg)
 on eventName decoder =
     Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
 

@@ -23,10 +23,6 @@ type DrawingCoordinates
     = DrawingCoordinates
 
 
-type alias DrawingEvent =
-    Drawing2d.Event Pixels DrawingCoordinates Msg
-
-
 type alias Model =
     { messages : List String
     , touchInteraction : Maybe (TouchInteraction Pixels DrawingCoordinates)
@@ -58,7 +54,7 @@ logString message =
             Debug.toString message
 
 
-eventHandlers : Int -> Model -> List (Drawing2d.Attribute Pixels DrawingCoordinates DrawingEvent)
+eventHandlers : Int -> Model -> List (Drawing2d.Attribute Pixels DrawingCoordinates Msg)
 eventHandlers id model =
     let
         constantHandlers =

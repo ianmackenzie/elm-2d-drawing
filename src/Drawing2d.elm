@@ -34,7 +34,6 @@ module Drawing2d exposing
     , decodeLeftClick, decodeRightClick
     , decodeLeftMouseDown, decodeLeftMouseUp, decodeMiddleMouseDown, decodeMiddleMouseUp, decodeRightMouseDown, decodeRightMouseUp
     , decodeTouchStart
-    , Event
     )
 
 {-|
@@ -282,6 +281,8 @@ import Drawing2d.Attributes as Attributes
     exposing
         ( Attribute(..)
         , AttributeValues
+        , DrawingCoordinates
+        , DrawingUnits
         , Event(..)
         , Fill(..)
         , LineCap(..)
@@ -326,7 +327,7 @@ import Vector2d exposing (Vector2d)
 import VirtualDom
 
 
-type Entity units coordinates event
+type Entity units coordinates msg
     = Entity
         (Bool -- borders visible
          -> Float -- stroke width in current units
@@ -334,32 +335,38 @@ type Entity units coordinates event
          -> String -- encoded gradient fill in current units
          -> String -- encoded gradient stroke in current units
          -> String -- encoded dash pattern in current units
-         -> Svg event
+         -> Svg (Event msg)
         )
 
 
-type Size drawingUnits
-    = Scale (Quantity Float (Rate Pixels drawingUnits))
+type Size units
+    = Scale (Quantity Float (Rate Pixels units))
     | Width (Quantity Float Pixels)
     | Height (Quantity Float Pixels)
     | Fit
     | FitWidth
 
 
-type alias Attribute units coordinates event =
-    Attributes.Attribute units coordinates event
-
-
-type alias Event drawingUnits drawingCoordinates msg =
-    Attributes.Event drawingUnits drawingCoordinates msg
+type alias Attribute units coordinates msg =
+    Attributes.Attribute units coordinates msg
 
 
 type alias Gradient units coordinates =
     Gradient.Gradient units coordinates
 
 
-type alias Renderer a event =
-    List (Svg.Attribute event) -> a -> Svg event
+type alias Renderer a msg =
+    List (Svg.Attribute (Event msg)) -> a -> Svg (Event msg)
+
+
+topLevelRectangle : Rectangle2d units1 coordinates1 -> Rectangle2d units2 coordinates2
+topLevelRectangle =
+    Rectangle2d.placeIn Frame2d.atOrigin >> Rectangle2d.at (Quantity 1)
+
+
+topLevelPoint : Point2d units1 coordinates1 -> Point2d units2 coordinates2
+topLevelPoint =
+    Point2d.unwrap >> Point2d.unsafe
 
 
 containerStaticCss : List (Html.Attribute msg)
@@ -390,8 +397,8 @@ px value =
 draw :
     { viewBox : Rectangle2d Pixels coordinates
     , background : Background Pixels coordinates
-    , attributes : List (Attribute Pixels coordinates (Event Pixels coordinates msg))
-    , entities : List (Entity Pixels coordinates (Event Pixels coordinates msg))
+    , attributes : List (Attribute Pixels coordinates msg)
+    , entities : List (Entity Pixels coordinates msg)
     }
     -> Html msg
 draw { viewBox, background, attributes, entities } =
@@ -412,8 +419,8 @@ custom :
     , strokeWidth : Quantity Float units
     , fontSize : Quantity Float units
     , background : Background units coordinates
-    , attributes : List (Attribute units coordinates (Event units coordinates msg))
-    , entities : List (Entity units coordinates (Event units coordinates msg))
+    , attributes : List (Attribute units coordinates msg)
+    , entities : List (Entity units coordinates msg)
     }
     -> Html msg
 custom given =
@@ -518,11 +525,11 @@ custom given =
 
         (Entity svgElement) =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues <|
-                [ group [] (backgroundEntity :: given.entities) |> relativeTo (Rectangle2d.axes given.viewBox)
+                [ group [] (backgroundEntity :: given.entities) |> unsafePlaceIn (Rectangle2d.axes given.viewBox)
                 ]
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement False 0 0 "" "" "[]" |> Svg.map (\(Event callback) -> callback given.viewBox) ]
+        [ svgElement False 0 0 "" "" "[]" |> Svg.map (\(Event callback) -> callback (topLevelRectangle given.viewBox)) ]
 
 
 fixed : Size Pixels
@@ -556,7 +563,7 @@ fitWidth =
 
 
 type Background units coordinates
-    = Background (Attribute units coordinates (Event units coordinates Never))
+    = Background (Attribute units coordinates Never)
 
 
 noBackground : Background units coordinates
@@ -584,16 +591,16 @@ backgroundGradient gradient =
     Background (fillGradient gradient)
 
 
-empty : Entity units coordinates event
+empty : Entity units coordinates msg
 empty =
     Entity (\_ _ _ _ _ _ -> Svg.text "")
 
 
 drawCurve :
-    List (Attribute units coordinates event)
-    -> Renderer curve event
+    List (Attribute units coordinates msg)
+    -> Renderer curve msg
     -> curve
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 drawCurve attributes renderer curve =
     let
         attributeValues =
@@ -617,10 +624,10 @@ drawCurve attributes renderer curve =
 
 
 drawRegion :
-    List (Attribute units coordinates event)
-    -> Renderer region event
+    List (Attribute units coordinates msg)
+    -> Renderer region msg
     -> region
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 drawRegion attributes renderer region =
     let
         attributeValues =
@@ -657,17 +664,17 @@ drawRegion attributes renderer region =
 
 
 lineSegment :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> LineSegment2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 lineSegment attributes givenSegment =
     drawCurve attributes Svg.lineSegment2d givenSegment
 
 
 triangle :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Triangle2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
 
@@ -679,16 +686,16 @@ render :
     -> String
     -> String
     -> String
-    -> Entity units coordinates event
-    -> Svg event
+    -> Entity units coordinates msg
+    -> Svg (Event msg)
 render arg1 arg2 arg3 arg4 arg5 arg6 (Entity function) =
     function arg1 arg2 arg3 arg4 arg5 arg6
 
 
 group :
-    List (Attribute units coordinates event)
-    -> List (Entity units coordinates event)
-    -> Entity units coordinates event
+    List (Attribute units coordinates msg)
+    -> List (Entity units coordinates msg)
+    -> Entity units coordinates msg
 group attributes childEntities =
     groupLike "g" [] (Attributes.collectAttributeValues attributes) childEntities
 
@@ -712,10 +719,10 @@ decodeDashPattern json =
 
 groupLike :
     String
-    -> List (Svg.Attribute event)
-    -> AttributeValues units coordinates event
-    -> List (Entity units coordinates event)
-    -> Entity units coordinates event
+    -> List (Svg.Attribute (Event msg))
+    -> AttributeValues units coordinates msg
+    -> List (Entity units coordinates msg)
+    -> Entity units coordinates msg
 groupLike tag extraSvgAttributes attributeValues childEntities =
     Entity <|
         \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
@@ -792,98 +799,98 @@ groupLike tag extraSvgAttributes attributeValues childEntities =
 
 
 add :
-    List (Attribute units coordinates event)
-    -> Entity units coordinates event
-    -> Entity units coordinates event
+    List (Attribute units coordinates msg)
+    -> Entity units coordinates msg
+    -> Entity units coordinates msg
 add attributes entity =
     group attributes [ entity ]
 
 
 arc :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Arc2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 arc attributes givenArc =
     drawCurve attributes Svg.arc2d givenArc
 
 
 quadraticSpline :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> QuadraticSpline2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 quadraticSpline attributes givenSpline =
     drawCurve attributes Svg.quadraticSpline2d givenSpline
 
 
 cubicSpline :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> CubicSpline2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 cubicSpline attributes givenSpline =
     drawCurve attributes Svg.cubicSpline2d givenSpline
 
 
 polyline :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Polyline2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 polyline attributes givenPolyline =
     drawCurve attributes Svg.polyline2d givenPolyline
 
 
 polygon :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Polygon2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 polygon attributes givenPolygon =
     drawRegion attributes Svg.polygon2d givenPolygon
 
 
 circle :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Circle2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 circle attributes givenCircle =
     drawRegion attributes Svg.circle2d givenCircle
 
 
 ellipticalArc :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> EllipticalArc2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 ellipticalArc attributes givenArc =
     drawCurve attributes Svg.ellipticalArc2d givenArc
 
 
 ellipse :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Ellipse2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 ellipse attributes givenEllipse =
     drawRegion attributes Svg.ellipse2d givenEllipse
 
 
 rectangle :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Rectangle2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 rectangle attributes givenRectangle =
     drawRegion attributes Svg.rectangle2d givenRectangle
 
 
 boundingBox :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> BoundingBox2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 boundingBox attributes givenBox =
     drawRegion attributes Svg.boundingBox2d givenBox
 
 
 text :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> Point2d units coordinates
     -> String
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 text attributes position string =
     let
         attributeValues =
@@ -905,10 +912,10 @@ text attributes position string =
 
 
 image :
-    List (Attribute units coordinates event)
+    List (Attribute units coordinates msg)
     -> String
     -> Rectangle2d units coordinates
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
 image attributes givenUrl givenRectangle =
     let
         attributeValues =
@@ -962,9 +969,17 @@ placementTransform frame =
 
 placeIn :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Entity units localCoordinates event
-    -> Entity units globalCoordinates event
-placeIn frame (Entity function) =
+    -> Entity units localCoordinates Never
+    -> Entity units globalCoordinates msg
+placeIn frame entity =
+    unsafePlaceIn frame (map never entity)
+
+
+unsafePlaceIn :
+    Frame2d units globalCoordinates { defines : localCoordinates }
+    -> Entity units localCoordinates msg
+    -> Entity units globalCoordinates msg
+unsafePlaceIn frame (Entity function) =
     Entity
         (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
             let
@@ -1025,8 +1040,8 @@ placeIn frame (Entity function) =
 scaleAbout :
     Point2d units coordinates
     -> Float
-    -> Entity units coordinates event
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
+    -> Entity units coordinates msg
 scaleAbout point factor entity =
     scaleImpl point factor entity
 
@@ -1034,8 +1049,8 @@ scaleAbout point factor entity =
 scaleImpl :
     Point2d units1 coordinates
     -> Float
-    -> Entity units1 coordinates event
-    -> Entity units2 coordinates event
+    -> Entity units1 coordinates msg
+    -> Entity units2 coordinates msg
 scaleImpl point factor (Entity function) =
     let
         { x, y } =
@@ -1129,25 +1144,25 @@ scaleImpl point factor (Entity function) =
 
 relativeTo :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Entity units globalCoordinates event
-    -> Entity units localCoordinates event
+    -> Entity units globalCoordinates Never
+    -> Entity units localCoordinates msg
 relativeTo frame entity =
     entity |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
 
 
 translateBy :
     Vector2d units coordinates
-    -> Entity units coordinates event
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
+    -> Entity units coordinates msg
 translateBy displacement entity =
-    entity |> placeIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
+    entity |> unsafePlaceIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
 
 
 translateIn :
     Direction2d coordinates
     -> Quantity Float units
-    -> Entity units coordinates event
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
+    -> Entity units coordinates msg
 translateIn direction distance entity =
     entity |> translateBy (Vector2d.withLength distance direction)
 
@@ -1155,48 +1170,45 @@ translateIn direction distance entity =
 rotateAround :
     Point2d units coordinates
     -> Angle
-    -> Entity units coordinates event
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
+    -> Entity units coordinates msg
 rotateAround centerPoint angle entity =
-    entity |> placeIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
+    entity |> unsafePlaceIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
 
 
 mirrorAcross :
     Axis2d units coordinates
-    -> Entity units coordinates event
-    -> Entity units coordinates event
+    -> Entity units coordinates msg
+    -> Entity units coordinates msg
 mirrorAcross axis entity =
-    entity |> placeIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
+    entity |> unsafePlaceIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
 
 
 at :
     Quantity Float (Rate units2 units1)
-    -> Entity units1 coordinates event
-    -> Entity units2 coordinates event
+    -> Entity units1 coordinates Never
+    -> Entity units2 coordinates msg
 at (Quantity factor) entity =
-    scaleImpl Point2d.origin factor entity
+    scaleImpl Point2d.origin factor (map never entity)
 
 
 at_ :
     Quantity Float (Rate units1 units2)
-    -> Entity units1 coordinates event
-    -> Entity units2 coordinates event
+    -> Entity units1 coordinates Never
+    -> Entity units2 coordinates msg
 at_ (Quantity factor) entity =
-    scaleImpl Point2d.origin (1 / factor) entity
+    scaleImpl Point2d.origin (1 / factor) (map never entity)
 
 
-mapEvent :
-    (a -> b)
-    -> Event drawingUnits drawingCoordinates a
-    -> Event drawingUnits drawingCoordinates b
+mapEvent : (a -> b) -> Event a -> Event b
 mapEvent function (Event callback) =
     Event (callback >> function)
 
 
 map :
     (a -> b)
-    -> Entity units coordinates (Event drawingUnits drawingCoordinates a)
-    -> Entity units coordinates (Event drawingUnits drawingCoordinates b)
+    -> Entity units coordinates a
+    -> Entity units coordinates b
 map mapFunction (Entity drawFunction) =
     Entity
         (\arg1 arg2 arg3 arg4 arg5 arg6 ->
@@ -1204,7 +1216,10 @@ map mapFunction (Entity drawFunction) =
         )
 
 
-addStrokeGradient : AttributeValues units coordinates event -> List (Svg event) -> List (Svg event)
+addStrokeGradient :
+    AttributeValues units coordinates msg
+    -> List (Svg (Event msg))
+    -> List (Svg (Event msg))
 addStrokeGradient attributeValues svgElements =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -1217,7 +1232,10 @@ addStrokeGradient attributeValues svgElements =
             Gradient.render gradient svgElements
 
 
-addFillGradient : AttributeValues units coordinates event -> List (Svg event) -> List (Svg event)
+addFillGradient :
+    AttributeValues units coordinates msg
+    -> List (Svg (Event msg))
+    -> List (Svg (Event msg))
 addFillGradient attributeValues svgElements =
     case attributeValues.fillStyle of
         Nothing ->
@@ -1233,7 +1251,10 @@ addFillGradient attributeValues svgElements =
             Gradient.render gradient svgElements
 
 
-addGradientElements : Maybe (Gradient units coordinates) -> List (Svg event) -> List (Svg event)
+addGradientElements :
+    Maybe (Gradient units coordinates)
+    -> List (Svg (Event msg))
+    -> List (Svg (Event msg))
 addGradientElements maybeGradient svgElements =
     case maybeGradient of
         Nothing ->
@@ -1245,8 +1266,8 @@ addGradientElements maybeGradient svgElements =
 
 addTransformedFillGradientReference :
     Maybe (Gradient units gradientCoordinates)
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addTransformedFillGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->
@@ -1258,8 +1279,8 @@ addTransformedFillGradientReference maybeGradient svgAttributes =
 
 addTransformedStrokeGradientReference :
     Maybe (Gradient units gradientCoordinates)
-    -> List (Svg.Attribute event)
-    -> List (Svg.Attribute event)
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addTransformedStrokeGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->
@@ -1269,7 +1290,10 @@ addTransformedStrokeGradientReference maybeGradient svgAttributes =
             Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes
 
 
-addScaledStrokeDashPattern : List Float -> List (Svg.Attribute event) -> List (Svg.Attribute event)
+addScaledStrokeDashPattern :
+    List Float
+    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event msg))
 addScaledStrokeDashPattern dashPattern svgAttributes =
     case dashPattern of
         [] ->
@@ -1280,7 +1304,10 @@ addScaledStrokeDashPattern dashPattern svgAttributes =
             Attributes.dashPatternSvgAttribute dashPattern :: svgAttributes
 
 
-addDropShadow : AttributeValues units coordinates event -> List (Svg event) -> List (Svg event)
+addDropShadow :
+    AttributeValues units coordinates msg
+    -> List (Svg (Event msg))
+    -> List (Svg (Event msg))
 addDropShadow attributeValues svgElements =
     case attributeValues.dropShadow of
         Nothing ->
@@ -1290,7 +1317,10 @@ addDropShadow attributeValues svgElements =
             Shadow.element shadow :: svgElements
 
 
-addDefs : List (Svg event) -> Svg event -> Svg event
+addDefs :
+    List (Svg (Event msg))
+    -> Svg (Event msg)
+    -> Svg (Event msg)
 addDefs defs svgElement =
     case defs of
         [] ->
@@ -1300,107 +1330,107 @@ addDefs defs svgElement =
             Svg.g [] (svgElement :: defs)
 
 
-fillColor : Color -> Attribute units coordinates event
+fillColor : Color -> Attribute units coordinates msg
 fillColor color =
     FillStyle (FillColor (Color.toCssString color))
 
 
-noFill : Attribute units coordinates event
+noFill : Attribute units coordinates msg
 noFill =
     FillStyle (FillColor "none")
 
 
-blackFill : Attribute units coordinates event
+blackFill : Attribute units coordinates msg
 blackFill =
     FillStyle (FillColor "black")
 
 
-whiteFill : Attribute units coordinates event
+whiteFill : Attribute units coordinates msg
 whiteFill =
     FillStyle (FillColor "white")
 
 
-fillGradient : Gradient units coordinates -> Attribute units coordinates event
+fillGradient : Gradient units coordinates -> Attribute units coordinates msg
 fillGradient gradient =
     FillStyle (FillGradient gradient)
 
 
-strokeColor : Color -> Attribute units coordinates event
+strokeColor : Color -> Attribute units coordinates msg
 strokeColor color =
     StrokeStyle (StrokeColor (Color.toCssString color))
 
 
-blackStroke : Attribute units coordinates event
+blackStroke : Attribute units coordinates msg
 blackStroke =
     StrokeStyle (StrokeColor "black")
 
 
-whiteStroke : Attribute units coordinates event
+whiteStroke : Attribute units coordinates msg
 whiteStroke =
     StrokeStyle (StrokeColor "white")
 
 
-strokeGradient : Gradient units coordinates -> Attribute units coordinates event
+strokeGradient : Gradient units coordinates -> Attribute units coordinates msg
 strokeGradient gradient =
     StrokeStyle (StrokeGradient gradient)
 
 
-dashedStroke : List (Quantity Float units) -> Attribute units coordinates event
+dashedStroke : List (Quantity Float units) -> Attribute units coordinates msg
 dashedStroke dashPattern =
     StrokeDashPattern (List.map Quantity.unwrap dashPattern)
 
 
-solidStroke : Attribute units coordinates event
+solidStroke : Attribute units coordinates msg
 solidStroke =
     StrokeDashPattern []
 
 
-noBorder : Attribute units coordinates event
+noBorder : Attribute units coordinates msg
 noBorder =
     BorderVisibility False
 
 
-strokedBorder : Attribute units coordinates event
+strokedBorder : Attribute units coordinates msg
 strokedBorder =
     BorderVisibility True
 
 
-strokeWidth : Quantity Float units -> Attribute units coordinates event
+strokeWidth : Quantity Float units -> Attribute units coordinates msg
 strokeWidth (Quantity size) =
     StrokeWidth size
 
 
-roundStrokeJoins : Attribute units coordinates event
+roundStrokeJoins : Attribute units coordinates msg
 roundStrokeJoins =
     StrokeLineJoin RoundJoin
 
 
-bevelStrokeJoins : Attribute units coordinates event
+bevelStrokeJoins : Attribute units coordinates msg
 bevelStrokeJoins =
     StrokeLineJoin BevelJoin
 
 
-miterStrokeJoins : Attribute units coordinates event
+miterStrokeJoins : Attribute units coordinates msg
 miterStrokeJoins =
     StrokeLineJoin MiterJoin
 
 
-noStrokeCaps : Attribute units coordinates event
+noStrokeCaps : Attribute units coordinates msg
 noStrokeCaps =
     StrokeLineCap NoCap
 
 
-roundStrokeCaps : Attribute units coordinates event
+roundStrokeCaps : Attribute units coordinates msg
 roundStrokeCaps =
     StrokeLineCap RoundCap
 
 
-squareStrokeCaps : Attribute units coordinates event
+squareStrokeCaps : Attribute units coordinates msg
 squareStrokeCaps =
     StrokeLineCap SquareCap
 
 
-opacity : Float -> Attribute units coordinates event
+opacity : Float -> Attribute units coordinates msg
 opacity value =
     Opacity value
 
@@ -1410,72 +1440,72 @@ dropShadow :
     , offset : Vector2d units coordinates
     , color : Color
     }
-    -> Attribute units coordinates event
+    -> Attribute units coordinates msg
 dropShadow properties =
     DropShadow (Shadow.with properties)
 
 
-anchorAtTopLeft : Attribute units coordinates event
+anchorAtTopLeft : Attribute units coordinates msg
 anchorAtTopLeft =
     TextAnchor { x = "start", y = "hanging" }
 
 
-anchorAtTopCenter : Attribute units coordinates event
+anchorAtTopCenter : Attribute units coordinates msg
 anchorAtTopCenter =
     TextAnchor { x = "middle", y = "hanging" }
 
 
-anchorAtTopRight : Attribute units coordinates event
+anchorAtTopRight : Attribute units coordinates msg
 anchorAtTopRight =
     TextAnchor { x = "end", y = "hanging" }
 
 
-anchorAtCenterLeft : Attribute units coordinates event
+anchorAtCenterLeft : Attribute units coordinates msg
 anchorAtCenterLeft =
     TextAnchor { x = "start", y = "middle" }
 
 
-anchorAtCenter : Attribute units coordinates event
+anchorAtCenter : Attribute units coordinates msg
 anchorAtCenter =
     TextAnchor { x = "middle", y = "middle" }
 
 
-anchorAtCenterRight : Attribute units coordinates event
+anchorAtCenterRight : Attribute units coordinates msg
 anchorAtCenterRight =
     TextAnchor { x = "end", y = "middle" }
 
 
-anchorAtBottomLeft : Attribute units coordinates event
+anchorAtBottomLeft : Attribute units coordinates msg
 anchorAtBottomLeft =
     TextAnchor { x = "start", y = "alphabetic" }
 
 
-anchorAtBottomCenter : Attribute units coordinates event
+anchorAtBottomCenter : Attribute units coordinates msg
 anchorAtBottomCenter =
     TextAnchor { x = "middle", y = "alphabetic" }
 
 
-anchorAtBottomRight : Attribute units coordinates event
+anchorAtBottomRight : Attribute units coordinates msg
 anchorAtBottomRight =
     TextAnchor { x = "end", y = "alphabetic" }
 
 
-blackText : Attribute units coordinates event
+blackText : Attribute units coordinates msg
 blackText =
     TextColor "black"
 
 
-whiteText : Attribute units coordinates event
+whiteText : Attribute units coordinates msg
 whiteText =
     TextColor "white"
 
 
-textColor : Color -> Attribute units coordinates event
+textColor : Color -> Attribute units coordinates msg
 textColor color =
     TextColor (Color.toCssString color)
 
 
-fontSize : Quantity Float units -> Attribute units coordinates event
+fontSize : Quantity Float units -> Attribute units coordinates msg
 fontSize (Quantity size) =
     FontSize size
 
@@ -1504,235 +1534,235 @@ normalizeFont font =
 
 {-| Generic font family names: <https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#Values>
 -}
-fontFamily : List String -> Attribute units coordinates event
+fontFamily : List String -> Attribute units coordinates msg
 fontFamily fonts =
     FontFamily (fonts |> List.map normalizeFont |> String.join ",")
 
 
 {-| -}
-autoCursor : Attribute units coordinates event
+autoCursor : Attribute units coordinates msg
 autoCursor =
     Attributes.Cursor Attributes.AutoCursor
 
 
 {-| -}
-defaultCursor : Attribute units coordinates event
+defaultCursor : Attribute units coordinates msg
 defaultCursor =
     Attributes.Cursor Attributes.DefaultCursor
 
 
 {-| -}
-noCursor : Attribute units coordinates event
+noCursor : Attribute units coordinates msg
 noCursor =
     Attributes.Cursor Attributes.NoCursor
 
 
 {-| -}
-contextMenuCursor : Attribute units coordinates event
+contextMenuCursor : Attribute units coordinates msg
 contextMenuCursor =
     Attributes.Cursor Attributes.ContextMenuCursor
 
 
 {-| -}
-helpCursor : Attribute units coordinates event
+helpCursor : Attribute units coordinates msg
 helpCursor =
     Attributes.Cursor Attributes.HelpCursor
 
 
 {-| -}
-pointerCursor : Attribute units coordinates event
+pointerCursor : Attribute units coordinates msg
 pointerCursor =
     Attributes.Cursor Attributes.PointerCursor
 
 
 {-| -}
-progressCursor : Attribute units coordinates event
+progressCursor : Attribute units coordinates msg
 progressCursor =
     Attributes.Cursor Attributes.ProgressCursor
 
 
 {-| -}
-waitCursor : Attribute units coordinates event
+waitCursor : Attribute units coordinates msg
 waitCursor =
     Attributes.Cursor Attributes.WaitCursor
 
 
 {-| -}
-cellCursor : Attribute units coordinates event
+cellCursor : Attribute units coordinates msg
 cellCursor =
     Attributes.Cursor Attributes.CellCursor
 
 
 {-| -}
-crosshairCursor : Attribute units coordinates event
+crosshairCursor : Attribute units coordinates msg
 crosshairCursor =
     Attributes.Cursor Attributes.CrosshairCursor
 
 
 {-| -}
-textCursor : Attribute units coordinates event
+textCursor : Attribute units coordinates msg
 textCursor =
     Attributes.Cursor Attributes.TextCursor
 
 
 {-| -}
-verticalTextCursor : Attribute units coordinates event
+verticalTextCursor : Attribute units coordinates msg
 verticalTextCursor =
     Attributes.Cursor Attributes.VerticalTextCursor
 
 
 {-| -}
-aliasCursor : Attribute units coordinates event
+aliasCursor : Attribute units coordinates msg
 aliasCursor =
     Attributes.Cursor Attributes.AliasCursor
 
 
 {-| -}
-copyCursor : Attribute units coordinates event
+copyCursor : Attribute units coordinates msg
 copyCursor =
     Attributes.Cursor Attributes.CopyCursor
 
 
 {-| -}
-moveCursor : Attribute units coordinates event
+moveCursor : Attribute units coordinates msg
 moveCursor =
     Attributes.Cursor Attributes.MoveCursor
 
 
 {-| -}
-noDropCursor : Attribute units coordinates event
+noDropCursor : Attribute units coordinates msg
 noDropCursor =
     Attributes.Cursor Attributes.NoDropCursor
 
 
 {-| -}
-notAllowedCursor : Attribute units coordinates event
+notAllowedCursor : Attribute units coordinates msg
 notAllowedCursor =
     Attributes.Cursor Attributes.NotAllowedCursor
 
 
 {-| -}
-grabCursor : Attribute units coordinates event
+grabCursor : Attribute units coordinates msg
 grabCursor =
     Attributes.Cursor Attributes.GrabCursor
 
 
 {-| -}
-grabbingCursor : Attribute units coordinates event
+grabbingCursor : Attribute units coordinates msg
 grabbingCursor =
     Attributes.Cursor Attributes.GrabbingCursor
 
 
 {-| -}
-allScrollCursor : Attribute units coordinates event
+allScrollCursor : Attribute units coordinates msg
 allScrollCursor =
     Attributes.Cursor Attributes.AllScrollCursor
 
 
 {-| -}
-colResizeCursor : Attribute units coordinates event
+colResizeCursor : Attribute units coordinates msg
 colResizeCursor =
     Attributes.Cursor Attributes.ColResizeCursor
 
 
 {-| -}
-rowResizeCursor : Attribute units coordinates event
+rowResizeCursor : Attribute units coordinates msg
 rowResizeCursor =
     Attributes.Cursor Attributes.RowResizeCursor
 
 
 {-| -}
-nResizeCursor : Attribute units coordinates event
+nResizeCursor : Attribute units coordinates msg
 nResizeCursor =
     Attributes.Cursor Attributes.NResizeCursor
 
 
 {-| -}
-eResizeCursor : Attribute units coordinates event
+eResizeCursor : Attribute units coordinates msg
 eResizeCursor =
     Attributes.Cursor Attributes.EResizeCursor
 
 
 {-| -}
-sResizeCursor : Attribute units coordinates event
+sResizeCursor : Attribute units coordinates msg
 sResizeCursor =
     Attributes.Cursor Attributes.SResizeCursor
 
 
 {-| -}
-wResizeCursor : Attribute units coordinates event
+wResizeCursor : Attribute units coordinates msg
 wResizeCursor =
     Attributes.Cursor Attributes.WResizeCursor
 
 
 {-| -}
-neResizeCursor : Attribute units coordinates event
+neResizeCursor : Attribute units coordinates msg
 neResizeCursor =
     Attributes.Cursor Attributes.NeResizeCursor
 
 
 {-| -}
-nwResizeCursor : Attribute units coordinates event
+nwResizeCursor : Attribute units coordinates msg
 nwResizeCursor =
     Attributes.Cursor Attributes.NwResizeCursor
 
 
 {-| -}
-seResizeCursor : Attribute units coordinates event
+seResizeCursor : Attribute units coordinates msg
 seResizeCursor =
     Attributes.Cursor Attributes.SeResizeCursor
 
 
 {-| -}
-swResizeCursor : Attribute units coordinates event
+swResizeCursor : Attribute units coordinates msg
 swResizeCursor =
     Attributes.Cursor Attributes.SwResizeCursor
 
 
 {-| -}
-ewResizeCursor : Attribute units coordinates event
+ewResizeCursor : Attribute units coordinates msg
 ewResizeCursor =
     Attributes.Cursor Attributes.EwResizeCursor
 
 
 {-| -}
-nsResizeCursor : Attribute units coordinates event
+nsResizeCursor : Attribute units coordinates msg
 nsResizeCursor =
     Attributes.Cursor Attributes.NsResizeCursor
 
 
 {-| -}
-neswResizeCursor : Attribute units coordinates event
+neswResizeCursor : Attribute units coordinates msg
 neswResizeCursor =
     Attributes.Cursor Attributes.NeswResizeCursor
 
 
 {-| -}
-nwseResizeCursor : Attribute units coordinates event
+nwseResizeCursor : Attribute units coordinates msg
 nwseResizeCursor =
     Attributes.Cursor Attributes.NwseResizeCursor
 
 
 {-| -}
-zoomInCursor : Attribute units coordinates event
+zoomInCursor : Attribute units coordinates msg
 zoomInCursor =
     Attributes.Cursor Attributes.ZoomInCursor
 
 
 {-| -}
-zoomOutCursor : Attribute units coordinates event
+zoomOutCursor : Attribute units coordinates msg
 zoomOutCursor =
     Attributes.Cursor Attributes.ZoomOutCursor
 
 
-cursor : Cursor -> Attribute units coordinates event
+cursor : Cursor -> Attribute units coordinates msg
 cursor givenCursor =
     Attributes.Cursor givenCursor
 
 
 {-| The best cursor ever.
 -}
-bestCursorEver : Attribute units coordinates event
+bestCursorEver : Attribute units coordinates msg
 bestCursorEver =
     cursor <|
         Cursor.image
@@ -1757,155 +1787,113 @@ rightButton =
     2
 
 
-onLeftClick :
-    (Point2d drawingUnits drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+onLeftClick : (Point2d units coordinates -> msg) -> Attribute units coordinates msg
 onLeftClick callback =
     decodeLeftClick (Decode.succeed callback)
 
 
-onRightClick :
-    (Point2d drawingUnits drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+onRightClick : (Point2d units coordinates -> msg) -> Attribute units coordinates msg
 onRightClick callback =
     decodeRightClick (Decode.succeed callback)
 
 
 onLeftMouseDown :
-    (Point2d drawingUnits drawingCoordinates
-     -> MouseInteraction drawingUnits drawingCoordinates
-     -> msg
-    )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 onLeftMouseDown callback =
     decodeLeftMouseDown (Decode.succeed callback)
 
 
 onRightMouseDown :
-    (Point2d drawingUnits drawingCoordinates
-     -> MouseInteraction drawingUnits drawingCoordinates
-     -> msg
-    )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 onRightMouseDown callback =
     decodeRightMouseDown (Decode.succeed callback)
 
 
 onMiddleMouseDown :
-    (Point2d drawingUnits drawingCoordinates
-     -> MouseInteraction drawingUnits drawingCoordinates
-     -> msg
-    )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 onMiddleMouseDown callback =
     decodeMiddleMouseDown (Decode.succeed callback)
 
 
-onLeftMouseUp : msg -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+onLeftMouseUp : msg -> Attribute units coordinates msg
 onLeftMouseUp message =
     decodeLeftMouseUp (Decode.succeed message)
 
 
-onRightMouseUp : msg -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+onRightMouseUp : msg -> Attribute units coordinates msg
 onRightMouseUp message =
     decodeRightMouseUp (Decode.succeed message)
 
 
-onMiddleMouseUp : msg -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+onMiddleMouseUp : msg -> Attribute units coordinates msg
 onMiddleMouseUp message =
     decodeMiddleMouseUp (Decode.succeed message)
 
 
 onTouchStart :
-    (Dict Int (Point2d drawingUnits drawingCoordinates)
-     -> TouchInteraction drawingUnits drawingCoordinates
-     -> msg
-    )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 onTouchStart callback =
     decodeTouchStart (Decode.succeed callback)
 
 
-decodeLeftClick :
-    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+decodeLeftClick : Decoder (Point2d units coordinates -> msg) -> Attribute units coordinates msg
 decodeLeftClick decoder =
     Attributes.EventHandlers [ ( "click", clickDecoder decoder ) ]
 
 
-decodeRightClick :
-    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+decodeRightClick : Decoder (Point2d units coordinates -> msg) -> Attribute units coordinates msg
 decodeRightClick decoder =
     Attributes.EventHandlers [ ( "contextmenu", clickDecoder decoder ) ]
 
 
 decodeLeftMouseDown :
-    Decoder
-        (Point2d drawingUnits drawingCoordinates
-         -> MouseInteraction drawingUnits drawingCoordinates
-         -> msg
-        )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    Decoder (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 decodeLeftMouseDown decoder =
     Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder leftButton decoder ) ]
 
 
 decodeMiddleMouseDown :
-    Decoder
-        (Point2d drawingUnits drawingCoordinates
-         -> MouseInteraction drawingUnits drawingCoordinates
-         -> msg
-        )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    Decoder (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 decodeMiddleMouseDown decoder =
     Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder middleButton decoder ) ]
 
 
 decodeRightMouseDown :
-    Decoder
-        (Point2d drawingUnits drawingCoordinates
-         -> MouseInteraction drawingUnits drawingCoordinates
-         -> msg
-        )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    Decoder (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 decodeRightMouseDown decoder =
     Attributes.EventHandlers [ ( "mousedown", mouseDownDecoder rightButton decoder ) ]
 
 
-decodeLeftMouseUp :
-    Decoder msg
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+decodeLeftMouseUp : Decoder msg -> Attribute units coordinates msg
 decodeLeftMouseUp decoder =
     Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder leftButton decoder ) ]
 
 
-decodeMiddleMouseUp :
-    Decoder msg
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+decodeMiddleMouseUp : Decoder msg -> Attribute units coordinates msg
 decodeMiddleMouseUp decoder =
     Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder middleButton decoder ) ]
 
 
-decodeRightMouseUp :
-    Decoder msg
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+decodeRightMouseUp : Decoder msg -> Attribute units coordinates msg
 decodeRightMouseUp decoder =
     Attributes.EventHandlers [ ( "mouseup", mouseUpDecoder rightButton decoder ) ]
 
 
 decodeTouchStart :
-    Decoder
-        (Dict Int (Point2d drawingUnits drawingCoordinates)
-         -> TouchInteraction drawingUnits drawingCoordinates
-         -> msg
-        )
-    -> Attribute units coordinates (Event drawingUnits drawingCoordinates msg)
+    Decoder (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
+    -> Attribute units coordinates msg
 decodeTouchStart decoder =
     Attributes.EventHandlers [ ( "touchstart", touchStartDecoder decoder ) ]
 
 
-wrapMessage : msg -> Event drawingUnits drawingCoordinates msg
+wrapMessage : msg -> Event msg
 wrapMessage message =
     Event (always message)
 
@@ -1923,17 +1911,12 @@ filterByButton whichButton decoder =
             )
 
 
-clickDecoder :
-    Decoder (Point2d drawingUnits drawingCoordinates -> msg)
-    -> Decoder (Event drawingUnits drawingCoordinates msg)
+clickDecoder : Decoder (Point2d units coordinates -> msg) -> Decoder (Event msg)
 clickDecoder givenDecoder =
     Decode.map2 handleClick MouseStartEvent.decoder givenDecoder
 
 
-handleClick :
-    MouseStartEvent
-    -> (Point2d drawingUnits drawingCoordinates -> msg)
-    -> Event drawingUnits drawingCoordinates msg
+handleClick : MouseStartEvent -> (Point2d units coordinates -> msg) -> Event msg
 handleClick mouseStartEvent userCallback =
     Event
         (\viewBox ->
@@ -1941,22 +1924,22 @@ handleClick mouseStartEvent userCallback =
                 drawingPoint =
                     InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
             in
-            userCallback drawingPoint
+            userCallback (topLevelPoint drawingPoint)
         )
 
 
 mouseDownDecoder :
     Int
-    -> Decoder (Point2d drawingUnits drawingCoordinates -> MouseInteraction drawingUnits drawingCoordinates -> msg)
-    -> Decoder (Event drawingUnits drawingCoordinates msg)
+    -> Decoder (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Decoder (Event msg)
 mouseDownDecoder givenButton givenDecoder =
     filterByButton givenButton (Decode.map2 handleMouseDown MouseStartEvent.decoder givenDecoder)
 
 
 handleMouseDown :
     MouseStartEvent
-    -> (Point2d drawingUnits drawingCoordinates -> MouseInteraction drawingUnits drawingCoordinates -> msg)
-    -> Event drawingUnits drawingCoordinates msg
+    -> (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
+    -> Event msg
 handleMouseDown mouseStartEvent userCallback =
     Event
         (\viewBox ->
@@ -1965,38 +1948,34 @@ handleMouseDown mouseStartEvent userCallback =
                     InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
 
                 mouseInteraction =
-                    MouseInteraction.start mouseStartEvent viewBox
+                    MouseInteraction.start mouseStartEvent (topLevelRectangle viewBox)
             in
-            userCallback drawingPoint mouseInteraction
+            userCallback (topLevelPoint drawingPoint) mouseInteraction
         )
 
 
-mouseUpDecoder : Int -> Decoder msg -> Decoder (Event drawingUnits drawingCoordinates msg)
+mouseUpDecoder : Int -> Decoder msg -> Decoder (Event msg)
 mouseUpDecoder givenButton givenDecoder =
     filterByButton givenButton (Decode.map wrapMessage givenDecoder)
 
 
 touchStartDecoder :
-    Decoder
-        (Dict Int (Point2d drawingUnits drawingCoordinates)
-         -> TouchInteraction drawingUnits drawingCoordinates
-         -> msg
-        )
-    -> Decoder (Event drawingUnits drawingCoordinates msg)
+    Decoder (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
+    -> Decoder (Event msg)
 touchStartDecoder givenDecoder =
     Decode.map2 handleTouchStart TouchStartEvent.decoder givenDecoder
 
 
 handleTouchStart :
     TouchStartEvent
-    -> (Dict Int (Point2d drawingUnits drawingCoordinates) -> TouchInteraction drawingUnits drawingCoordinates -> msg)
-    -> Event drawingUnits drawingCoordinates msg
+    -> (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
+    -> Event msg
 handleTouchStart touchStartEvent userCallback =
     Event
         (\viewBox ->
             let
                 ( touchInteraction, initialPoints ) =
-                    TouchInteraction.start touchStartEvent viewBox
+                    TouchInteraction.start touchStartEvent (topLevelRectangle viewBox)
             in
             userCallback initialPoints touchInteraction
         )
