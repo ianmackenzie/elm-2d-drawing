@@ -5,6 +5,8 @@ module Drawing2d.Decode exposing
     , clientY
     , container
     , identifier
+    , movementX
+    , movementY
     , nonempty
     , pageX
     , pageY
@@ -42,6 +44,16 @@ clientX =
 clientY : Decoder Float
 clientY =
     Decode.field "clientY" Decode.float
+
+
+movementX : Decoder Float
+movementX =
+    Decode.field "movementX" Decode.float
+
+
+movementY : Decoder Float
+movementY =
+    Decode.field "movementY" Decode.float
 
 
 button : Decoder Int
