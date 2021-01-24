@@ -73,13 +73,13 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
-        , background = Drawing2d.noBackground
-        , attributes =
-            [ Drawing2d.fontSize (Pixels.float 12)
-            , Drawing2d.fontFamily [ "monospace" ]
-            ]
         , entities =
-            [ Drawing2d.group [ Drawing2d.strokeColor Color.darkGrey ] lines
-            , Drawing2d.group [ Drawing2d.strokeColor Color.charcoal ] vertices
+            [ Drawing2d.group
+                [ Drawing2d.fontSize (Pixels.float 12)
+                , Drawing2d.fontFamily [ "monospace" ]
+                ]
+                [ Drawing2d.group [ Drawing2d.strokeColor Color.darkGrey ] lines
+                , Drawing2d.group [ Drawing2d.strokeColor Color.charcoal ] vertices
+                ]
             ]
         }

@@ -1,6 +1,8 @@
 module Drawing2d.Gradient exposing
     ( Gradient
     , along
+    , at
+    , at_
     , circular
     , decode
     , decoder
@@ -23,7 +25,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Murmur3
 import Point2d exposing (Point2d)
-import Quantity exposing (Quantity(..))
+import Quantity exposing (Quantity(..), Rate)
 import Svg exposing (Svg)
 import Svg.Attributes
 
@@ -205,6 +207,27 @@ scaleAbout centerPoint scale gradient =
                 (Point2d.scaleAbout centerPoint scale radialGradient.start)
                 (Circle2d.scaleAbout centerPoint scale radialGradient.end)
                 radialGradient.stops
+
+
+at : Quantity Float (Rate units2 units1) -> Gradient units1 coordinates -> Gradient units2 coordinates
+at rate gradient =
+    case gradient of
+        LinearGradient linearGradient ->
+            makeLinearGradient
+                (Point2d.at rate linearGradient.start)
+                (Point2d.at rate linearGradient.end)
+                linearGradient.stops
+
+        RadialGradient radialGradient ->
+            makeRadialGradient
+                (Point2d.at rate radialGradient.start)
+                (Circle2d.at rate radialGradient.end)
+                radialGradient.stops
+
+
+at_ : Quantity Float (Rate units1 units2) -> Gradient units1 coordinates -> Gradient units2 coordinates
+at_ rate gradient =
+    at (Quantity.inverse rate) gradient
 
 
 encode : Gradient units coordinates -> String

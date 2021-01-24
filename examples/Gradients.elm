@@ -101,19 +101,7 @@ example1 : Html Msg
 example1 =
     Drawing2d.draw
         { viewBox = viewBox
-        , background = Drawing2d.noBackground
-        , attributes = []
         , entities = [ Drawing2d.rectangle [ diagonalGradientAttribute ] square ]
-        }
-
-
-example2 : Html Msg
-example2 =
-    Drawing2d.draw
-        { viewBox = viewBox
-        , background = Drawing2d.noBackground
-        , attributes = [ diagonalGradientAttribute ]
-        , entities = [ Drawing2d.rectangle [] square ]
         }
 
 
@@ -137,8 +125,6 @@ example3 angle =
     in
     Drawing2d.draw
         { viewBox = viewBox
-        , background = Drawing2d.noBackground
-        , attributes = []
         , entities =
             [ Drawing2d.rectangle [] square
             , Drawing2d.group [ diagonalGradientAttribute ]

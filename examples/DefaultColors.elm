@@ -22,8 +22,6 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
-        , background = Drawing2d.noBackground
-        , attributes = []
         , entities =
             [ Drawing2d.rectangle [ Drawing2d.whiteFill ] <|
                 Rectangle2d.with

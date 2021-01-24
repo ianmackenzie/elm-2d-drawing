@@ -35,8 +35,6 @@ main =
     in
     Drawing2d.draw
         { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 800 800)
-        , background = Drawing2d.noBackground
-        , attributes = []
         , entities =
             [ Drawing2d.circle [ dashedStroke ] (Circle2d.atPoint p1 r)
             , Drawing2d.scaleAbout p1 0.5 <|

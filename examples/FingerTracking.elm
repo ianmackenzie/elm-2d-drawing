@@ -123,9 +123,10 @@ view model =
                 Element.html <|
                     Drawing2d.draw
                         { viewBox = viewBox
-                        , background = Drawing2d.noBackground
-                        , attributes = attributes
-                        , entities = List.map drawPoint (Dict.values model.touchPoints)
+                        , entities =
+                            [ Drawing2d.group attributes
+                                (List.map drawPoint (Dict.values model.touchPoints))
+                            ]
                         }
             , Element.html <|
                 Html.div [ Html.Attributes.style "max-width" "816px", Html.Attributes.style "overflow-wrap" "normal", Html.Attributes.style "white-space" "normal" ]

@@ -94,28 +94,41 @@ view model =
         existingLines =
             Dict.toList model.linesById
                 |> List.map (\( id, line ) -> drawPolyline [ rightClickHandler id ] line)
+
+        background =
+            Drawing2d.rectangle
+                [ Drawing2d.noBorder
+                , Drawing2d.fillColor Color.lightBlue
+                ]
+                viewBox
     in
     Element.layout [ Element.width Element.fill ] <|
         Element.el [ Element.padding 20 ] <|
             Element.el
                 [ Element.Border.width 1
                 , Element.Border.color (Element.rgb 0 0 0)
-                , Element.width (Element.px 1200)
-                , Element.height (Element.px 300)
+                , Element.width Element.shrink
+                , Element.height Element.shrink
                 ]
                 (Element.html <|
                     Drawing2d.custom
                         { viewBox = viewBox
-                        , size = Drawing2d.fit
+                        , size = Drawing2d.fixed
                         , strokeWidth = Pixels.float 5
                         , fontSize = Pixels.float 16
-                        , background = Drawing2d.backgroundColor Color.lightBlue
-                        , attributes =
-                            [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
-                            , Drawing2d.onRightMouseDown (StartDrawing Green)
-                            , Drawing2d.onRightClick (always DrawingRightClick)
+                        , entities =
+                            [ Drawing2d.group
+                                [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
+                                , Drawing2d.onRightMouseDown (StartDrawing Green)
+                                , Drawing2d.onRightClick (always DrawingRightClick)
+                                , Drawing2d.roundStrokeJoins
+                                , Drawing2d.roundStrokeCaps
+                                ]
+                                [ background
+                                , Drawing2d.group [] existingLines
+                                , activeLine
+                                ]
                             ]
-                        , entities = activeLine :: existingLines
                         }
                 )
 

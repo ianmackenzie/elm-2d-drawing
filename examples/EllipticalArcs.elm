@@ -46,8 +46,6 @@ main =
     in
     Drawing2d.draw
         { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 600 600)
-        , background = Drawing2d.noBackground
-        , attributes = []
         , entities =
             [ Drawing2d.ellipticalArc
                 [ Drawing2d.strokeGradient gradient

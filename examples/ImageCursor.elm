@@ -19,16 +19,20 @@ main =
     in
     Drawing2d.draw
         { viewBox = Rectangle2d.from Point2d.origin (Point2d.pixels 800 700)
-        , attributes = [ Drawing2d.whiteText, Drawing2d.anchorAtCenter, Drawing2d.fontSize (Pixels.float 96) ]
-        , background = Drawing2d.noBackground
         , entities =
-            [ Drawing2d.group [ Drawing2d.crosshairCursor ]
-                [ Drawing2d.rectangle [ Drawing2d.fillColor Color.red ] rect1
-                , Drawing2d.text [] (Rectangle2d.centerPoint rect1) "BORING"
+            [ Drawing2d.group
+                [ Drawing2d.whiteText
+                , Drawing2d.anchorAtCenter
+                , Drawing2d.fontSize (Pixels.float 96)
                 ]
-            , Drawing2d.group [ Drawing2d.bestCursorEver ]
-                [ Drawing2d.rectangle [ Drawing2d.fillColor Color.green ] rect2
-                , Drawing2d.text [] (Rectangle2d.centerPoint rect2) "AWESOME"
+                [ Drawing2d.group [ Drawing2d.crosshairCursor ]
+                    [ Drawing2d.rectangle [ Drawing2d.fillColor Color.red ] rect1
+                    , Drawing2d.text [] (Rectangle2d.centerPoint rect1) "BORING"
+                    ]
+                , Drawing2d.group [ Drawing2d.bestCursorEver ]
+                    [ Drawing2d.rectangle [ Drawing2d.fillColor Color.green ] rect2
+                    , Drawing2d.text [] (Rectangle2d.centerPoint rect2) "AWESOME"
+                    ]
                 ]
             ]
         }

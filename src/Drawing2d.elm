@@ -2,10 +2,9 @@ module Drawing2d exposing
     ( Entity, Attribute
     , draw, custom
     , Size, fixed, scale, width, height, fit, fitWidth
-    , Background, noBackground, whiteBackground, blackBackground, backgroundColor, backgroundGradient
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
-    , noFill, blackFill, whiteFill, fillColor, fillGradient
+    , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
     , Gradient, gradientFrom, gradientAlong, circularGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
     , miterStrokeJoins, roundStrokeJoins, bevelStrokeJoins
@@ -48,11 +47,6 @@ module Drawing2d exposing
 @docs Size, fixed, scale, width, height, fit, fitWidth
 
 
-# Background
-
-@docs Background, noBackground, whiteBackground, blackBackground, backgroundColor, backgroundGradient
-
-
 # Drawing
 
 @docs empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
@@ -65,7 +59,7 @@ module Drawing2d exposing
 
 ## Fill
 
-@docs noFill, blackFill, whiteFill, fillColor, fillGradient
+@docs noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
 
 
 ## Gradients
@@ -281,8 +275,6 @@ import Drawing2d.Attributes as Attributes
     exposing
         ( Attribute(..)
         , AttributeValues
-        , DrawingCoordinates
-        , DrawingUnits
         , Event(..)
         , Fill(..)
         , LineCap(..)
@@ -335,7 +327,7 @@ type Entity units coordinates msg
          -> String -- encoded gradient fill in current units
          -> String -- encoded gradient stroke in current units
          -> String -- encoded dash pattern in current units
-         -> Svg (Event msg)
+         -> Svg (Event units coordinates msg)
         )
 
 
@@ -355,8 +347,8 @@ type alias Gradient units coordinates =
     Gradient.Gradient units coordinates
 
 
-type alias Renderer a msg =
-    List (Svg.Attribute (Event msg)) -> a -> Svg (Event msg)
+type alias Renderer a units coordinates msg =
+    List (Svg.Attribute (Event units coordinates msg)) -> a -> Svg (Event units coordinates msg)
 
 
 topLevelRectangle : Rectangle2d units1 coordinates1 -> Rectangle2d units2 coordinates2
@@ -396,20 +388,16 @@ px value =
 
 draw :
     { viewBox : Rectangle2d Pixels coordinates
-    , background : Background Pixels coordinates
-    , attributes : List (Attribute Pixels coordinates msg)
     , entities : List (Entity Pixels coordinates msg)
     }
     -> Html msg
-draw { viewBox, background, attributes, entities } =
+draw arguments =
     custom
-        { viewBox = viewBox
+        { viewBox = arguments.viewBox
         , size = fixed
         , strokeWidth = Pixels.float 1
         , fontSize = Pixels.float 16
-        , background = background
-        , attributes = attributes
-        , entities = entities
+        , entities = arguments.entities
         }
 
 
@@ -418,8 +406,6 @@ custom :
     , size : Size units
     , strokeWidth : Quantity Float units
     , fontSize : Quantity Float units
-    , background : Background units coordinates
-    , attributes : List (Attribute units coordinates msg)
     , entities : List (Entity units coordinates msg)
     }
     -> Html msg
@@ -506,30 +492,17 @@ custom given =
         rootAttributeValues =
             Attributes.emptyAttributeValues
                 |> Attributes.assignAttributes defaultAttributes
-                |> Attributes.assignAttributes given.attributes
-
-        backgroundEntity =
-            if given.background == noBackground then
-                empty
-
-            else
-                let
-                    scaledViewBox =
-                        given.viewBox
-                            |> Rectangle2d.scaleAbout (Rectangle2d.centerPoint given.viewBox) 1.0e6
-
-                    (Background backgroundAttribute) =
-                        given.background
-                in
-                rectangle [ backgroundAttribute ] scaledViewBox |> map never
 
         (Entity svgElement) =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) rootAttributeValues <|
-                [ group [] (backgroundEntity :: given.entities) |> unsafePlaceIn (Rectangle2d.axes given.viewBox)
+                [ group [] given.entities |> relativeTo (Rectangle2d.axes given.viewBox)
                 ]
+
+        topLevelViewBox =
+            given.viewBox |> Rectangle2d.relativeTo (Rectangle2d.axes given.viewBox)
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement False 0 0 "" "" "[]" |> Svg.map (\(Event callback) -> callback (topLevelRectangle given.viewBox)) ]
+        [ svgElement False 0 0 "" "" "[]" |> Svg.map (\(Event callback) -> callback topLevelViewBox) ]
 
 
 fixed : Size Pixels
@@ -562,35 +535,6 @@ fitWidth =
     FitWidth
 
 
-type Background units coordinates
-    = Background (Attribute units coordinates Never)
-
-
-noBackground : Background units coordinates
-noBackground =
-    Background noFill
-
-
-blackBackground : Background units coordinates
-blackBackground =
-    Background blackFill
-
-
-whiteBackground : Background units coordinates
-whiteBackground =
-    Background whiteFill
-
-
-backgroundColor : Color -> Background units coordinates
-backgroundColor color =
-    Background (fillColor color)
-
-
-backgroundGradient : Gradient units coordinates -> Background units coordinates
-backgroundGradient gradient =
-    Background (fillGradient gradient)
-
-
 empty : Entity units coordinates msg
 empty =
     Entity (\_ _ _ _ _ _ -> Svg.text "")
@@ -598,7 +542,7 @@ empty =
 
 drawCurve :
     List (Attribute units coordinates msg)
-    -> Renderer curve msg
+    -> Renderer curve units coordinates msg
     -> curve
     -> Entity units coordinates msg
 drawCurve attributes renderer curve =
@@ -625,7 +569,7 @@ drawCurve attributes renderer curve =
 
 drawRegion :
     List (Attribute units coordinates msg)
-    -> Renderer region msg
+    -> Renderer region units coordinates msg
     -> region
     -> Entity units coordinates msg
 drawRegion attributes renderer region =
@@ -687,7 +631,7 @@ render :
     -> String
     -> String
     -> Entity units coordinates msg
-    -> Svg (Event msg)
+    -> Svg (Event units coordinates msg)
 render arg1 arg2 arg3 arg4 arg5 arg6 (Entity function) =
     function arg1 arg2 arg3 arg4 arg5 arg6
 
@@ -719,7 +663,7 @@ decodeDashPattern json =
 
 groupLike :
     String
-    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
     -> AttributeValues units coordinates msg
     -> List (Entity units coordinates msg)
     -> Entity units coordinates msg
@@ -745,6 +689,9 @@ groupLike tag extraSvgAttributes attributeValues childEntities =
                             currentFillGradient
 
                         Just NoFill ->
+                            ""
+
+                        Just TransparentFill ->
                             ""
 
                         Just (FillColor _) ->
@@ -969,22 +916,24 @@ placementTransform frame =
 
 placeIn :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Entity units localCoordinates Never
-    -> Entity units globalCoordinates msg
-placeIn frame entity =
-    unsafePlaceIn frame (map never entity)
-
-
-unsafePlaceIn :
-    Frame2d units globalCoordinates { defines : localCoordinates }
     -> Entity units localCoordinates msg
     -> Entity units globalCoordinates msg
-unsafePlaceIn frame (Entity function) =
-    Entity
-        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
+placeIn frame entity =
+    placeImpl Frame2d.atOrigin frame entity
+
+
+placeImpl :
+    Frame2d units localCoordinates { defines : localCoordinates }
+    -> Frame2d units globalCoordinates { defines : localCoordinates }
+    -> Entity units localCoordinates msg
+    -> Entity units globalCoordinates msg
+placeImpl transformationFrame coordinateConversionFrame (Entity function) =
+    Entity <|
+        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
             let
                 toLocalGradient =
-                    Gradient.relativeTo frame
+                    Gradient.relativeTo coordinateConversionFrame
+                        >> Gradient.relativeTo transformationFrame
 
                 localFillGradient =
                     Gradient.decode currentFillGradient
@@ -1032,9 +981,15 @@ unsafePlaceIn frame (Entity function) =
 
                         _ ->
                             Svg.g localGradientReferences (localSvgElement :: localGradientElements)
+
+                groupElement =
+                    Svg.g [ placementTransform (Frame2d.placeIn coordinateConversionFrame transformationFrame) ]
+                        [ localElement ]
+
+                transformEvent (Event callback) =
+                    Event (Rectangle2d.relativeTo coordinateConversionFrame >> callback)
             in
-            Svg.g [ placementTransform frame ] [ localElement ]
-        )
+            Svg.map transformEvent groupElement
 
 
 scaleAbout :
@@ -1043,15 +998,11 @@ scaleAbout :
     -> Entity units coordinates msg
     -> Entity units coordinates msg
 scaleAbout point factor entity =
-    scaleImpl point factor entity
+    scaleImpl point factor (Quantity 1) entity
 
 
-scaleImpl :
-    Point2d units1 coordinates
-    -> Float
-    -> Entity units1 coordinates msg
-    -> Entity units2 coordinates msg
-scaleImpl point factor (Entity function) =
+scaleTransform : Point2d units coordinates -> Float -> Svg.Attribute a
+scaleTransform point factor =
     let
         { x, y } =
             Point2d.unwrap point
@@ -1065,22 +1016,32 @@ scaleImpl point factor (Entity function) =
             , String.fromFloat ((factor - 1) * y)
             ]
 
-        transform =
+        transformMatrixString =
             "matrix(" ++ String.join " " matrixComponents ++ ")"
     in
-    Entity
-        (\currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
+    Svg.Attributes.transform transformMatrixString
+
+
+scaleImpl :
+    Point2d units1 coordinates
+    -> Float
+    -> Quantity Float (Rate units2 units1)
+    -> Entity units1 coordinates msg
+    -> Entity units2 coordinates msg
+scaleImpl centerPoint scaleFactor rate (Entity function) =
+    Entity <|
+        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
             let
-                transformation =
-                    Gradient.scaleAbout point (1 / factor)
+                gradientTransformation =
+                    Gradient.scaleAbout centerPoint scaleFactor >> Gradient.at rate
 
                 transformedFillGradient =
                     Gradient.decode currentFillGradient
-                        |> Maybe.map transformation
+                        |> Maybe.map gradientTransformation
 
                 transformedStrokeGradient =
                     Gradient.decode currentStrokeGradient
-                        |> Maybe.map transformation
+                        |> Maybe.map gradientTransformation
 
                 updatedFillGradient =
                     transformedFillGradient
@@ -1092,25 +1053,29 @@ scaleImpl point factor (Entity function) =
                         |> Maybe.map Gradient.encode
                         |> Maybe.withDefault ""
 
+                (Quantity rateFactor) =
+                    rate
+
+                overallFactor =
+                    scaleFactor * rateFactor
+
                 updatedStrokeWidth =
-                    currentStrokeWidth / factor
+                    currentStrokeWidth / overallFactor
 
                 updatedFontSize =
-                    currentFontSize / factor
+                    currentFontSize / overallFactor
 
                 scaledDashPattern =
                     decodeDashPattern currentDashPattern
-                        |> List.map (\value -> value / factor)
+                        |> List.map (\value -> value / overallFactor)
 
                 updatedDashPattern =
                     encodeDashPattern scaledDashPattern
 
                 svgAttributes =
-                    [ Svg.Attributes.transform transform
-                    , Svg.Attributes.fontSize
-                        (String.fromFloat updatedFontSize)
-                    , Svg.Attributes.strokeWidth
-                        (String.fromFloat updatedStrokeWidth)
+                    [ scaleTransform centerPoint overallFactor
+                    , Svg.Attributes.fontSize (String.fromFloat updatedFontSize)
+                    , Svg.Attributes.strokeWidth (String.fromFloat updatedStrokeWidth)
                     ]
                         |> addTransformedFillGradientReference transformedFillGradient
                         |> addTransformedStrokeGradientReference transformedStrokeGradient
@@ -1121,30 +1086,25 @@ scaleImpl point factor (Entity function) =
                         |> addGradientElements transformedFillGradient
                         |> addGradientElements transformedStrokeGradient
 
+                transformEvent (Event callback) =
+                    Event (Rectangle2d.at_ rate >> callback)
+
                 childSvgElement =
-                    function
-                        currentBordersVisible
-                        updatedStrokeWidth
-                        updatedFontSize
-                        updatedFillGradient
-                        updatedStrokeGradient
-                        updatedDashPattern
-
-                groupElement =
-                    case transformedGradientElements of
-                        [] ->
-                            Svg.g svgAttributes [ childSvgElement ]
-
-                        _ ->
-                            Svg.g svgAttributes (childSvgElement :: transformedGradientElements)
+                    Svg.map transformEvent <|
+                        function
+                            currentBordersVisible
+                            updatedStrokeWidth
+                            updatedFontSize
+                            updatedFillGradient
+                            updatedStrokeGradient
+                            updatedDashPattern
             in
-            groupElement
-        )
+            Svg.g svgAttributes (childSvgElement :: transformedGradientElements)
 
 
 relativeTo :
     Frame2d units globalCoordinates { defines : localCoordinates }
-    -> Entity units globalCoordinates Never
+    -> Entity units globalCoordinates msg
     -> Entity units localCoordinates msg
 relativeTo frame entity =
     entity |> placeIn (Frame2d.atOrigin |> Frame2d.relativeTo frame)
@@ -1155,7 +1115,7 @@ translateBy :
     -> Entity units coordinates msg
     -> Entity units coordinates msg
 translateBy displacement entity =
-    entity |> unsafePlaceIn (Frame2d.atOrigin |> Frame2d.translateBy displacement)
+    placeImpl (Frame2d.atOrigin |> Frame2d.translateBy displacement) Frame2d.atOrigin entity
 
 
 translateIn :
@@ -1173,7 +1133,7 @@ rotateAround :
     -> Entity units coordinates msg
     -> Entity units coordinates msg
 rotateAround centerPoint angle entity =
-    entity |> unsafePlaceIn (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle)
+    placeImpl (Frame2d.atOrigin |> Frame2d.rotateAround centerPoint angle) Frame2d.atOrigin entity
 
 
 mirrorAcross :
@@ -1181,45 +1141,46 @@ mirrorAcross :
     -> Entity units coordinates msg
     -> Entity units coordinates msg
 mirrorAcross axis entity =
-    entity |> unsafePlaceIn (Frame2d.atOrigin |> Frame2d.mirrorAcross axis)
+    placeImpl (Frame2d.atOrigin |> Frame2d.mirrorAcross axis) Frame2d.atOrigin entity
 
 
 at :
     Quantity Float (Rate units2 units1)
-    -> Entity units1 coordinates Never
+    -> Entity units1 coordinates msg
     -> Entity units2 coordinates msg
-at (Quantity factor) entity =
-    scaleImpl Point2d.origin factor (map never entity)
+at rate entity =
+    scaleImpl Point2d.origin 1 rate entity
 
 
 at_ :
     Quantity Float (Rate units1 units2)
-    -> Entity units1 coordinates Never
+    -> Entity units1 coordinates msg
     -> Entity units2 coordinates msg
-at_ (Quantity factor) entity =
-    scaleImpl Point2d.origin (1 / factor) (map never entity)
+at_ rate entity =
+    at (Quantity.inverse rate) entity
 
 
-mapEvent : (a -> b) -> Event a -> Event b
+mapEvent : (a -> b) -> Event units coordinates a -> Event units coordinates b
 mapEvent function (Event callback) =
     Event (callback >> function)
 
 
-map :
-    (a -> b)
-    -> Entity units coordinates a
-    -> Entity units coordinates b
-map mapFunction (Entity drawFunction) =
-    Entity
-        (\arg1 arg2 arg3 arg4 arg5 arg6 ->
-            Svg.map (mapEvent mapFunction) (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
-        )
+map : (a -> b) -> Entity units coordinates a -> Entity units coordinates b
+map function entity =
+    mapImpl (mapEvent function) entity
+
+
+mapImpl : (Event units1 coordinates1 msg1 -> Event units2 coordinates2 msg2) -> Entity units1 coordinates1 msg1 -> Entity units2 coordinates2 msg2
+mapImpl function (Entity drawFunction) =
+    Entity <|
+        \arg1 arg2 arg3 arg4 arg5 arg6 ->
+            Svg.map function (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
 
 
 addStrokeGradient :
     AttributeValues units coordinates msg
-    -> List (Svg (Event msg))
-    -> List (Svg (Event msg))
+    -> List (Svg (Event units coordinates msg))
+    -> List (Svg (Event units coordinates msg))
 addStrokeGradient attributeValues svgElements =
     case attributeValues.strokeStyle of
         Nothing ->
@@ -1234,14 +1195,17 @@ addStrokeGradient attributeValues svgElements =
 
 addFillGradient :
     AttributeValues units coordinates msg
-    -> List (Svg (Event msg))
-    -> List (Svg (Event msg))
+    -> List (Svg (Event units coordinates msg))
+    -> List (Svg (Event units coordinates msg))
 addFillGradient attributeValues svgElements =
     case attributeValues.fillStyle of
         Nothing ->
             svgElements
 
         Just NoFill ->
+            svgElements
+
+        Just TransparentFill ->
             svgElements
 
         Just (FillColor _) ->
@@ -1253,8 +1217,8 @@ addFillGradient attributeValues svgElements =
 
 addGradientElements :
     Maybe (Gradient units coordinates)
-    -> List (Svg (Event msg))
-    -> List (Svg (Event msg))
+    -> List (Svg (Event units coordinates msg))
+    -> List (Svg (Event units coordinates msg))
 addGradientElements maybeGradient svgElements =
     case maybeGradient of
         Nothing ->
@@ -1266,8 +1230,8 @@ addGradientElements maybeGradient svgElements =
 
 addTransformedFillGradientReference :
     Maybe (Gradient units gradientCoordinates)
-    -> List (Svg.Attribute (Event msg))
-    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
 addTransformedFillGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->
@@ -1279,8 +1243,8 @@ addTransformedFillGradientReference maybeGradient svgAttributes =
 
 addTransformedStrokeGradientReference :
     Maybe (Gradient units gradientCoordinates)
-    -> List (Svg.Attribute (Event msg))
-    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
 addTransformedStrokeGradientReference maybeGradient svgAttributes =
     case maybeGradient of
         Nothing ->
@@ -1292,8 +1256,8 @@ addTransformedStrokeGradientReference maybeGradient svgAttributes =
 
 addScaledStrokeDashPattern :
     List Float
-    -> List (Svg.Attribute (Event msg))
-    -> List (Svg.Attribute (Event msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
 addScaledStrokeDashPattern dashPattern svgAttributes =
     case dashPattern of
         [] ->
@@ -1306,8 +1270,8 @@ addScaledStrokeDashPattern dashPattern svgAttributes =
 
 addDropShadow :
     AttributeValues units coordinates msg
-    -> List (Svg (Event msg))
-    -> List (Svg (Event msg))
+    -> List (Svg (Event units coordinates msg))
+    -> List (Svg (Event units coordinates msg))
 addDropShadow attributeValues svgElements =
     case attributeValues.dropShadow of
         Nothing ->
@@ -1318,9 +1282,9 @@ addDropShadow attributeValues svgElements =
 
 
 addDefs :
-    List (Svg (Event msg))
-    -> Svg (Event msg)
-    -> Svg (Event msg)
+    List (Svg (Event units coordinates msg))
+    -> Svg (Event units coordinates msg)
+    -> Svg (Event units coordinates msg)
 addDefs defs svgElement =
     case defs of
         [] ->
@@ -1338,6 +1302,11 @@ fillColor color =
 noFill : Attribute units coordinates msg
 noFill =
     FillStyle (FillColor "none")
+
+
+transparentFill : Attribute units coordinates msg
+transparentFill =
+    FillStyle TransparentFill
 
 
 blackFill : Attribute units coordinates msg
@@ -1893,7 +1862,7 @@ decodeTouchStart decoder =
     Attributes.EventHandlers [ ( "touchstart", touchStartDecoder decoder ) ]
 
 
-wrapMessage : msg -> Event msg
+wrapMessage : msg -> Event units coordinates msg
 wrapMessage message =
     Event (always message)
 
@@ -1911,12 +1880,12 @@ filterByButton whichButton decoder =
             )
 
 
-clickDecoder : Decoder (Point2d units coordinates -> msg) -> Decoder (Event msg)
+clickDecoder : Decoder (Point2d units coordinates -> msg) -> Decoder (Event units coordinates msg)
 clickDecoder givenDecoder =
     Decode.map2 handleClick MouseStartEvent.decoder givenDecoder
 
 
-handleClick : MouseStartEvent -> (Point2d units coordinates -> msg) -> Event msg
+handleClick : MouseStartEvent -> (Point2d units coordinates -> msg) -> Event units coordinates msg
 handleClick mouseStartEvent userCallback =
     Event
         (\viewBox ->
@@ -1931,7 +1900,7 @@ handleClick mouseStartEvent userCallback =
 mouseDownDecoder :
     Int
     -> Decoder (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
-    -> Decoder (Event msg)
+    -> Decoder (Event units coordinates msg)
 mouseDownDecoder givenButton givenDecoder =
     filterByButton givenButton (Decode.map2 handleMouseDown MouseStartEvent.decoder givenDecoder)
 
@@ -1939,7 +1908,7 @@ mouseDownDecoder givenButton givenDecoder =
 handleMouseDown :
     MouseStartEvent
     -> (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
-    -> Event msg
+    -> Event units coordinates msg
 handleMouseDown mouseStartEvent userCallback =
     Event
         (\viewBox ->
@@ -1954,14 +1923,14 @@ handleMouseDown mouseStartEvent userCallback =
         )
 
 
-mouseUpDecoder : Int -> Decoder msg -> Decoder (Event msg)
+mouseUpDecoder : Int -> Decoder msg -> Decoder (Event units coordinates msg)
 mouseUpDecoder givenButton givenDecoder =
     filterByButton givenButton (Decode.map wrapMessage givenDecoder)
 
 
 touchStartDecoder :
     Decoder (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
-    -> Decoder (Event msg)
+    -> Decoder (Event units coordinates msg)
 touchStartDecoder givenDecoder =
     Decode.map2 handleTouchStart TouchStartEvent.decoder givenDecoder
 
@@ -1969,13 +1938,13 @@ touchStartDecoder givenDecoder =
 handleTouchStart :
     TouchStartEvent
     -> (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
-    -> Event msg
+    -> Event units coordinates msg
 handleTouchStart touchStartEvent userCallback =
     Event
         (\viewBox ->
             let
                 ( touchInteraction, initialPoints ) =
-                    TouchInteraction.start touchStartEvent (topLevelRectangle viewBox)
+                    TouchInteraction.start touchStartEvent viewBox
             in
             userCallback initialPoints touchInteraction
         )

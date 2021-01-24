@@ -230,9 +230,10 @@ view model =
                 Element.html <|
                     Drawing2d.draw
                         { viewBox = viewBox
-                        , background = Drawing2d.noBackground
-                        , attributes = commonAttributes ++ touchInteractionAttributes
-                        , entities = List.map drawLine allLines
+                        , entities =
+                            [ Drawing2d.group (commonAttributes ++ touchInteractionAttributes)
+                                (List.map drawLine allLines)
+                            ]
                         }
             , Element.html <|
                 Html.div [ Html.Attributes.style "max-width" "816px", Html.Attributes.style "overflow-wrap" "normal", Html.Attributes.style "white-space" "normal" ]

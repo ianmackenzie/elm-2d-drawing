@@ -58,15 +58,19 @@ scene points =
     ]
 
 
-background : Drawing2d.Background Pixels DrawingCoordinates
+background : Drawing2d.Entity Pixels DrawingCoordinates Msg
 background =
-    Drawing2d.backgroundGradient <|
-        Drawing2d.gradientAlong Axis2d.x <|
-            [ ( Pixels.float -51, Color.orange )
-            , ( Pixels.float -50, Color.lightBlue )
-            , ( Pixels.float 50, Color.lightGreen )
-            , ( Pixels.float 51, Color.yellow )
-            ]
+    Drawing2d.rectangle
+        [ Drawing2d.noBorder
+        , Drawing2d.fillGradient <|
+            Drawing2d.gradientAlong Axis2d.x <|
+                [ ( Pixels.float -51, Color.orange )
+                , ( Pixels.float -50, Color.lightBlue )
+                , ( Pixels.float 50, Color.lightGreen )
+                , ( Pixels.float 51, Color.yellow )
+                ]
+        ]
+        viewBox
 
 
 onClick : Drawing2d.Attribute Pixels DrawingCoordinates Msg
@@ -202,9 +206,10 @@ view model =
                                     , strokeWidth = Pixels.float 1
                                     , fontSize = Pixels.float 16
                                     , viewBox = viewBox
-                                    , background = background
-                                    , attributes = [ onClick ]
-                                    , entities = scene model.points
+                                    , entities =
+                                        [ Drawing2d.group [ onClick ]
+                                            (background :: scene model.points)
+                                        ]
                                     }
                   }
                 , { header = Element.text "Large"
@@ -217,9 +222,10 @@ view model =
                                     , viewBox = viewBox
                                     , strokeWidth = Pixels.float 5
                                     , fontSize = Pixels.float 32
-                                    , background = background
-                                    , attributes = [ onClick ]
-                                    , entities = scene model.points
+                                    , entities =
+                                        [ Drawing2d.group [ onClick ]
+                                            (background :: scene model.points)
+                                        ]
                                     }
                   }
                 ]

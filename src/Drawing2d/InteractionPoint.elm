@@ -19,6 +19,7 @@ type ReferencePoint drawingUnits drawingCoordinates
     = ReferencePoint
         { pageX : Float
         , pageY : Float
+        , viewBox : Rectangle2d drawingUnits drawingCoordinates
         , drawingPoint : Point2d drawingUnits drawingCoordinates
         , drawingScale : Float
         }
@@ -67,6 +68,7 @@ referencePoint startEvent viewBox container =
     ReferencePoint
         { pageX = startEvent.pageX
         , pageY = startEvent.pageY
+        , viewBox = viewBox
         , drawingScale = drawingScale
         , drawingPoint = drawingPoint
         }
@@ -97,7 +99,7 @@ updatedPosition :
 updatedPosition (ReferencePoint reference) { pageX, pageY } =
     let
         displacementFromReference =
-            Vector2d.xy
+            Vector2d.xyIn (Rectangle2d.axes reference.viewBox)
                 (Quantity ((pageX - reference.pageX) / reference.drawingScale))
                 (Quantity ((reference.pageY - pageY) / reference.drawingScale))
     in

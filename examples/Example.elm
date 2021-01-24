@@ -52,29 +52,29 @@ main =
     in
     Drawing2d.draw
         { viewBox = viewBox
-        , background = Drawing2d.noBackground
-        , attributes =
-            [ Drawing2d.fillColor Color.orange
-            , Drawing2d.strokeColor Color.blue
-            , Drawing2d.fontSize (Pixels.float 20)
-            ]
         , entities =
-            [ Drawing2d.group [ Drawing2d.strokeWidth (pixels 2) ]
-                (List.map (Drawing2d.lineSegment []) [ lineSegment, mirroredSegment ])
-            , Drawing2d.group
-                [ Drawing2d.whiteFill, Drawing2d.blackStroke ]
-                (List.map dot arcPoints)
-            , dot (Arc2d.centerPoint arc)
-            , Drawing2d.group []
-                [ text Drawing2d.anchorAtTopLeft (Point2d.pixels 300 200) "top left"
-                , text Drawing2d.anchorAtTopCenter (Point2d.pixels 500 200) "top center"
-                , text Drawing2d.anchorAtTopRight (Point2d.pixels 700 200) "top right"
-                , text Drawing2d.anchorAtCenterLeft (Point2d.pixels 300 150) "center left"
-                , text Drawing2d.anchorAtCenter (Point2d.pixels 500 150) "center"
-                , text Drawing2d.anchorAtCenterRight (Point2d.pixels 700 150) "center right"
-                , text Drawing2d.anchorAtBottomLeft (Point2d.pixels 300 100) "bottom left"
-                , text Drawing2d.anchorAtBottomCenter (Point2d.pixels 500 100) "bottom center"
-                , text Drawing2d.anchorAtBottomRight (Point2d.pixels 700 100) "bottom right"
+            [ Drawing2d.group
+                [ Drawing2d.fillColor Color.orange
+                , Drawing2d.strokeColor Color.blue
+                , Drawing2d.fontSize (Pixels.float 20)
+                ]
+                [ Drawing2d.group [ Drawing2d.strokeWidth (pixels 2) ]
+                    (List.map (Drawing2d.lineSegment []) [ lineSegment, mirroredSegment ])
+                , Drawing2d.group
+                    [ Drawing2d.whiteFill, Drawing2d.blackStroke ]
+                    (List.map dot arcPoints)
+                , dot (Arc2d.centerPoint arc)
+                , Drawing2d.group []
+                    [ text Drawing2d.anchorAtTopLeft (Point2d.pixels 300 200) "top left"
+                    , text Drawing2d.anchorAtTopCenter (Point2d.pixels 500 200) "top center"
+                    , text Drawing2d.anchorAtTopRight (Point2d.pixels 700 200) "top right"
+                    , text Drawing2d.anchorAtCenterLeft (Point2d.pixels 300 150) "center left"
+                    , text Drawing2d.anchorAtCenter (Point2d.pixels 500 150) "center"
+                    , text Drawing2d.anchorAtCenterRight (Point2d.pixels 700 150) "center right"
+                    , text Drawing2d.anchorAtBottomLeft (Point2d.pixels 300 100) "bottom left"
+                    , text Drawing2d.anchorAtBottomCenter (Point2d.pixels 500 100) "bottom center"
+                    , text Drawing2d.anchorAtBottomRight (Point2d.pixels 700 100) "bottom right"
+                    ]
                 ]
             ]
         }

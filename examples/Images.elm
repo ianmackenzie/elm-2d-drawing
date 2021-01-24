@@ -79,21 +79,21 @@ main =
             in
             Drawing2d.draw
                 { viewBox = viewBox
-                , background = Drawing2d.noBackground
-                , attributes =
-                    [ Drawing2d.dropShadow
-                        { radius = pixels 6
-                        , offset = Vector2d.pixels 2 -4
-                        , color = Color.darkGrey
-                        }
-                    ]
                 , entities =
-                    [ Drawing2d.cubicSpline
-                        [ Drawing2d.strokeWidth (pixels 4)
-                        , Drawing2d.strokeColor Color.charcoal
+                    [ Drawing2d.group
+                        [ Drawing2d.dropShadow
+                            { radius = pixels 6
+                            , offset = Vector2d.pixels 2 -4
+                            , color = Color.darkGrey
+                            }
                         ]
-                        spline
-                    , Drawing2d.group [] (List.map toImage samples)
+                        [ Drawing2d.cubicSpline
+                            [ Drawing2d.strokeWidth (pixels 4)
+                            , Drawing2d.strokeColor Color.charcoal
+                            ]
+                            spline
+                        , Drawing2d.group [] (List.map toImage samples)
+                        ]
                     ]
                 }
 

@@ -89,9 +89,10 @@ view model =
     Html.div [ Html.Events.onClick ToggleTransform ]
         [ Drawing2d.draw
             { viewBox = viewBox
-            , background = Drawing2d.backgroundGradient backgroundGradient
-            , attributes = [ Drawing2d.fontSize (Pixels.float 20) ]
-            , entities = [ rendered ]
+            , entities =
+                [ Drawing2d.rectangle [ Drawing2d.fillGradient backgroundGradient ] viewBox
+                , Drawing2d.group [ Drawing2d.fontSize (Pixels.float 20) ] [ rendered ]
+                ]
             }
         ]
 

@@ -44,7 +44,7 @@ decodeChange decoder touchInteraction =
 decodeTouchChange :
     Decoder (Dict Int (Point2d units coordinates) -> msg)
     -> TouchInteraction units coordinates
-    -> Decoder (Event msg)
+    -> Decoder (Event units coordinates msg)
 decodeTouchChange givenDecoder touchInteraction =
     Decode.map2 (handleTouchChange touchInteraction) TouchChangeEvent.decoder givenDecoder
 
@@ -53,7 +53,7 @@ handleTouchChange :
     TouchInteraction units coordinates
     -> TouchChangeEvent
     -> (Dict Int (Point2d units coordinates) -> msg)
-    -> Event msg
+    -> Event units coordinates msg
 handleTouchChange touchInteraction touchChangeEvent userCallback =
     Event
         (\viewBox ->
@@ -85,7 +85,7 @@ decodeEnd decoder touchInteraction =
 decodeTouchEnd :
     Decoder (Duration -> msg)
     -> TouchInteraction units coordinates
-    -> Decoder (Event msg)
+    -> Decoder (Event units coordinates msg)
 decodeTouchEnd givenDecoder touchInteraction =
     Decode.map2 (handleTouchEnd touchInteraction) TouchEndEvent.decoder givenDecoder
 
@@ -94,7 +94,7 @@ handleTouchEnd :
     TouchInteraction units coordinates
     -> TouchEndEvent
     -> (Duration -> msg)
-    -> Event msg
+    -> Event units coordinates msg
 handleTouchEnd touchInteraction touchEndEvent userCallback =
     Event (always (userCallback (duration touchInteraction touchEndEvent)))
 
