@@ -268,7 +268,6 @@ import BoundingBox2d exposing (BoundingBox2d)
 import Circle2d exposing (Circle2d)
 import Color exposing (Color)
 import CubicSpline2d exposing (CubicSpline2d)
-import DOM
 import Dict exposing (Dict)
 import Direction2d exposing (Direction2d)
 import Drawing2d.Attributes as Attributes
@@ -287,22 +286,19 @@ import Drawing2d.Gradient as Gradient
 import Drawing2d.InteractionPoint as InteractionPoint
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Drawing2d.MouseInteraction.Protected as MouseInteraction
-import Drawing2d.MouseMoveEvent as MouseMoveEvent exposing (MouseMoveEvent)
 import Drawing2d.MouseStartEvent as MouseStartEvent exposing (MouseStartEvent)
 import Drawing2d.Shadow as Shadow
 import Drawing2d.Svg as Svg
-import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent)
-import Drawing2d.TouchEndEvent as TouchEndEvent
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Drawing2d.TouchInteraction.Protected as TouchInteraction
-import Drawing2d.TouchStartEvent as TouchStartEvent exposing (TouchStart, TouchStartEvent)
+import Drawing2d.TouchStartEvent as TouchStartEvent exposing (TouchStartEvent)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
 import Html exposing (Html)
 import Html.Attributes
 import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode exposing (Value)
+import Json.Encode as Encode
 import LineSegment2d exposing (LineSegment2d)
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
@@ -316,7 +312,6 @@ import Svg.Attributes
 import Svg.Events
 import Triangle2d exposing (Triangle2d)
 import Vector2d exposing (Vector2d)
-import VirtualDom
 
 
 type Entity units coordinates msg
