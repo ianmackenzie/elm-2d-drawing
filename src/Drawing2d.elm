@@ -639,18 +639,18 @@ group attributes childEntities =
     groupLike "g" [] (Attributes.collectAttributeValues attributes) childEntities
 
 
-encodeDashPattern : List Float -> String
+encodeDashPattern : List (Quantity Float units) -> String
 encodeDashPattern dashPattern =
-    Encode.list Encode.float dashPattern
+    Encode.list (Quantity.unwrap >> Encode.float) dashPattern
         |> Encode.encode 0
 
 
-dashPatternDecoder : Decoder (List Float)
+dashPatternDecoder : Decoder (List (Quantity Float units))
 dashPatternDecoder =
-    Decode.list Decode.float
+    Decode.list (Decode.map Quantity Decode.float)
 
 
-decodeDashPattern : String -> List Float
+decodeDashPattern : String -> List (Quantity Float units)
 decodeDashPattern json =
     Decode.decodeString dashPatternDecoder json
         |> Result.withDefault []
@@ -1062,7 +1062,7 @@ scaleImpl centerPoint scaleFactor rate (Entity function) =
 
                 scaledDashPattern =
                     decodeDashPattern currentDashPattern
-                        |> List.map (\value -> value / overallFactor)
+                        |> List.map (Quantity.divideBy overallFactor)
 
                 updatedDashPattern =
                     encodeDashPattern scaledDashPattern
@@ -1250,7 +1250,7 @@ addTransformedStrokeGradientReference maybeGradient svgAttributes =
 
 
 addScaledStrokeDashPattern :
-    List Float
+    List (Quantity Float units)
     -> List (Svg.Attribute (Event units coordinates msg))
     -> List (Svg.Attribute (Event units coordinates msg))
 addScaledStrokeDashPattern dashPattern svgAttributes =
@@ -1341,7 +1341,7 @@ strokeGradient gradient =
 
 dashedStroke : List (Quantity Float units) -> Attribute units coordinates msg
 dashedStroke dashPattern =
-    StrokeDashPattern (List.map Quantity.unwrap dashPattern)
+    StrokeDashPattern dashPattern
 
 
 solidStroke : Attribute units coordinates msg

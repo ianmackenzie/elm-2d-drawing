@@ -112,7 +112,7 @@ type Attribute units coordinates msg
     | StrokeWidth Float
     | StrokeLineJoin LineJoin
     | StrokeLineCap LineCap
-    | StrokeDashPattern (List Float)
+    | StrokeDashPattern (List (Quantity Float units))
     | BorderVisibility Bool
     | DropShadow (Shadow units coordinates)
     | TextColor String -- Svg.Attributes.color
@@ -130,7 +130,7 @@ type alias AttributeValues units coordinates msg =
     , strokeWidth : Maybe Float
     , strokeLineJoin : Maybe LineJoin
     , strokeLineCap : Maybe LineCap
-    , strokeDashPattern : Maybe (List Float)
+    , strokeDashPattern : Maybe (List (Quantity Float units))
     , borderVisibility : Maybe Bool
     , dropShadow : Maybe (Shadow units coordinates)
     , textColor : Maybe String
@@ -410,14 +410,14 @@ addStrokeDashPattern attributeValues svgAttributes =
             dashPatternSvgAttribute dashPattern :: svgAttributes
 
 
-dashPatternSvgAttribute : List Float -> Svg.Attribute (Event units coordinates msg)
+dashPatternSvgAttribute : List (Quantity Float units) -> Svg.Attribute (Event units coordinates msg)
 dashPatternSvgAttribute dashPattern =
     case dashPattern of
         [] ->
             Svg.Attributes.strokeDasharray "none"
 
         _ ->
-            Svg.Attributes.strokeDasharray (String.join " " (List.map String.fromFloat dashPattern))
+            Svg.Attributes.strokeDasharray (String.join " " (List.map (Quantity.unwrap >> String.fromFloat) dashPattern))
 
 
 addTextColor :
