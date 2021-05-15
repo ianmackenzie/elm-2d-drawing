@@ -1,7 +1,7 @@
 module Drawing2d exposing
     ( Entity, Attribute
     , draw, custom
-    , Size, fixed, scale, width, height, fit, fitWidth
+    , Size, fixed, scale, width, height
     , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
     , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
@@ -287,6 +287,8 @@ import Drawing2d.InteractionPoint as InteractionPoint
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Drawing2d.MouseInteraction.Protected as MouseInteraction
 import Drawing2d.MouseStartEvent as MouseStartEvent exposing (MouseStartEvent)
+import Drawing2d.RenderContext as RenderContext
+import Drawing2d.RenderContext.Protected as RenderContext exposing (RenderContext(..))
 import Drawing2d.Shadow as Shadow
 import Drawing2d.Svg as Svg
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
@@ -315,23 +317,13 @@ import Vector2d exposing (Vector2d)
 
 
 type Entity units coordinates msg
-    = Entity
-        (Bool -- borders visible
-         -> Float -- stroke width in current units
-         -> Float -- font size in current units
-         -> String -- encoded gradient fill in current units
-         -> String -- encoded gradient stroke in current units
-         -> String -- encoded dash pattern in current units
-         -> Svg (Event units coordinates msg)
-        )
+    = Entity (RenderContext units coordinates -> Svg (Event units coordinates msg))
 
 
 type Size units
     = Scale (Quantity Float (Rate Pixels units))
     | Width (Quantity Float Pixels)
     | Height (Quantity Float Pixels)
-    | Fit
-    | FitWidth
 
 
 type alias Attribute units coordinates msg =
@@ -418,59 +410,30 @@ custom given =
                     , String.fromFloat (Quantity.unwrap viewBoxHeight)
                     ]
 
-        -- Based on https://css-tricks.com/scale-svg/
-        containerSizeCss =
+        resolution =
             case given.size of
                 Scale factor ->
-                    [ Html.Attributes.style "width" (px (viewBoxWidth |> Quantity.at factor))
-                    , Html.Attributes.style "height" (px (viewBoxHeight |> Quantity.at factor))
-                    ]
+                    factor
 
                 Width value ->
-                    let
-                        factor =
-                            value |> Quantity.per viewBoxWidth
-
-                        computedHeight =
-                            viewBoxHeight |> Quantity.at factor
-                    in
-                    [ Html.Attributes.style "width" (px value)
-                    , Html.Attributes.style "height" (px computedHeight)
-                    ]
+                    value |> Quantity.per viewBoxWidth
 
                 Height value ->
-                    let
-                        factor =
-                            value |> Quantity.per viewBoxHeight
+                    value |> Quantity.per viewBoxHeight
 
-                        computedWidth =
-                            viewBoxWidth |> Quantity.at factor
-                    in
-                    [ Html.Attributes.style "width" (px computedWidth)
-                    , Html.Attributes.style "height" (px value)
-                    ]
+        canvasWidth =
+            viewBoxWidth |> Quantity.at resolution
 
-                Fit ->
-                    [ Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "height" "100%"
-                    ]
+        canvasHeight =
+            viewBoxHeight |> Quantity.at resolution
 
-                FitWidth ->
-                    let
-                        dummyHeight =
-                            "1px"
+        pixelSize =
+            Pixels.pixel |> Quantity.at_ resolution
 
-                        heightAsPercentOfWidth =
-                            String.fromFloat (100 * Quantity.ratio viewBoxHeight viewBoxWidth) ++ "%"
-
-                        bottomPadding =
-                            "calc(" ++ heightAsPercentOfWidth ++ " - " ++ dummyHeight ++ ")"
-                    in
-                    [ Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "height" dummyHeight
-                    , Html.Attributes.style "padding-bottom" bottomPadding
-                    , Html.Attributes.style "overflow" "visible"
-                    ]
+        containerSizeCss =
+            [ Html.Attributes.style "width" (px canvasWidth)
+            , Html.Attributes.style "height" (px canvasHeight)
+            ]
 
         defaultAttributes =
             [ blackStroke
@@ -495,9 +458,20 @@ custom given =
 
         topLevelViewBox =
             given.viewBox |> Rectangle2d.relativeTo (Rectangle2d.axes given.viewBox)
+
+        initialRenderContext =
+            RenderContext
+                { bordersVisible = False
+                , pixelSize = pixelSize
+                , strokeWidth = Quantity.zero
+                , fontSize = Quantity.zero
+                , fillGradient = Nothing
+                , strokeGradient = Nothing
+                , strokeDashPattern = []
+                }
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement False 0 0 "" "" "[]" |> Svg.map (\(Event callback) -> callback topLevelViewBox) ]
+        [ svgElement initialRenderContext |> Svg.map (\(Event callback) -> callback topLevelViewBox) ]
 
 
 fixed : Size Pixels
@@ -520,19 +494,9 @@ height value =
     Height value
 
 
-fit : Size units
-fit =
-    Fit
-
-
-fitWidth : Size units
-fitWidth =
-    FitWidth
-
-
 empty : Entity units coordinates msg
 empty =
-    Entity (\_ _ _ _ _ _ -> Svg.text "")
+    Entity (\_ -> Svg.text "")
 
 
 drawCurve :
@@ -546,7 +510,7 @@ drawCurve attributes renderer curve =
             Attributes.collectAttributeValues attributes
     in
     Entity <|
-        \_ _ _ _ _ _ ->
+        \_ ->
             let
                 svgAttributes =
                     Attributes.curveAttributes attributeValues
@@ -573,11 +537,11 @@ drawRegion attributes renderer region =
             Attributes.collectAttributeValues attributes
     in
     Entity <|
-        \currentBordersVisible _ _ _ _ _ ->
+        \(RenderContext context) ->
             let
                 bordersVisible =
                     attributeValues.borderVisibility
-                        |> Maybe.withDefault currentBordersVisible
+                        |> Maybe.withDefault context.bordersVisible
 
                 svgAttributes =
                     Attributes.regionAttributes bordersVisible attributeValues
@@ -619,16 +583,11 @@ triangle attributes givenTriangle =
 
 
 render :
-    Bool
-    -> Float
-    -> Float
-    -> String
-    -> String
-    -> String
+    RenderContext units coordinates
     -> Entity units coordinates msg
     -> Svg (Event units coordinates msg)
-render arg1 arg2 arg3 arg4 arg5 arg6 (Entity function) =
-    function arg1 arg2 arg3 arg4 arg5 arg6
+render context (Entity function) =
+    function context
 
 
 group :
@@ -664,67 +623,69 @@ groupLike :
     -> Entity units coordinates msg
 groupLike tag extraSvgAttributes attributeValues childEntities =
     Entity <|
-        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
+        \(RenderContext context) ->
             let
-                updatedBordersVisible =
+                childBordersVisible =
                     attributeValues.borderVisibility
-                        |> Maybe.withDefault currentBordersVisible
+                        |> Maybe.withDefault context.bordersVisible
 
-                updatedStrokeWidth =
+                childStrokeWidth =
                     attributeValues.strokeWidth
-                        |> Maybe.withDefault currentStrokeWidth
+                        |> Maybe.withDefault context.strokeWidth
 
-                updatedFontSize =
+                childFontSize =
                     attributeValues.fontSize
-                        |> Maybe.withDefault currentFontSize
+                        |> Maybe.withDefault context.fontSize
 
-                updatedFillGradient =
+                childFillGradient =
                     case attributeValues.fillStyle of
                         Nothing ->
-                            currentFillGradient
+                            context.fillGradient
 
                         Just NoFill ->
-                            ""
+                            Nothing
 
                         Just TransparentFill ->
-                            ""
+                            Nothing
 
                         Just (FillColor _) ->
-                            ""
+                            Nothing
 
                         Just (FillGradient gradient) ->
-                            Gradient.encode gradient
+                            Just gradient
 
-                updatedStrokeGradient =
+                childStrokeGradient =
                     case attributeValues.strokeStyle of
                         Nothing ->
-                            currentStrokeGradient
+                            context.strokeGradient
 
                         Just (StrokeColor _) ->
-                            ""
+                            Nothing
 
                         Just (StrokeGradient gradient) ->
-                            Gradient.encode gradient
+                            Just gradient
 
-                updatedDashPattern =
+                childDashPattern =
                     case attributeValues.strokeDashPattern of
                         Nothing ->
-                            currentDashPattern
+                            context.strokeDashPattern
 
                         Just dashPattern ->
-                            encodeDashPattern dashPattern
+                            dashPattern
+
+                childContext =
+                    RenderContext
+                        { pixelSize = context.pixelSize
+                        , bordersVisible = childBordersVisible
+                        , strokeWidth = childStrokeWidth
+                        , fontSize = childFontSize
+                        , fillGradient = childFillGradient
+                        , strokeGradient = childStrokeGradient
+                        , strokeDashPattern = childDashPattern
+                        }
 
                 childSvgElements =
-                    childEntities
-                        |> List.map
-                            (render
-                                updatedBordersVisible
-                                updatedStrokeWidth
-                                updatedFontSize
-                                updatedFillGradient
-                                updatedStrokeGradient
-                                updatedDashPattern
-                            )
+                    childEntities |> List.map (render childContext)
 
                 defs =
                     []
@@ -842,7 +803,7 @@ text attributes position string =
             Point2d.unwrap position
     in
     Entity <|
-        \_ _ _ _ _ _ ->
+        \_ ->
             let
                 svgAttributes =
                     Svg.Attributes.x (String.fromFloat x)
@@ -867,7 +828,7 @@ image attributes givenUrl givenRectangle =
             Rectangle2d.dimensions givenRectangle
     in
     Entity <|
-        \_ _ _ _ _ _ ->
+        \_ ->
             let
                 svgAttributes =
                     Svg.Attributes.xlinkHref givenUrl
@@ -924,50 +885,41 @@ placeImpl :
     -> Entity units globalCoordinates msg
 placeImpl transformationFrame coordinateConversionFrame (Entity function) =
     Entity <|
-        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
+        \(RenderContext context) ->
             let
                 toLocalGradient =
                     Gradient.relativeTo coordinateConversionFrame
                         >> Gradient.relativeTo transformationFrame
 
                 localFillGradient =
-                    Gradient.decode currentFillGradient
-                        |> Maybe.map toLocalGradient
+                    context.fillGradient |> Maybe.map toLocalGradient
 
                 localStrokeGradient =
-                    Gradient.decode currentStrokeGradient
-                        |> Maybe.map toLocalGradient
-
-                updatedFillGradient =
-                    localFillGradient
-                        |> Maybe.map Gradient.encode
-                        |> Maybe.withDefault ""
-
-                updatedStrokeGradient =
-                    localStrokeGradient
-                        |> Maybe.map Gradient.encode
-                        |> Maybe.withDefault ""
+                    context.strokeGradient |> Maybe.map toLocalGradient
 
                 localGradientReferences =
                     []
-                        |> addTransformedFillGradientReference
-                            localFillGradient
-                        |> addTransformedStrokeGradientReference
-                            localStrokeGradient
+                        |> addTransformedFillGradientReference localFillGradient
+                        |> addTransformedStrokeGradientReference localStrokeGradient
 
                 localGradientElements =
                     []
                         |> addGradientElements localFillGradient
                         |> addGradientElements localStrokeGradient
 
+                localContext =
+                    RenderContext
+                        { pixelSize = context.pixelSize
+                        , bordersVisible = context.bordersVisible
+                        , strokeWidth = context.strokeWidth
+                        , fontSize = context.fontSize
+                        , fillGradient = localFillGradient
+                        , strokeGradient = localStrokeGradient
+                        , strokeDashPattern = context.strokeDashPattern
+                        }
+
                 localSvgElement =
-                    function
-                        currentBordersVisible
-                        currentStrokeWidth
-                        currentFontSize
-                        updatedFillGradient
-                        updatedStrokeGradient
-                        currentDashPattern
+                    function localContext
 
                 localElement =
                     case localGradientElements of
@@ -977,9 +929,12 @@ placeImpl transformationFrame coordinateConversionFrame (Entity function) =
                         _ ->
                             Svg.g localGradientReferences (localSvgElement :: localGradientElements)
 
+                transform =
+                    placementTransform
+                        (Frame2d.placeIn coordinateConversionFrame transformationFrame)
+
                 groupElement =
-                    Svg.g [ placementTransform (Frame2d.placeIn coordinateConversionFrame transformationFrame) ]
-                        [ localElement ]
+                    Svg.g [ transform ] [ localElement ]
 
                 transformEvent (Event callback) =
                     Event (Rectangle2d.relativeTo coordinateConversionFrame >> callback)
@@ -1025,76 +980,74 @@ scaleImpl :
     -> Entity units2 coordinates msg
 scaleImpl centerPoint scaleFactor rate (Entity function) =
     Entity <|
-        \currentBordersVisible currentStrokeWidth currentFontSize currentFillGradient currentStrokeGradient currentDashPattern ->
+        \(RenderContext context) ->
             let
                 gradientTransformation =
-                    Gradient.scaleAbout centerPoint scaleFactor >> Gradient.at rate
-
-                transformedFillGradient =
-                    Gradient.decode currentFillGradient
-                        |> Maybe.map gradientTransformation
-
-                transformedStrokeGradient =
-                    Gradient.decode currentStrokeGradient
-                        |> Maybe.map gradientTransformation
+                    Gradient.at_ rate >> Gradient.scaleAbout centerPoint (1 / scaleFactor)
 
                 updatedFillGradient =
-                    transformedFillGradient
-                        |> Maybe.map Gradient.encode
-                        |> Maybe.withDefault ""
+                    context.fillGradient
+                        |> Maybe.map gradientTransformation
 
                 updatedStrokeGradient =
-                    transformedStrokeGradient
-                        |> Maybe.map Gradient.encode
-                        |> Maybe.withDefault ""
+                    context.strokeGradient
+                        |> Maybe.map gradientTransformation
 
-                (Quantity rateFactor) =
-                    rate
-
-                overallFactor =
-                    scaleFactor * rateFactor
+                updatedPixelSize =
+                    context.pixelSize
+                        |> Quantity.at_ rate
+                        |> Quantity.divideBy scaleFactor
 
                 updatedStrokeWidth =
-                    currentStrokeWidth / overallFactor
+                    context.strokeWidth
+                        |> Quantity.at_ rate
+                        |> Quantity.divideBy scaleFactor
 
                 updatedFontSize =
-                    currentFontSize / overallFactor
-
-                scaledDashPattern =
-                    decodeDashPattern currentDashPattern
-                        |> List.map (Quantity.divideBy overallFactor)
+                    context.fontSize
+                        |> Quantity.at_ rate
+                        |> Quantity.divideBy scaleFactor
 
                 updatedDashPattern =
-                    encodeDashPattern scaledDashPattern
+                    context.strokeDashPattern
+                        |> List.map (Quantity.at_ rate >> Quantity.divideBy scaleFactor)
+
+                overallFactor =
+                    scaleFactor * Quantity.unwrap rate
 
                 svgAttributes =
                     [ scaleTransform centerPoint overallFactor
-                    , Svg.Attributes.fontSize (String.fromFloat updatedFontSize)
-                    , Svg.Attributes.strokeWidth (String.fromFloat updatedStrokeWidth)
+                    , Svg.Attributes.fontSize (String.fromFloat (Quantity.unwrap updatedFontSize))
+                    , Svg.Attributes.strokeWidth (String.fromFloat (Quantity.unwrap updatedStrokeWidth))
                     ]
-                        |> addTransformedFillGradientReference transformedFillGradient
-                        |> addTransformedStrokeGradientReference transformedStrokeGradient
-                        |> addScaledStrokeDashPattern scaledDashPattern
+                        |> addTransformedFillGradientReference updatedFillGradient
+                        |> addTransformedStrokeGradientReference updatedStrokeGradient
+                        |> addScaledStrokeDashPattern updatedDashPattern
 
                 transformedGradientElements =
                     []
-                        |> addGradientElements transformedFillGradient
-                        |> addGradientElements transformedStrokeGradient
+                        |> addGradientElements updatedFillGradient
+                        |> addGradientElements updatedStrokeGradient
 
                 transformEvent (Event callback) =
                     Event (Rectangle2d.at_ rate >> callback)
 
+                updatedContext =
+                    RenderContext
+                        { pixelSize = updatedPixelSize
+                        , bordersVisible = context.bordersVisible
+                        , strokeWidth = updatedStrokeWidth
+                        , fontSize = updatedFontSize
+                        , fillGradient = updatedFillGradient
+                        , strokeGradient = updatedStrokeGradient
+                        , strokeDashPattern = updatedDashPattern
+                        }
+
                 childSvgElement =
-                    Svg.map transformEvent <|
-                        function
-                            currentBordersVisible
-                            updatedStrokeWidth
-                            updatedFontSize
-                            updatedFillGradient
-                            updatedStrokeGradient
-                            updatedDashPattern
+                    function updatedContext
             in
-            Svg.g svgAttributes (childSvgElement :: transformedGradientElements)
+            Svg.map transformEvent <|
+                Svg.g svgAttributes (childSvgElement :: transformedGradientElements)
 
 
 relativeTo :
@@ -1162,14 +1115,7 @@ mapEvent function (Event callback) =
 
 map : (a -> b) -> Entity units coordinates a -> Entity units coordinates b
 map function entity =
-    mapImpl (mapEvent function) entity
-
-
-mapImpl : (Event units1 coordinates1 msg1 -> Event units2 coordinates2 msg2) -> Entity units1 coordinates1 msg1 -> Entity units2 coordinates2 msg2
-mapImpl function (Entity drawFunction) =
-    Entity <|
-        \arg1 arg2 arg3 arg4 arg5 arg6 ->
-            Svg.map function (drawFunction arg1 arg2 arg3 arg4 arg5 arg6)
+    Entity (\renderContext -> Svg.map (mapEvent function) (render renderContext entity))
 
 
 addStrokeGradient :
@@ -1360,8 +1306,8 @@ strokedBorder =
 
 
 strokeWidth : Quantity Float units -> Attribute units coordinates msg
-strokeWidth (Quantity size) =
-    StrokeWidth size
+strokeWidth givenWidth =
+    StrokeWidth givenWidth
 
 
 roundStrokeJoins : Attribute units coordinates msg
@@ -1470,8 +1416,8 @@ textColor color =
 
 
 fontSize : Quantity Float units -> Attribute units coordinates msg
-fontSize (Quantity size) =
-    FontSize size
+fontSize givenSize =
+    FontSize givenSize
 
 
 normalizeFont : String -> String

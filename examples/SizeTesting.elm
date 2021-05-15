@@ -100,12 +100,6 @@ cell size html =
 
                 Width400 ->
                     Element.shrink
-
-                Fit ->
-                    Element.px 400
-
-                FitWidth ->
-                    Element.shrink
         , Element.Border.width 1
         , Element.Border.color (Element.rgb255 192 192 192)
         ]
@@ -119,8 +113,6 @@ type Size
     | Width100
     | Width200
     | Width400
-    | Fit
-    | FitWidth
 
 
 toDrawingSize : Size -> Drawing2d.Size Pixels
@@ -144,12 +136,6 @@ toDrawingSize size =
         Width400 ->
             Drawing2d.width (Pixels.float 400)
 
-        Fit ->
-            Drawing2d.fit
-
-        FitWidth ->
-            Drawing2d.fitWidth
-
 
 view : Model -> Html Msg
 view model =
@@ -162,8 +148,6 @@ view model =
                 , Width100
                 , Width200
                 , Width400
-                , Fit
-                , FitWidth
                 ]
             , columns =
                 [ { header = Element.none
@@ -189,12 +173,6 @@ view model =
 
                                     Width400 ->
                                         "Drawing2d.width (Pixels.float 400)"
-
-                                    Fit ->
-                                        "Drawing2d.fit"
-
-                                    FitWidth ->
-                                        "Drawing2d.fitWidth"
                   }
                 , { header = Element.text "Small"
                   , width = Element.px 500

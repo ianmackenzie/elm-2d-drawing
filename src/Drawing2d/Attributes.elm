@@ -108,8 +108,8 @@ type Attribute units coordinates msg
     = FillStyle (Fill units coordinates) -- Svg.Attributes.fill
     | StrokeStyle (Stroke units coordinates) -- Svg.Attributes.stroke
     | Opacity Float
-    | FontSize Float
-    | StrokeWidth Float
+    | FontSize (Quantity Float units)
+    | StrokeWidth (Quantity Float units)
     | StrokeLineJoin LineJoin
     | StrokeLineCap LineCap
     | StrokeDashPattern (List (Quantity Float units))
@@ -126,8 +126,8 @@ type alias AttributeValues units coordinates msg =
     { fillStyle : Maybe (Fill units coordinates)
     , strokeStyle : Maybe (Stroke units coordinates)
     , opacity : Maybe Float
-    , fontSize : Maybe Float
-    , strokeWidth : Maybe Float
+    , fontSize : Maybe (Quantity Float units)
+    , strokeWidth : Maybe (Quantity Float units)
     , strokeLineJoin : Maybe LineJoin
     , strokeLineCap : Maybe LineCap
     , strokeDashPattern : Maybe (List (Quantity Float units))
@@ -316,7 +316,7 @@ addFontSize attributeValues svgAttributes =
             svgAttributes
 
         Just size ->
-            Svg.Attributes.fontSize (String.fromFloat size) :: svgAttributes
+            Svg.Attributes.fontSize (String.fromFloat (Quantity.unwrap size)) :: svgAttributes
 
 
 addStrokeWidth :
@@ -329,7 +329,7 @@ addStrokeWidth attributeValues svgAttributes =
             svgAttributes
 
         Just width ->
-            Svg.Attributes.strokeWidth (String.fromFloat width) :: svgAttributes
+            Svg.Attributes.strokeWidth (String.fromFloat (Quantity.unwrap width)) :: svgAttributes
 
 
 addShadowFilter :
