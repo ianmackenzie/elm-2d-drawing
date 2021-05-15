@@ -105,7 +105,7 @@ view model =
     Element.layout [ Element.width Element.fill ] <|
         Element.el [ Element.padding 20 ] <|
             Element.el
-                [ Element.Border.width 1
+                [ Element.Border.width 20
                 , Element.Border.color (Element.rgb 0 0 0)
                 , Element.width Element.shrink
                 , Element.height Element.shrink
