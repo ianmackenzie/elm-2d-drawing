@@ -22,7 +22,8 @@ main =
         , entities =
             [ Drawing2d.group
                 [ Drawing2d.whiteText
-                , Drawing2d.anchorAtCenter
+                , Drawing2d.anchorAtMiddle
+                , Drawing2d.centralBaseline
                 , Drawing2d.fontSize (Pixels.float 96)
                 ]
                 [ Drawing2d.group [ Drawing2d.crosshairCursor ]

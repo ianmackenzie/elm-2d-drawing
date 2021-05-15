@@ -13,7 +13,8 @@ module Drawing2d exposing
     , dropShadow
     , noBorder, strokedBorder
     , fontSize, fontFamily, blackText, whiteText, textColor
-    , anchorAtTopLeft, anchorAtTopCenter, anchorAtTopRight, anchorAtCenterLeft, anchorAtCenter, anchorAtCenterRight, anchorAtBottomLeft, anchorAtBottomCenter, anchorAtBottomRight
+    , anchorAtStart, anchorAtMiddle, anchorAtEnd
+    , alphabeticBaseline, centralBaseline, hangingBaseline, ideographicBaseline, mathematicalBaseline, middleBaseline, textAfterEdgeBaseline, textBeforeEdgeBaseline
     , autoCursor, defaultCursor, noCursor
     , contextMenuCursor, helpCursor, pointerCursor, progressCursor, waitCursor
     , cellCursor, crosshairCursor, textCursor, verticalTextCursor
@@ -102,9 +103,11 @@ module Drawing2d exposing
 @docs fontSize, fontFamily, blackText, whiteText, textColor
 
 
-## Anchors
+### Alignment
 
-@docs anchorAtTopLeft, anchorAtTopCenter, anchorAtTopRight, anchorAtCenterLeft, anchorAtCenter, anchorAtCenterRight, anchorAtBottomLeft, anchorAtBottomCenter, anchorAtBottomRight
+@docs anchorAtStart, anchorAtMiddle, anchorAtEnd
+
+@docs alphabeticBaseline, centralBaseline, hangingBaseline, ideographicBaseline, mathematicalBaseline, middleBaseline, textAfterEdgeBaseline, textBeforeEdgeBaseline
 
 
 ## Cursors
@@ -444,7 +447,8 @@ custom given =
             , strokedBorder
             , fontSize given.fontSize
             , blackText
-            , anchorAtBottomLeft
+            , anchorAtStart
+            , alphabeticBaseline
             ]
 
         rootAttributeValues =
@@ -1355,49 +1359,59 @@ dropShadow properties =
     DropShadow (Shadow.with properties)
 
 
-anchorAtTopLeft : Attribute units coordinates msg
-anchorAtTopLeft =
-    TextAnchor { x = "start", y = "hanging" }
+anchorAtStart : Attribute units coordinates msg
+anchorAtStart =
+    TextAnchor "start"
 
 
-anchorAtTopCenter : Attribute units coordinates msg
-anchorAtTopCenter =
-    TextAnchor { x = "middle", y = "hanging" }
+anchorAtMiddle : Attribute units coordinates msg
+anchorAtMiddle =
+    TextAnchor "middle"
 
 
-anchorAtTopRight : Attribute units coordinates msg
-anchorAtTopRight =
-    TextAnchor { x = "end", y = "hanging" }
+anchorAtEnd : Attribute units coordinates msg
+anchorAtEnd =
+    TextAnchor "end"
 
 
-anchorAtCenterLeft : Attribute units coordinates msg
-anchorAtCenterLeft =
-    TextAnchor { x = "start", y = "middle" }
+alphabeticBaseline : Attribute units coordinates msg
+alphabeticBaseline =
+    DominantBaseline "alphabetic"
 
 
-anchorAtCenter : Attribute units coordinates msg
-anchorAtCenter =
-    TextAnchor { x = "middle", y = "middle" }
+centralBaseline : Attribute units coordinates msg
+centralBaseline =
+    DominantBaseline "central"
 
 
-anchorAtCenterRight : Attribute units coordinates msg
-anchorAtCenterRight =
-    TextAnchor { x = "end", y = "middle" }
+hangingBaseline : Attribute units coordinates msg
+hangingBaseline =
+    DominantBaseline "hanging"
 
 
-anchorAtBottomLeft : Attribute units coordinates msg
-anchorAtBottomLeft =
-    TextAnchor { x = "start", y = "alphabetic" }
+ideographicBaseline : Attribute units coordinates msg
+ideographicBaseline =
+    DominantBaseline "ideographic"
 
 
-anchorAtBottomCenter : Attribute units coordinates msg
-anchorAtBottomCenter =
-    TextAnchor { x = "middle", y = "alphabetic" }
+mathematicalBaseline : Attribute units coordinates msg
+mathematicalBaseline =
+    DominantBaseline "mathematical"
 
 
-anchorAtBottomRight : Attribute units coordinates msg
-anchorAtBottomRight =
-    TextAnchor { x = "end", y = "alphabetic" }
+middleBaseline : Attribute units coordinates msg
+middleBaseline =
+    DominantBaseline "middle"
+
+
+textAfterEdgeBaseline : Attribute units coordinates msg
+textAfterEdgeBaseline =
+    DominantBaseline "textAfterEdge"
+
+
+textBeforeEdgeBaseline : Attribute units coordinates msg
+textBeforeEdgeBaseline =
+    DominantBaseline "textBeforeEdge"
 
 
 blackText : Attribute units coordinates msg

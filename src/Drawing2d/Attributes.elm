@@ -117,7 +117,8 @@ type Attribute units coordinates msg
     | DropShadow (Shadow units coordinates)
     | TextColor String -- Svg.Attributes.color
     | FontFamily String -- Svg.Attributes.fontFamily
-    | TextAnchor { x : String, y : String } -- Svg.Attributes.textAnchor, Svg.Attributes.dominantBaseline
+    | TextAnchor String -- Svg.Attributes.textAnchor
+    | DominantBaseline String -- Svg.Attributes.dominantBaseline
     | Cursor Cursor -- Svg.Attributes.cursor
     | EventHandlers (List ( String, Decoder (Event units coordinates msg) ))
 
@@ -135,7 +136,8 @@ type alias AttributeValues units coordinates msg =
     , dropShadow : Maybe (Shadow units coordinates)
     , textColor : Maybe String
     , fontFamily : Maybe String
-    , textAnchor : Maybe { x : String, y : String }
+    , textAnchor : Maybe String
+    , dominantBaseline : Maybe String
     , cursor : Maybe Cursor
     , eventHandlers : Dict String (List (Decoder (Event units coordinates msg)))
     }
@@ -156,6 +158,7 @@ emptyAttributeValues =
     , textColor = Nothing
     , fontFamily = Nothing
     , textAnchor = Nothing
+    , dominantBaseline = Nothing
     , cursor = Nothing
     , eventHandlers = Dict.empty
     }
@@ -203,8 +206,11 @@ setAttribute attribute attributeValues =
         FontFamily string ->
             { attributeValues | fontFamily = Just string }
 
-        TextAnchor position ->
-            { attributeValues | textAnchor = Just position }
+        TextAnchor string ->
+            { attributeValues | textAnchor = Just string }
+
+        DominantBaseline string ->
+            { attributeValues | dominantBaseline = Just string }
 
         Cursor cursor ->
             { attributeValues | cursor = Just cursor }
@@ -455,10 +461,21 @@ addTextAnchor attributeValues svgAttributes =
         Nothing ->
             svgAttributes
 
-        Just position ->
-            Svg.Attributes.textAnchor position.x
-                :: Svg.Attributes.dominantBaseline position.y
-                :: svgAttributes
+        Just string ->
+            Svg.Attributes.textAnchor string :: svgAttributes
+
+
+addDominantBaseline :
+    AttributeValues units coordinates msg
+    -> List (Svg.Attribute (Event units coordinates msg))
+    -> List (Svg.Attribute (Event units coordinates msg))
+addDominantBaseline attributeValues svgAttributes =
+    case attributeValues.dominantBaseline of
+        Nothing ->
+            svgAttributes
+
+        Just string ->
+            Svg.Attributes.dominantBaseline string :: svgAttributes
 
 
 addCursor :
@@ -673,6 +690,7 @@ addTextAttributes attributeValues svgAttributes =
         |> addFontFamily attributeValues
         |> addFontSize attributeValues
         |> addTextAnchor attributeValues
+        |> addDominantBaseline attributeValues
         |> addTextColor attributeValues
 
 
