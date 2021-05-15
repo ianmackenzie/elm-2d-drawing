@@ -2,7 +2,7 @@ module Drawing2d exposing
     ( Entity, Attribute
     , draw, custom
     , Size, fixed, scale, width, height
-    , empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+    , nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
     , add
     , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
     , Gradient, gradientFrom, gradientAlong, circularGradient
@@ -50,7 +50,7 @@ module Drawing2d exposing
 
 # Drawing
 
-@docs empty, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+@docs nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
 
 
 # Attributes
@@ -498,8 +498,8 @@ height value =
     Height value
 
 
-empty : Entity units coordinates msg
-empty =
+nothing : Entity units coordinates msg
+nothing =
     Entity (\_ -> Svg.text "")
 
 

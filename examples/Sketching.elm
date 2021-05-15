@@ -89,7 +89,7 @@ view model =
                     drawPolyline [] ( lineColor, Polyline2d.fromVertices accumulatedPoints )
 
                 NotDrawing ->
-                    Drawing2d.empty
+                    Drawing2d.nothing
 
         existingLines =
             Dict.toList model.linesById
