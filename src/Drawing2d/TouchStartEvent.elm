@@ -4,14 +4,13 @@ module Drawing2d.TouchStartEvent exposing
     , decoder
     )
 
-import DOM
-import Drawing2d.Decode as Decode
+import Drawing2d.Decode as Decode exposing (BoundingClientRect)
 import Duration exposing (Duration)
 import Json.Decode as Decode exposing (Decoder)
 
 
 type alias TouchStartEvent =
-    { container : DOM.Rectangle
+    { container : BoundingClientRect
     , timeStamp : Duration
     , touches : ( TouchStart, List TouchStart )
     , targetTouches : ( TouchStart, List TouchStart )

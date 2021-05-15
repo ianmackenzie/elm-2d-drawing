@@ -1,12 +1,11 @@
 module Drawing2d.MouseStartEvent exposing (MouseStartEvent, decoder)
 
-import DOM
-import Drawing2d.Decode as Decode
+import Drawing2d.Decode as Decode exposing (BoundingClientRect)
 import Json.Decode as Decode exposing (Decoder)
 
 
 type alias MouseStartEvent =
-    { container : DOM.Rectangle
+    { container : BoundingClientRect
     , clientX : Float
     , clientY : Float
     , pageX : Float

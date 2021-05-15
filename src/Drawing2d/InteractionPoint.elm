@@ -6,7 +6,7 @@ module Drawing2d.InteractionPoint exposing
     , updatedPosition
     )
 
-import DOM
+import Drawing2d.Decode exposing (BoundingClientRect)
 import Json.Decode as Decode exposing (Decoder)
 import Pixels exposing (Pixels, inPixels, pixels)
 import Point2d exposing (Point2d)
@@ -28,7 +28,7 @@ type ReferencePoint drawingUnits drawingCoordinates
 referencePoint :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
     -> Rectangle2d drawingUnits drawingCoordinates
-    -> DOM.Rectangle
+    -> BoundingClientRect
     -> ReferencePoint drawingUnits drawingCoordinates
 referencePoint startEvent viewBox container =
     let
@@ -82,7 +82,7 @@ startPosition (ReferencePoint reference) =
 position :
     { a | clientX : Float, clientY : Float, pageX : Float, pageY : Float }
     -> Rectangle2d drawingUnits drawingCoordinates
-    -> DOM.Rectangle
+    -> BoundingClientRect
     -> Point2d drawingUnits drawingCoordinates
 position startEvent viewBox container =
     let

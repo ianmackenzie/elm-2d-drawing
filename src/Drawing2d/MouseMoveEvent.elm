@@ -1,6 +1,5 @@
 module Drawing2d.MouseMoveEvent exposing (MouseMoveEvent, decoder)
 
-import DOM
 import Drawing2d.Decode as Decode
 import Json.Decode as Decode exposing (Decoder)
 
