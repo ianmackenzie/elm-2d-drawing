@@ -3,7 +3,6 @@ module Drawing2d exposing
     , draw, custom
     , Size, fixed, scale, width, height
     , nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
-    , add
     , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
     , Gradient, gradientFrom, gradientAlong, circularGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
@@ -51,11 +50,6 @@ module Drawing2d exposing
 # Drawing
 
 @docs nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
-
-
-# Attributes
-
-@docs add
 
 
 ## Fill
@@ -703,14 +697,6 @@ groupLike tag extraSvgAttributes attributeValues childEntities =
             Svg.node tag
                 (groupAttributes ++ extraSvgAttributes)
                 (defs ++ childSvgElements)
-
-
-add :
-    List (Attribute units coordinates msg)
-    -> Entity units coordinates msg
-    -> Entity units coordinates msg
-add attributes entity =
-    group attributes [ entity ]
 
 
 arc :

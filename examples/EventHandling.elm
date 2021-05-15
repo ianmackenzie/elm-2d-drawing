@@ -123,9 +123,9 @@ view model =
             { viewBox = viewBox
             , entities =
                 [ Drawing2d.group [ Drawing2d.whiteFill ]
-                    [ rectangle1 |> Drawing2d.add (dropShadow :: eventHandlers 1 model)
-                    , rectangle2 |> Drawing2d.add (dropShadow :: eventHandlers 2 model)
-                    , rectangle3 |> Drawing2d.add (dropShadow :: eventHandlers 3 model)
+                    [ Drawing2d.group (dropShadow :: eventHandlers 1 model) [ rectangle1 ]
+                    , Drawing2d.group (dropShadow :: eventHandlers 2 model) [ rectangle2 ]
+                    , Drawing2d.group (dropShadow :: eventHandlers 3 model) [ rectangle3 ]
                     ]
                 ]
             }
