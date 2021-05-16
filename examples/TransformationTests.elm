@@ -65,8 +65,10 @@ view points =
                 ( Rectangle2d.interpolate viewBox 1 1, Color.green )
 
         drawPoint position =
-            Drawing2d.circle [ Drawing2d.fillColor Color.orange ]
-                (Circle2d.atPoint position (Length.centimeters 3))
+            Drawing2d.with Drawing2d.pixels <|
+                \pixels ->
+                    Drawing2d.circle [ Drawing2d.fillColor Color.orange ]
+                        (Circle2d.atPoint position (pixels 3))
 
         resolution =
             Pixels.float 100 |> Quantity.per Length.meter
@@ -90,10 +92,12 @@ view points =
                 , Drawing2d.placeIn frame <|
                     Drawing2d.at resolution <|
                         Drawing2d.group []
-                            [ Drawing2d.rectangle [ Drawing2d.onLeftClick identity ] rectangle
-                                |> Drawing2d.scaleAbout (Point2d.meters 1 1) 1.5
-                                |> Drawing2d.rotateAround (Point2d.meters 1 1) (Angle.degrees 30)
-                                |> Drawing2d.translateBy (Vector2d.meters 0.5 0)
+                            [ Drawing2d.with Drawing2d.pixels <|
+                                \pixels ->
+                                    Drawing2d.rectangle [ Drawing2d.onLeftClick identity, Drawing2d.dashedStroke [ pixels 3, pixels 3 ] ] rectangle
+                                        |> Drawing2d.scaleAbout (Point2d.meters 1 1) 1.5
+                                        |> Drawing2d.rotateAround (Point2d.meters 1 1) (Angle.degrees 30)
+                                        |> Drawing2d.translateBy (Vector2d.meters 0.5 0)
                             , Drawing2d.group [] (List.map drawPoint points)
                             ]
                 ]
