@@ -23,6 +23,7 @@ module Drawing2d exposing
     , zoomInCursor, zoomOutCursor
     , cursor
     , bestCursorEver
+    , unsafeCurve, unsafeRegion
     , with, Context, pixelSize, pixels, resolution, currentFontSize, ems, currentStrokeWidth
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
@@ -127,6 +128,8 @@ module Drawing2d exposing
 
 
 ## Advanced
+
+@docs unsafeCurve, unsafeRegion
 
 @docs with, Context, pixelSize, pixels, resolution, currentFontSize, ems, currentStrokeWidth
 
@@ -696,6 +699,17 @@ ellipticalArc attributes givenArc =
     drawCurve attributes Svg.ellipticalArc2d givenArc
 
 
+unsafeCurve :
+    List (Attribute units coordinates msg)
+    -> String
+    -> Entity units coordinates msg
+unsafeCurve attributes pathString =
+    group attributes
+        [ drawCurve [] Svg.unsafePath pathString
+            |> mirrorAcross Axis2d.x
+        ]
+
+
 ellipse :
     List (Attribute units coordinates msg)
     -> Ellipse2d units coordinates
@@ -718,6 +732,17 @@ boundingBox :
     -> Entity units coordinates msg
 boundingBox attributes givenBox =
     drawRegion attributes Svg.boundingBox2d givenBox
+
+
+unsafeRegion :
+    List (Attribute units coordinates msg)
+    -> String
+    -> Entity units coordinates msg
+unsafeRegion attributes pathString =
+    group attributes
+        [ drawRegion [] Svg.unsafePath pathString
+            |> mirrorAcross Axis2d.x
+        ]
 
 
 text :

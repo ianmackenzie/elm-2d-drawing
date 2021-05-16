@@ -11,6 +11,7 @@ module Drawing2d.Svg exposing
     , quadraticSpline2d
     , rectangle2d
     , triangle2d
+    , unsafePath
     )
 
 import Angle exposing (Angle)
@@ -50,6 +51,11 @@ coordinatesString point =
 pointsAttribute : List (Point2d units coordinates) -> Svg.Attribute msg
 pointsAttribute points =
     Svg.Attributes.points (String.join " " (List.map coordinatesString points))
+
+
+unsafePath : List (Svg.Attribute msg) -> String -> Svg msg
+unsafePath svgAttributes pathString =
+    Svg.path (Svg.Attributes.d pathString :: svgAttributes) []
 
 
 lineSegment2d : List (Svg.Attribute msg) -> LineSegment2d units coordinates -> Svg msg
@@ -114,11 +120,8 @@ polygon2d attributes polygon =
                                     )
                     in
                     "M " ++ String.join " L " coordinateStrings ++ " Z"
-
-        pathAttribute =
-            Svg.Attributes.d (String.join " " (List.map loopString loops))
     in
-    Svg.path (pathAttribute :: attributes) []
+    unsafePath attributes (String.join " " (List.map loopString loops))
 
 
 rectangle2d : List (Svg.Attribute msg) -> Rectangle2d units coordinates -> Svg msg
@@ -186,11 +189,8 @@ arc2d attributes arc =
 
             pathComponents =
                 moveCommand ++ List.concat arcSegments
-
-            pathAttribute =
-                Svg.Attributes.d (String.join " " pathComponents)
         in
-        Svg.path (pathAttribute :: attributes) []
+        unsafePath attributes (String.join " " pathComponents)
 
 
 ellipticalArc2d : List (Svg.Attribute msg) -> EllipticalArc2d units coordinates -> Svg msg
@@ -259,11 +259,8 @@ ellipticalArc2d attributes arc =
 
         pathComponents =
             moveCommand ++ List.concat arcSegments
-
-        pathAttribute =
-            Svg.Attributes.d (String.join " " pathComponents)
     in
-    Svg.path (pathAttribute :: attributes) []
+    unsafePath attributes (String.join " " pathComponents)
 
 
 circle2d : List (Svg.Attribute msg) -> Circle2d units coordinates -> Svg msg
@@ -314,11 +311,8 @@ quadraticSpline2d attributes spline =
             , String.fromFloat p3.x
             , String.fromFloat -p3.y
             ]
-
-        pathAttribute =
-            Svg.Attributes.d (String.join " " pathComponents)
     in
-    Svg.path (pathAttribute :: attributes) []
+    unsafePath attributes (String.join " " pathComponents)
 
 
 cubicSpline2d : List (Svg.Attribute msg) -> CubicSpline2d units coordinates -> Svg msg
@@ -348,11 +342,8 @@ cubicSpline2d attributes spline =
             , String.fromFloat p4.x
             , String.fromFloat -p4.y
             ]
-
-        pathAttribute =
-            Svg.Attributes.d (String.join " " pathComponents)
     in
-    Svg.path (pathAttribute :: attributes) []
+    unsafePath attributes (String.join " " pathComponents)
 
 
 boundingBox2d : List (Svg.Attribute msg) -> BoundingBox2d units coordinates -> Svg msg
