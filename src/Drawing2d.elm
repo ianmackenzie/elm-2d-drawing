@@ -23,6 +23,7 @@ module Drawing2d exposing
     , zoomInCursor, zoomOutCursor
     , cursor
     , bestCursorEver
+    , withContext, withPixels
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
     , onTouchStart
@@ -123,6 +124,11 @@ module Drawing2d exposing
 @docs cursor
 
 @docs bestCursorEver
+
+
+## Advanced
+
+@docs withContext, withPixels
 
 
 # Events
@@ -1584,6 +1590,20 @@ bestCursorEver =
             , hotspot = Point2d.pixels 8 8
             , fallback = Cursor.crosshair
             }
+
+
+withContext :
+    (RenderContext units coordinates -> Entity units coordinates msg)
+    -> Entity units coordinates msg
+withContext callback =
+    Entity (\context -> render context (callback context))
+
+
+withPixels :
+    ((Float -> Quantity Float units) -> Entity units coordinates msg)
+    -> Entity units coordinates msg
+withPixels callback =
+    withContext (\context -> callback (\numPixels -> RenderContext.pixels numPixels context))
 
 
 leftButton : Int
