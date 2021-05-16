@@ -23,7 +23,7 @@ module Drawing2d exposing
     , zoomInCursor, zoomOutCursor
     , cursor
     , bestCursorEver
-    , withContext, withPixels
+    , with, Context, pixelSize, pixels, resolution, currentFontSize, ems, currentStrokeWidth
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
     , onTouchStart
@@ -128,7 +128,7 @@ module Drawing2d exposing
 
 ## Advanced
 
-@docs withContext, withPixels
+@docs with, Context, pixelSize, pixels, resolution, currentFontSize, ems, currentStrokeWidth
 
 
 # Events
@@ -413,7 +413,7 @@ custom given =
                     , String.fromFloat (Quantity.unwrap viewBoxHeight)
                     ]
 
-        resolution =
+        drawingResolution =
             case given.size of
                 Scale factor ->
                     factor
@@ -425,13 +425,13 @@ custom given =
                     value |> Quantity.per viewBoxHeight
 
         canvasWidth =
-            viewBoxWidth |> Quantity.at resolution
+            viewBoxWidth |> Quantity.at drawingResolution
 
         canvasHeight =
-            viewBoxHeight |> Quantity.at resolution
+            viewBoxHeight |> Quantity.at drawingResolution
 
-        pixelSize =
-            Pixels.pixel |> Quantity.at_ resolution
+        topLevelPixelSize =
+            Pixels.pixel |> Quantity.at_ drawingResolution
 
         containerSizeCss =
             [ Html.Attributes.style "width" (px canvasWidth)
@@ -460,7 +460,7 @@ custom given =
             given.viewBox |> Rectangle2d.relativeTo (Rectangle2d.axes given.viewBox)
 
         initialRenderContext =
-            RenderContext.init pixelSize
+            RenderContext.init topLevelPixelSize
     in
     Html.div (containerStaticCss ++ containerSizeCss)
         [ svgElement initialRenderContext |> Svg.map (\(Event callback) -> callback topLevelViewBox) ]
@@ -1592,18 +1592,51 @@ bestCursorEver =
             }
 
 
-withContext :
-    (RenderContext units coordinates -> Entity units coordinates msg)
-    -> Entity units coordinates msg
-withContext callback =
-    Entity (\context -> render context (callback context))
+with : Context units coordinates a -> (a -> Entity units coordinates msg) -> Entity units coordinates msg
+with context callback =
+    let
+        (Context access) =
+            context
+    in
+    Entity
+        (\renderContext ->
+            render renderContext <|
+                callback (access renderContext)
+        )
 
 
-withPixels :
-    ((Float -> Quantity Float units) -> Entity units coordinates msg)
-    -> Entity units coordinates msg
-withPixels callback =
-    withContext (\context -> callback (\numPixels -> RenderContext.pixels numPixels context))
+type Context units coordinates a
+    = Context (RenderContext units coordinates -> a)
+
+
+pixelSize : Context units coordinates (Quantity Float units)
+pixelSize =
+    Context RenderContext.pixelSize
+
+
+currentFontSize : Context units coordinates (Quantity Float units)
+currentFontSize =
+    Context RenderContext.fontSize
+
+
+currentStrokeWidth : Context units coordinates (Quantity Float units)
+currentStrokeWidth =
+    Context RenderContext.strokeWidth
+
+
+ems : Context units coordinates (Float -> Quantity Float units)
+ems =
+    Context (\renderContext value -> RenderContext.ems value renderContext)
+
+
+pixels : Context units coordinates (Float -> Quantity Float units)
+pixels =
+    Context (\renderContext value -> RenderContext.pixels value renderContext)
+
+
+resolution : Context units coordinates (Quantity Float (Rate units Pixels))
+resolution =
+    Context RenderContext.resolution
 
 
 leftButton : Int
