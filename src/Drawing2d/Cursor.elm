@@ -8,6 +8,7 @@ module Drawing2d.Cursor exposing
     , nResize, eResize, sResize, wResize, neResize, nwResize, seResize, swResize, ewResize, nsResize, neswResize, nwseResize
     , zoomIn, zoomOut
     , image, ImageCoordinates
+    , toString
     )
 
 {-|
@@ -33,231 +34,271 @@ module Drawing2d.Cursor exposing
 
 @docs image, ImageCoordinates
 
+
+# Advanced
+
+@docs toString
+
 -}
 
-import Drawing2d.Attributes as Attributes
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 
 
-type alias Cursor =
-    Attributes.Cursor
+type Cursor
+    = Auto
+    | Default
+    | None
+    | ContextMenu
+    | Help
+    | Pointer
+    | Progress
+    | Wait
+    | Cell
+    | Crosshair
+    | Text
+    | VerticalText
+    | Alias
+    | Copy
+    | Move
+    | NoDrop
+    | NotAllowed
+    | Grab
+    | Grabbing
+    | AllScroll
+    | ColResize
+    | RowResize
+    | NResize
+    | EResize
+    | SResize
+    | WResize
+    | NeResize
+    | NwResize
+    | SeResize
+    | SwResize
+    | EwResize
+    | NsResize
+    | NeswResize
+    | NwseResize
+    | ZoomIn
+    | ZoomOut
+    | Image String Float Float Cursor
 
 
 {-| -}
 auto : Cursor
 auto =
-    Attributes.AutoCursor
+    Auto
 
 
 {-| -}
 default : Cursor
 default =
-    Attributes.DefaultCursor
+    Default
 
 
 {-| -}
 none : Cursor
 none =
-    Attributes.NoCursor
+    None
 
 
 {-| -}
 contextMenu : Cursor
 contextMenu =
-    Attributes.ContextMenuCursor
+    ContextMenu
 
 
 {-| -}
 help : Cursor
 help =
-    Attributes.HelpCursor
+    Help
 
 
 {-| -}
 pointer : Cursor
 pointer =
-    Attributes.PointerCursor
+    Pointer
 
 
 {-| -}
 progress : Cursor
 progress =
-    Attributes.ProgressCursor
+    Progress
 
 
 {-| -}
 wait : Cursor
 wait =
-    Attributes.WaitCursor
+    Wait
 
 
 {-| -}
 cell : Cursor
 cell =
-    Attributes.CellCursor
+    Cell
 
 
 {-| -}
 crosshair : Cursor
 crosshair =
-    Attributes.CrosshairCursor
+    Crosshair
 
 
 {-| -}
 text : Cursor
 text =
-    Attributes.TextCursor
+    Text
 
 
 {-| -}
 verticalText : Cursor
 verticalText =
-    Attributes.VerticalTextCursor
+    VerticalText
 
 
 {-| -}
 alias_ : Cursor
 alias_ =
-    Attributes.AliasCursor
+    Alias
 
 
 {-| -}
 copy : Cursor
 copy =
-    Attributes.CopyCursor
+    Copy
 
 
 {-| -}
 move : Cursor
 move =
-    Attributes.MoveCursor
+    Move
 
 
 {-| -}
 noDrop : Cursor
 noDrop =
-    Attributes.NoDropCursor
+    NoDrop
 
 
 {-| -}
 notAllowed : Cursor
 notAllowed =
-    Attributes.NotAllowedCursor
+    NotAllowed
 
 
 {-| -}
 grab : Cursor
 grab =
-    Attributes.GrabCursor
+    Grab
 
 
 {-| -}
 grabbing : Cursor
 grabbing =
-    Attributes.GrabbingCursor
+    Grabbing
 
 
 {-| -}
 allScroll : Cursor
 allScroll =
-    Attributes.AllScrollCursor
+    AllScroll
 
 
 {-| -}
 colResize : Cursor
 colResize =
-    Attributes.ColResizeCursor
+    ColResize
 
 
 {-| -}
 rowResize : Cursor
 rowResize =
-    Attributes.RowResizeCursor
+    RowResize
 
 
 {-| -}
 nResize : Cursor
 nResize =
-    Attributes.NResizeCursor
+    NResize
 
 
 {-| -}
 eResize : Cursor
 eResize =
-    Attributes.EResizeCursor
+    EResize
 
 
 {-| -}
 sResize : Cursor
 sResize =
-    Attributes.SResizeCursor
+    SResize
 
 
 {-| -}
 wResize : Cursor
 wResize =
-    Attributes.WResizeCursor
+    WResize
 
 
 {-| -}
 neResize : Cursor
 neResize =
-    Attributes.NeResizeCursor
+    NeResize
 
 
 {-| -}
 nwResize : Cursor
 nwResize =
-    Attributes.NwResizeCursor
+    NwResize
 
 
 {-| -}
 seResize : Cursor
 seResize =
-    Attributes.SeResizeCursor
+    SeResize
 
 
 {-| -}
 swResize : Cursor
 swResize =
-    Attributes.SwResizeCursor
+    SwResize
 
 
 {-| -}
 ewResize : Cursor
 ewResize =
-    Attributes.EwResizeCursor
+    EwResize
 
 
 {-| -}
 nsResize : Cursor
 nsResize =
-    Attributes.NsResizeCursor
+    NsResize
 
 
 {-| -}
 neswResize : Cursor
 neswResize =
-    Attributes.NeswResizeCursor
+    NeswResize
 
 
 {-| -}
 nwseResize : Cursor
 nwseResize =
-    Attributes.NwseResizeCursor
+    NwseResize
 
 
 {-| -}
 zoomIn : Cursor
 zoomIn =
-    Attributes.ZoomInCursor
+    ZoomIn
 
 
 {-| -}
 zoomOut : Cursor
 zoomOut =
-    Attributes.ZoomOutCursor
+    ZoomOut
 
 
 image : { url : String, hotspot : Point2d Pixels ImageCoordinates, fallback : Cursor } -> Cursor
@@ -266,8 +307,131 @@ image { url, hotspot, fallback } =
         { x, y } =
             Point2d.toPixels hotspot
     in
-    Attributes.ImageCursor url x y fallback
+    Image url x y fallback
 
 
 type ImageCoordinates
     = ImageCoordinates
+
+
+toString : Cursor -> String
+toString cursor =
+    case cursor of
+        Auto ->
+            "auto"
+
+        Default ->
+            "default"
+
+        None ->
+            "none"
+
+        ContextMenu ->
+            "context-menu"
+
+        Help ->
+            "help"
+
+        Pointer ->
+            "pointer"
+
+        Progress ->
+            "progress"
+
+        Wait ->
+            "wait"
+
+        Cell ->
+            "cell"
+
+        Crosshair ->
+            "crosshair"
+
+        Text ->
+            "text"
+
+        VerticalText ->
+            "vertical-text"
+
+        Alias ->
+            "alias"
+
+        Copy ->
+            "copy"
+
+        Move ->
+            "move"
+
+        NoDrop ->
+            "no-drop"
+
+        NotAllowed ->
+            "not-allowed"
+
+        Grab ->
+            "grab"
+
+        Grabbing ->
+            "grabbing"
+
+        AllScroll ->
+            "all-scroll"
+
+        ColResize ->
+            "col-resize"
+
+        RowResize ->
+            "row-resize"
+
+        NResize ->
+            "n-resize"
+
+        EResize ->
+            "e-resize"
+
+        SResize ->
+            "s-resize"
+
+        WResize ->
+            "w-resize"
+
+        NeResize ->
+            "ne-resize"
+
+        NwResize ->
+            "nw-resize"
+
+        SeResize ->
+            "se-resize"
+
+        SwResize ->
+            "sw-resize"
+
+        EwResize ->
+            "ew-resize"
+
+        NsResize ->
+            "ns-resize"
+
+        NeswResize ->
+            "nesw-resize"
+
+        NwseResize ->
+            "nwse-resize"
+
+        ZoomIn ->
+            "zoom-in"
+
+        ZoomOut ->
+            "zoom-out"
+
+        Image url x y fallback ->
+            "url"
+                ++ "("
+                ++ url
+                ++ ") "
+                ++ String.fromFloat x
+                ++ " "
+                ++ String.fromFloat y
+                ++ ", "
+                ++ toString fallback

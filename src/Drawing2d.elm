@@ -3,7 +3,7 @@ module Drawing2d exposing
     , draw, custom
     , Size, fixed, scale, width, height
     , nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
-    , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
+    , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient, hatchFill
     , Gradient, gradientFrom, gradientAlong, circularGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
     , miterStrokeJoins, roundStrokeJoins, bevelStrokeJoins
@@ -22,7 +22,7 @@ module Drawing2d exposing
     , nResizeCursor, eResizeCursor, sResizeCursor, wResizeCursor, neResizeCursor, nwResizeCursor, seResizeCursor, swResizeCursor, ewResizeCursor, nsResizeCursor, neswResizeCursor, nwseResizeCursor
     , zoomInCursor, zoomOutCursor
     , cursor
-    , bestCursorEver
+    , dinosaurCursor
     , unsafeCurve, unsafeRegion
     , with, Context, pixelSize, pixels, resolution, currentFontSize, ems, currentStrokeWidth
     , onLeftClick, onRightClick
@@ -56,7 +56,7 @@ module Drawing2d exposing
 
 ## Fill
 
-@docs noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient
+@docs noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient, hatchFill
 
 
 ## Gradients
@@ -124,7 +124,7 @@ module Drawing2d exposing
 
 @docs cursor
 
-@docs bestCursorEver
+@docs dinosaurCursor
 
 
 ## Advanced
@@ -276,26 +276,26 @@ import Color exposing (Color)
 import CubicSpline2d exposing (CubicSpline2d)
 import Dict exposing (Dict)
 import Direction2d exposing (Direction2d)
-import Drawing2d.Attributes as Attributes
-    exposing
-        ( Attribute(..)
-        , AttributeValues
-        , Event(..)
-        , Fill(..)
-        , LineCap(..)
-        , LineJoin(..)
-        , Stroke(..)
-        )
+import Drawing2d.Attributes as Attributes exposing (AttributeValues)
 import Drawing2d.Cursor as Cursor exposing (Cursor)
 import Drawing2d.Decode as Decode
+import Drawing2d.Entity as Entity
+import Drawing2d.Event as Event exposing (Event)
+import Drawing2d.FillStyle as FillStyle
+import Drawing2d.FontFamily as FontFamily
 import Drawing2d.Gradient as Gradient
+import Drawing2d.HatchPattern as HatchPattern
 import Drawing2d.InteractionPoint as InteractionPoint
+import Drawing2d.LineCap as LineCap
+import Drawing2d.LineJoin as LineJoin
 import Drawing2d.MouseInteraction as MouseInteraction exposing (MouseInteraction)
 import Drawing2d.MouseInteraction.Protected as MouseInteraction
 import Drawing2d.MouseStartEvent as MouseStartEvent exposing (MouseStartEvent)
 import Drawing2d.RenderContext as RenderContext exposing (RenderContext)
-import Drawing2d.RenderContext.Protected as RenderContext
+import Drawing2d.RenderedSvg as RenderedSvg
 import Drawing2d.Shadow as Shadow
+import Drawing2d.StrokeDashPattern as StrokeDashPattern
+import Drawing2d.StrokeStyle as StrokeStyle
 import Drawing2d.Svg as Svg
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Drawing2d.TouchInteraction.Protected as TouchInteraction
@@ -322,8 +322,8 @@ import Triangle2d exposing (Triangle2d)
 import Vector2d exposing (Vector2d)
 
 
-type Entity units coordinates msg
-    = Entity (RenderContext units coordinates -> Svg (Event units coordinates msg))
+type alias Entity units coordinates msg =
+    Entity.Entity units coordinates msg
 
 
 type Size units
@@ -342,16 +342,6 @@ type alias Gradient units coordinates =
 
 type alias Renderer a units coordinates msg =
     List (Svg.Attribute (Event units coordinates msg)) -> a -> Svg (Event units coordinates msg)
-
-
-topLevelRectangle : Rectangle2d units1 coordinates1 -> Rectangle2d units2 coordinates2
-topLevelRectangle =
-    Rectangle2d.placeIn Frame2d.atOrigin >> Rectangle2d.at (Quantity 1)
-
-
-topLevelPoint : Point2d units1 coordinates1 -> Point2d units2 coordinates2
-topLevelPoint =
-    Point2d.unwrap >> Point2d.unsafe
 
 
 containerStaticCss : List (Html.Attribute msg)
@@ -397,8 +387,8 @@ draw arguments =
 custom :
     { viewBox : Rectangle2d units coordinates
     , size : Size units
-    , strokeWidth : Quantity Float units
-    , fontSize : Quantity Float units
+    , strokeWidth : Quantity Float Pixels
+    , fontSize : Quantity Float Pixels
     , entities : List (Entity units coordinates msg)
     }
     -> Html msg
@@ -443,30 +433,35 @@ custom given =
 
         defaultAttributes =
             [ blackStroke
-            , strokeWidth given.strokeWidth
+            , strokeWidth (Quantity.at_ drawingResolution given.strokeWidth)
             , bevelStrokeJoins
             , noStrokeCaps
             , noFill
             , strokedBorder
-            , fontSize given.fontSize
+            , fontSize (Quantity.at_ drawingResolution given.fontSize)
             , blackText
             , anchorAtStart
             , alphabeticBaseline
             ]
 
-        (Entity svgElement) =
+        svgOriginFrame =
+            Rectangle2d.axes given.viewBox
+
+        svgEntity =
             groupLike "svg" (viewBoxAttribute :: svgStaticCss) defaultAttributes <|
-                [ group [] given.entities |> relativeTo (Rectangle2d.axes given.viewBox)
+                [ group [] given.entities |> relativeTo svgOriginFrame
                 ]
 
         topLevelViewBox =
-            given.viewBox |> Rectangle2d.relativeTo (Rectangle2d.axes given.viewBox)
+            given.viewBox |> Rectangle2d.relativeTo svgOriginFrame
 
         initialRenderContext =
-            RenderContext.init topLevelPixelSize
+            RenderContext.init topLevelPixelSize topLevelViewBox
     in
     Html.div (containerStaticCss ++ containerSizeCss)
-        [ svgElement initialRenderContext |> Svg.map (\(Event callback) -> callback topLevelViewBox) ]
+        [ Entity.render initialRenderContext svgEntity
+            |> Svg.map (\event -> event topLevelViewBox)
+        ]
 
 
 fixed : Size Pixels
@@ -491,7 +486,7 @@ height value =
 
 nothing : Entity units coordinates msg
 nothing =
-    Entity (\_ -> Svg.text "")
+    Entity.nothing
 
 
 drawCurve :
@@ -503,22 +498,11 @@ drawCurve attributes renderer curve =
     let
         attributeValues =
             Attributes.collectAttributeValues attributes
+
+        svgAttributes =
+            Attributes.curveAttributes attributeValues
     in
-    Entity <|
-        \_ ->
-            let
-                svgAttributes =
-                    Attributes.curveAttributes attributeValues
-
-                curveElement =
-                    renderer svgAttributes curve
-
-                defs =
-                    []
-                        |> addStrokeGradient attributeValues
-                        |> addDropShadow attributeValues
-            in
-            curveElement |> addDefs defs
+    Entity.simple (RenderedSvg.wrap renderer svgAttributes curve)
 
 
 drawRegion :
@@ -531,7 +515,7 @@ drawRegion attributes renderer region =
         attributeValues =
             Attributes.collectAttributeValues attributes
     in
-    Entity <|
+    Entity.contextual <|
         \context ->
             let
                 bordersVisible =
@@ -540,25 +524,8 @@ drawRegion attributes renderer region =
 
                 svgAttributes =
                     Attributes.regionAttributes bordersVisible attributeValues
-
-                fillGradientElement =
-                    addFillGradient attributeValues []
-
-                regionElement =
-                    renderer svgAttributes region
-
-                gradientElements =
-                    if bordersVisible then
-                        fillGradientElement
-                            |> addStrokeGradient attributeValues
-
-                    else
-                        fillGradientElement
-
-                defs =
-                    gradientElements |> addDropShadow attributeValues
             in
-            regionElement |> addDefs defs
+            RenderedSvg.wrap renderer svgAttributes region
 
 
 lineSegment :
@@ -569,20 +536,21 @@ lineSegment attributes givenSegment =
     drawCurve attributes Svg.lineSegment2d givenSegment
 
 
+coordinatesString : Point2d units coordinates -> String
+coordinatesString point =
+    let
+        { x, y } =
+            Point2d.unwrap point
+    in
+    String.fromFloat x ++ " " ++ String.fromFloat -y
+
+
 triangle :
     List (Attribute units coordinates msg)
     -> Triangle2d units coordinates
     -> Entity units coordinates msg
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
-
-
-render :
-    RenderContext units coordinates
-    -> Entity units coordinates msg
-    -> Svg (Event units coordinates msg)
-render context (Entity function) =
-    function context
 
 
 group :
@@ -593,23 +561,6 @@ group attributes childEntities =
     groupLike "g" [] attributes childEntities
 
 
-encodeDashPattern : List (Quantity Float units) -> String
-encodeDashPattern dashPattern =
-    Encode.list (Quantity.unwrap >> Encode.float) dashPattern
-        |> Encode.encode 0
-
-
-dashPatternDecoder : Decoder (List (Quantity Float units))
-dashPatternDecoder =
-    Decode.list (Decode.map Quantity Decode.float)
-
-
-decodeDashPattern : String -> List (Quantity Float units)
-decodeDashPattern json =
-    Decode.decodeString dashPatternDecoder json
-        |> Result.withDefault []
-
-
 groupLike :
     String
     -> List (Svg.Attribute (Event units coordinates msg))
@@ -617,7 +568,7 @@ groupLike :
     -> List (Entity units coordinates msg)
     -> Entity units coordinates msg
 groupLike tag extraSvgAttributes attributes childEntities =
-    Entity <|
+    Entity.contextual <|
         \currentContext ->
             let
                 attributeValues =
@@ -627,20 +578,15 @@ groupLike tag extraSvgAttributes attributes childEntities =
                     currentContext |> RenderContext.update attributeValues
 
                 childSvgElements =
-                    childEntities |> List.map (render childContext)
-
-                defs =
-                    []
-                        |> addStrokeGradient attributeValues
-                        |> addFillGradient attributeValues
-                        |> addDropShadow attributeValues
+                    childEntities |> List.map (Entity.render childContext)
 
                 groupAttributes =
-                    Attributes.groupAttributes attributeValues
+                    RenderedSvg.merge
+                        [ RenderedSvg.attributes extraSvgAttributes
+                        , Attributes.groupAttributes attributeValues
+                        ]
             in
-            Svg.node tag
-                (groupAttributes ++ extraSvgAttributes)
-                (defs ++ childSvgElements)
+            RenderedSvg.wrap (Svg.node tag) groupAttributes childSvgElements
 
 
 arc :
@@ -723,7 +669,7 @@ rectangle :
     -> Rectangle2d units coordinates
     -> Entity units coordinates msg
 rectangle attributes givenRectangle =
-    drawRegion attributes Svg.rectangle2d givenRectangle
+    polygon attributes (Rectangle2d.toPolygon givenRectangle)
 
 
 boundingBox :
@@ -731,7 +677,7 @@ boundingBox :
     -> BoundingBox2d units coordinates
     -> Entity units coordinates msg
 boundingBox attributes givenBox =
-    drawRegion attributes Svg.boundingBox2d givenBox
+    rectangle attributes (Rectangle2d.fromBoundingBox givenBox)
 
 
 unsafeRegion :
@@ -757,17 +703,20 @@ text attributes position string =
 
         { x, y } =
             Point2d.unwrap position
+
+        svgAttributes =
+            RenderedSvg.merge
+                [ Attributes.textAttributes attributeValues
+                , RenderedSvg.attributes
+                    [ Svg.Attributes.x (String.fromFloat x)
+                    , Svg.Attributes.y (String.fromFloat -y)
+                    ]
+                ]
+
+        svgElement =
+            RenderedSvg.wrap Svg.text_ svgAttributes [ Svg.text string ]
     in
-    Entity <|
-        \_ ->
-            let
-                svgAttributes =
-                    Svg.Attributes.x (String.fromFloat x)
-                        :: Svg.Attributes.y (String.fromFloat -y)
-                        :: Attributes.textAttributes attributeValues
-            in
-            Svg.text_ svgAttributes [ Svg.text string ]
-                |> addDefs (addDropShadow attributeValues [])
+    Entity.simple svgElement
 
 
 image :
@@ -782,21 +731,24 @@ image attributes givenUrl givenRectangle =
 
         ( Quantity rectangleWidth, Quantity rectangleHeight ) =
             Rectangle2d.dimensions givenRectangle
+
+        svgAttributes =
+            RenderedSvg.merge
+                [ Attributes.imageAttributes attributeValues
+                , RenderedSvg.attributes
+                    [ Svg.Attributes.xlinkHref givenUrl
+                    , Svg.Attributes.x (String.fromFloat (-rectangleWidth / 2))
+                    , Svg.Attributes.y (String.fromFloat (-rectangleHeight / 2))
+                    , Svg.Attributes.width (String.fromFloat rectangleWidth)
+                    , Svg.Attributes.height (String.fromFloat rectangleHeight)
+                    , placementTransform (Rectangle2d.axes givenRectangle)
+                    ]
+                ]
+
+        svgElement =
+            RenderedSvg.wrap Svg.image svgAttributes []
     in
-    Entity <|
-        \_ ->
-            let
-                svgAttributes =
-                    Svg.Attributes.xlinkHref givenUrl
-                        :: Svg.Attributes.x (String.fromFloat (-rectangleWidth / 2))
-                        :: Svg.Attributes.y (String.fromFloat (-rectangleHeight / 2))
-                        :: Svg.Attributes.width (String.fromFloat rectangleWidth)
-                        :: Svg.Attributes.height (String.fromFloat rectangleHeight)
-                        :: placementTransform (Rectangle2d.axes givenRectangle)
-                        :: Attributes.imageAttributes attributeValues
-            in
-            Svg.image svgAttributes []
-                |> addDefs (addDropShadow attributeValues [])
+    Entity.simple svgElement
 
 
 placementTransform : Frame2d units coordinates defines -> Svg.Attribute a
@@ -839,8 +791,8 @@ placeImpl :
     -> Frame2d units globalCoordinates { defines : localCoordinates }
     -> Entity units localCoordinates msg
     -> Entity units globalCoordinates msg
-placeImpl transformationFrame coordinateConversionFrame (Entity function) =
-    Entity <|
+placeImpl transformationFrame coordinateConversionFrame entity =
+    Entity.contextual <|
         \currentContext ->
             let
                 localContext =
@@ -848,32 +800,11 @@ placeImpl transformationFrame coordinateConversionFrame (Entity function) =
                         |> RenderContext.relativeTo
                             (Frame2d.placeIn coordinateConversionFrame transformationFrame)
 
-                localFillGradient =
-                    RenderContext.fillGradient localContext
-
-                localStrokeGradient =
-                    RenderContext.strokeGradient localContext
-
-                localGradientReferences =
-                    []
-                        |> addTransformedFillGradientReference localFillGradient
-                        |> addTransformedStrokeGradientReference localStrokeGradient
-
-                localGradientElements =
-                    []
-                        |> addGradientElements localFillGradient
-                        |> addGradientElements localStrokeGradient
-
                 localSvgElement =
-                    function localContext
+                    Entity.render localContext entity
 
                 localElement =
-                    case localGradientElements of
-                        [] ->
-                            localSvgElement
-
-                        _ ->
-                            Svg.g localGradientReferences (localSvgElement :: localGradientElements)
+                    RenderedSvg.wrap Svg.g (RenderContext.render localContext) [ localSvgElement ]
 
                 transform =
                     placementTransform
@@ -882,8 +813,8 @@ placeImpl transformationFrame coordinateConversionFrame (Entity function) =
                 groupElement =
                     Svg.g [ transform ] [ localElement ]
 
-                transformEvent (Event callback) =
-                    Event (Rectangle2d.relativeTo coordinateConversionFrame >> callback)
+                transformEvent event =
+                    Rectangle2d.relativeTo coordinateConversionFrame >> event
             in
             Svg.map transformEvent groupElement
 
@@ -924,8 +855,8 @@ scaleImpl :
     -> Quantity Float (Rate units2 units1)
     -> Entity units1 coordinates msg
     -> Entity units2 coordinates msg
-scaleImpl centerPoint scaleFactor rate (Entity function) =
-    Entity <|
+scaleImpl centerPoint scaleFactor rate entity =
+    Entity.contextual <|
         \currentContext ->
             let
                 updatedContext =
@@ -933,46 +864,22 @@ scaleImpl centerPoint scaleFactor rate (Entity function) =
                         |> RenderContext.at_ rate
                         |> RenderContext.scaleAbout centerPoint (1 / scaleFactor)
 
-                updatedFillGradient =
-                    RenderContext.fillGradient updatedContext
-
-                updatedStrokeGradient =
-                    RenderContext.strokeGradient updatedContext
-
-                updatedStrokeWidth =
-                    RenderContext.strokeWidth updatedContext
-
-                updatedFontSize =
-                    RenderContext.fontSize updatedContext
-
-                updatedDashPattern =
-                    RenderContext.strokeDashPattern updatedContext
-
-                overallFactor =
-                    scaleFactor * Quantity.unwrap rate
-
-                svgAttributes =
-                    [ scaleTransform centerPoint overallFactor
-                    , Svg.Attributes.fontSize (String.fromFloat (Quantity.unwrap updatedFontSize))
-                    , Svg.Attributes.strokeWidth (String.fromFloat (Quantity.unwrap updatedStrokeWidth))
-                    ]
-                        |> addTransformedFillGradientReference updatedFillGradient
-                        |> addTransformedStrokeGradientReference updatedStrokeGradient
-                        |> addScaledStrokeDashPattern updatedDashPattern
-
-                transformedGradientElements =
-                    []
-                        |> addGradientElements updatedFillGradient
-                        |> addGradientElements updatedStrokeGradient
-
-                transformEvent (Event callback) =
-                    Event (Rectangle2d.at_ rate >> callback)
-
                 childSvgElement =
-                    function updatedContext
+                    Entity.render updatedContext entity
+
+                childElement =
+                    RenderedSvg.wrap Svg.g (RenderContext.render updatedContext) [ childSvgElement ]
+
+                transform =
+                    scaleTransform centerPoint (scaleFactor * Quantity.unwrap rate)
+
+                groupElement =
+                    Svg.g [ transform ] [ childElement ]
+
+                transformEvent event =
+                    Rectangle2d.at_ rate >> event
             in
-            Svg.map transformEvent <|
-                Svg.g svgAttributes (childSvgElement :: transformedGradientElements)
+            Svg.map transformEvent groupElement
 
 
 relativeTo :
@@ -1034,240 +941,148 @@ at_ rate entity =
 
 
 mapEvent : (a -> b) -> Event units coordinates a -> Event units coordinates b
-mapEvent function (Event callback) =
-    Event (callback >> function)
+mapEvent function event =
+    event >> function
 
 
 map : (a -> b) -> Entity units coordinates a -> Entity units coordinates b
 map function entity =
-    Entity (\context -> Svg.map (mapEvent function) (render context entity))
-
-
-addStrokeGradient :
-    AttributeValues units coordinates msg
-    -> List (Svg (Event units coordinates msg))
-    -> List (Svg (Event units coordinates msg))
-addStrokeGradient attributeValues svgElements =
-    case attributeValues.strokeStyle of
-        Nothing ->
-            svgElements
-
-        Just (StrokeColor _) ->
-            svgElements
-
-        Just (StrokeGradient gradient) ->
-            Gradient.render gradient svgElements
-
-
-addFillGradient :
-    AttributeValues units coordinates msg
-    -> List (Svg (Event units coordinates msg))
-    -> List (Svg (Event units coordinates msg))
-addFillGradient attributeValues svgElements =
-    case attributeValues.fillStyle of
-        Nothing ->
-            svgElements
-
-        Just NoFill ->
-            svgElements
-
-        Just TransparentFill ->
-            svgElements
-
-        Just (FillColor _) ->
-            svgElements
-
-        Just (FillGradient gradient) ->
-            Gradient.render gradient svgElements
-
-
-addGradientElements :
-    Maybe (Gradient units coordinates)
-    -> List (Svg (Event units coordinates msg))
-    -> List (Svg (Event units coordinates msg))
-addGradientElements maybeGradient svgElements =
-    case maybeGradient of
-        Nothing ->
-            svgElements
-
-        Just gradient ->
-            Gradient.render gradient svgElements
-
-
-addTransformedFillGradientReference :
-    Maybe (Gradient units gradientCoordinates)
-    -> List (Svg.Attribute (Event units coordinates msg))
-    -> List (Svg.Attribute (Event units coordinates msg))
-addTransformedFillGradientReference maybeGradient svgAttributes =
-    case maybeGradient of
-        Nothing ->
-            svgAttributes
-
-        Just gradient ->
-            Svg.Attributes.fill (Gradient.reference gradient) :: svgAttributes
-
-
-addTransformedStrokeGradientReference :
-    Maybe (Gradient units gradientCoordinates)
-    -> List (Svg.Attribute (Event units coordinates msg))
-    -> List (Svg.Attribute (Event units coordinates msg))
-addTransformedStrokeGradientReference maybeGradient svgAttributes =
-    case maybeGradient of
-        Nothing ->
-            svgAttributes
-
-        Just gradient ->
-            Svg.Attributes.stroke (Gradient.reference gradient) :: svgAttributes
-
-
-addScaledStrokeDashPattern :
-    List (Quantity Float units)
-    -> List (Svg.Attribute (Event units coordinates msg))
-    -> List (Svg.Attribute (Event units coordinates msg))
-addScaledStrokeDashPattern dashPattern svgAttributes =
-    case dashPattern of
-        [] ->
-            -- No need to set dash pattern to 'none' again
-            svgAttributes
-
-        _ ->
-            Attributes.dashPatternSvgAttribute dashPattern :: svgAttributes
-
-
-addDropShadow :
-    AttributeValues units coordinates msg
-    -> List (Svg (Event units coordinates msg))
-    -> List (Svg (Event units coordinates msg))
-addDropShadow attributeValues svgElements =
-    case attributeValues.dropShadow of
-        Nothing ->
-            svgElements
-
-        Just shadow ->
-            Shadow.element shadow :: svgElements
-
-
-addDefs :
-    List (Svg (Event units coordinates msg))
-    -> Svg (Event units coordinates msg)
-    -> Svg (Event units coordinates msg)
-addDefs defs svgElement =
-    case defs of
-        [] ->
-            svgElement
-
-        _ ->
-            Svg.g [] (svgElement :: defs)
+    Entity.contextual (\context -> Svg.map (mapEvent function) (Entity.render context entity))
 
 
 fillColor : Color -> Attribute units coordinates msg
 fillColor color =
-    FillStyle (FillColor (Color.toCssString color))
+    Attributes.Fill (FillStyle.color color)
 
 
 noFill : Attribute units coordinates msg
 noFill =
-    FillStyle (FillColor "none")
+    Attributes.Fill FillStyle.none
 
 
 transparentFill : Attribute units coordinates msg
 transparentFill =
-    FillStyle TransparentFill
+    Attributes.Fill FillStyle.transparent
 
 
 blackFill : Attribute units coordinates msg
 blackFill =
-    FillStyle (FillColor "black")
+    Attributes.Fill FillStyle.black
 
 
 whiteFill : Attribute units coordinates msg
 whiteFill =
-    FillStyle (FillColor "white")
+    Attributes.Fill FillStyle.white
 
 
 fillGradient : Gradient units coordinates -> Attribute units coordinates msg
 fillGradient gradient =
-    FillStyle (FillGradient gradient)
+    Attributes.Fill (FillStyle.gradient gradient)
+
+
+hatchFill :
+    { angle : Angle
+    , spacing : Quantity Float units
+    , strokeWidth : Quantity Float units
+    , strokeColor : Color
+    , fillColor : Maybe Color
+    , dashPattern : List (Quantity Float units)
+    , origin : Point2d units coordinates
+    }
+    -> Attribute units coordinates msg
+hatchFill properties =
+    let
+        hatchPattern =
+            HatchPattern.with
+                { frame = Frame2d.atPoint properties.origin |> Frame2d.rotateBy properties.angle
+                , spacing = Quantity.abs properties.spacing
+                , strokeWidth = Quantity.abs properties.strokeWidth
+                , strokeColor = properties.strokeColor
+                , fillColor = properties.fillColor
+                , dashPattern = properties.dashPattern
+                }
+    in
+    Attributes.Fill (FillStyle.hatchPattern hatchPattern)
 
 
 strokeColor : Color -> Attribute units coordinates msg
 strokeColor color =
-    StrokeStyle (StrokeColor (Color.toCssString color))
+    Attributes.Stroke (StrokeStyle.color color)
 
 
 blackStroke : Attribute units coordinates msg
 blackStroke =
-    StrokeStyle (StrokeColor "black")
+    Attributes.Stroke StrokeStyle.black
 
 
 whiteStroke : Attribute units coordinates msg
 whiteStroke =
-    StrokeStyle (StrokeColor "white")
+    Attributes.Stroke StrokeStyle.white
 
 
 strokeGradient : Gradient units coordinates -> Attribute units coordinates msg
 strokeGradient gradient =
-    StrokeStyle (StrokeGradient gradient)
+    Attributes.Stroke (StrokeStyle.gradient gradient)
 
 
 dashedStroke : List (Quantity Float units) -> Attribute units coordinates msg
 dashedStroke dashPattern =
-    StrokeDashPattern dashPattern
+    Attributes.DashPattern (StrokeDashPattern.fromList dashPattern)
 
 
 solidStroke : Attribute units coordinates msg
 solidStroke =
-    StrokeDashPattern []
+    Attributes.DashPattern StrokeDashPattern.none
 
 
 noBorder : Attribute units coordinates msg
 noBorder =
-    BorderVisibility False
+    Attributes.BorderVisibility False
 
 
 strokedBorder : Attribute units coordinates msg
 strokedBorder =
-    BorderVisibility True
+    Attributes.BorderVisibility True
 
 
 strokeWidth : Quantity Float units -> Attribute units coordinates msg
 strokeWidth givenWidth =
-    StrokeWidth givenWidth
+    Attributes.StrokeWidth givenWidth
 
 
 roundStrokeJoins : Attribute units coordinates msg
 roundStrokeJoins =
-    StrokeLineJoin RoundJoin
+    Attributes.StrokeLineJoin LineJoin.round
 
 
 bevelStrokeJoins : Attribute units coordinates msg
 bevelStrokeJoins =
-    StrokeLineJoin BevelJoin
+    Attributes.StrokeLineJoin LineJoin.bevel
 
 
 miterStrokeJoins : Attribute units coordinates msg
 miterStrokeJoins =
-    StrokeLineJoin MiterJoin
+    Attributes.StrokeLineJoin LineJoin.miter
 
 
 noStrokeCaps : Attribute units coordinates msg
 noStrokeCaps =
-    StrokeLineCap NoCap
+    Attributes.StrokeLineCap LineCap.none
 
 
 roundStrokeCaps : Attribute units coordinates msg
 roundStrokeCaps =
-    StrokeLineCap RoundCap
+    Attributes.StrokeLineCap LineCap.round
 
 
 squareStrokeCaps : Attribute units coordinates msg
 squareStrokeCaps =
-    StrokeLineCap SquareCap
+    Attributes.StrokeLineCap LineCap.square
 
 
 opacity : Float -> Attribute units coordinates msg
 opacity value =
-    Opacity value
+    Attributes.Opacity value
 
 
 dropShadow :
@@ -1277,327 +1092,305 @@ dropShadow :
     }
     -> Attribute units coordinates msg
 dropShadow properties =
-    DropShadow (Shadow.with properties)
+    Attributes.DropShadow (Shadow.with properties)
 
 
 anchorAtStart : Attribute units coordinates msg
 anchorAtStart =
-    TextAnchor "start"
+    Attributes.TextAnchor "start"
 
 
 anchorAtMiddle : Attribute units coordinates msg
 anchorAtMiddle =
-    TextAnchor "middle"
+    Attributes.TextAnchor "middle"
 
 
 anchorAtEnd : Attribute units coordinates msg
 anchorAtEnd =
-    TextAnchor "end"
+    Attributes.TextAnchor "end"
 
 
 alphabeticBaseline : Attribute units coordinates msg
 alphabeticBaseline =
-    DominantBaseline "alphabetic"
+    Attributes.DominantBaseline "alphabetic"
 
 
 centralBaseline : Attribute units coordinates msg
 centralBaseline =
-    DominantBaseline "central"
+    Attributes.DominantBaseline "central"
 
 
 hangingBaseline : Attribute units coordinates msg
 hangingBaseline =
-    DominantBaseline "hanging"
+    Attributes.DominantBaseline "hanging"
 
 
 ideographicBaseline : Attribute units coordinates msg
 ideographicBaseline =
-    DominantBaseline "ideographic"
+    Attributes.DominantBaseline "ideographic"
 
 
 mathematicalBaseline : Attribute units coordinates msg
 mathematicalBaseline =
-    DominantBaseline "mathematical"
+    Attributes.DominantBaseline "mathematical"
 
 
 middleBaseline : Attribute units coordinates msg
 middleBaseline =
-    DominantBaseline "middle"
+    Attributes.DominantBaseline "middle"
 
 
 textAfterEdgeBaseline : Attribute units coordinates msg
 textAfterEdgeBaseline =
-    DominantBaseline "textAfterEdge"
+    Attributes.DominantBaseline "textAfterEdge"
 
 
 textBeforeEdgeBaseline : Attribute units coordinates msg
 textBeforeEdgeBaseline =
-    DominantBaseline "textBeforeEdge"
+    Attributes.DominantBaseline "textBeforeEdge"
 
 
 blackText : Attribute units coordinates msg
 blackText =
-    TextColor "black"
+    Attributes.TextColor Color.black
 
 
 whiteText : Attribute units coordinates msg
 whiteText =
-    TextColor "white"
+    Attributes.TextColor Color.white
 
 
 textColor : Color -> Attribute units coordinates msg
 textColor color =
-    TextColor (Color.toCssString color)
+    Attributes.TextColor color
 
 
 fontSize : Quantity Float units -> Attribute units coordinates msg
 fontSize givenSize =
-    FontSize givenSize
-
-
-normalizeFont : String -> String
-normalizeFont font =
-    if String.contains " " font then
-        -- Font family name has spaces, should be quoted
-        if
-            (String.startsWith "\"" font && String.endsWith "\"" font)
-                || (String.startsWith "'" font && String.endsWith "'" font)
-        then
-            -- Font family name is already quoted, don't need to do anything
-            font
-
-        else
-            -- Font family name is not already quoted, add quotes
-            "\"" ++ font ++ "\""
-
-    else
-        -- Font family name has no spaces, don't need quotes (note that generic
-        -- font family names like 'sans-serif' *must not* be quoted, so we can't
-        -- just always add quotes)
-        font
+    Attributes.FontSize givenSize
 
 
 {-| Generic font family names: <https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#Values>
 -}
 fontFamily : List String -> Attribute units coordinates msg
 fontFamily fonts =
-    FontFamily (fonts |> List.map normalizeFont |> String.join ",")
+    Attributes.FontFamily (FontFamily.fromNames fonts)
 
 
 {-| -}
 autoCursor : Attribute units coordinates msg
 autoCursor =
-    Attributes.Cursor Attributes.AutoCursor
+    Attributes.Cursor Cursor.auto
 
 
 {-| -}
 defaultCursor : Attribute units coordinates msg
 defaultCursor =
-    Attributes.Cursor Attributes.DefaultCursor
+    Attributes.Cursor Cursor.default
 
 
 {-| -}
 noCursor : Attribute units coordinates msg
 noCursor =
-    Attributes.Cursor Attributes.NoCursor
+    Attributes.Cursor Cursor.none
 
 
 {-| -}
 contextMenuCursor : Attribute units coordinates msg
 contextMenuCursor =
-    Attributes.Cursor Attributes.ContextMenuCursor
+    Attributes.Cursor Cursor.contextMenu
 
 
 {-| -}
 helpCursor : Attribute units coordinates msg
 helpCursor =
-    Attributes.Cursor Attributes.HelpCursor
+    Attributes.Cursor Cursor.help
 
 
 {-| -}
 pointerCursor : Attribute units coordinates msg
 pointerCursor =
-    Attributes.Cursor Attributes.PointerCursor
+    Attributes.Cursor Cursor.pointer
 
 
 {-| -}
 progressCursor : Attribute units coordinates msg
 progressCursor =
-    Attributes.Cursor Attributes.ProgressCursor
+    Attributes.Cursor Cursor.progress
 
 
 {-| -}
 waitCursor : Attribute units coordinates msg
 waitCursor =
-    Attributes.Cursor Attributes.WaitCursor
+    Attributes.Cursor Cursor.wait
 
 
 {-| -}
 cellCursor : Attribute units coordinates msg
 cellCursor =
-    Attributes.Cursor Attributes.CellCursor
+    Attributes.Cursor Cursor.cell
 
 
 {-| -}
 crosshairCursor : Attribute units coordinates msg
 crosshairCursor =
-    Attributes.Cursor Attributes.CrosshairCursor
+    Attributes.Cursor Cursor.crosshair
 
 
 {-| -}
 textCursor : Attribute units coordinates msg
 textCursor =
-    Attributes.Cursor Attributes.TextCursor
+    Attributes.Cursor Cursor.text
 
 
 {-| -}
 verticalTextCursor : Attribute units coordinates msg
 verticalTextCursor =
-    Attributes.Cursor Attributes.VerticalTextCursor
+    Attributes.Cursor Cursor.verticalText
 
 
 {-| -}
 aliasCursor : Attribute units coordinates msg
 aliasCursor =
-    Attributes.Cursor Attributes.AliasCursor
+    Attributes.Cursor Cursor.alias_
 
 
 {-| -}
 copyCursor : Attribute units coordinates msg
 copyCursor =
-    Attributes.Cursor Attributes.CopyCursor
+    Attributes.Cursor Cursor.copy
 
 
 {-| -}
 moveCursor : Attribute units coordinates msg
 moveCursor =
-    Attributes.Cursor Attributes.MoveCursor
+    Attributes.Cursor Cursor.move
 
 
 {-| -}
 noDropCursor : Attribute units coordinates msg
 noDropCursor =
-    Attributes.Cursor Attributes.NoDropCursor
+    Attributes.Cursor Cursor.noDrop
 
 
 {-| -}
 notAllowedCursor : Attribute units coordinates msg
 notAllowedCursor =
-    Attributes.Cursor Attributes.NotAllowedCursor
+    Attributes.Cursor Cursor.notAllowed
 
 
 {-| -}
 grabCursor : Attribute units coordinates msg
 grabCursor =
-    Attributes.Cursor Attributes.GrabCursor
+    Attributes.Cursor Cursor.grab
 
 
 {-| -}
 grabbingCursor : Attribute units coordinates msg
 grabbingCursor =
-    Attributes.Cursor Attributes.GrabbingCursor
+    Attributes.Cursor Cursor.grabbing
 
 
 {-| -}
 allScrollCursor : Attribute units coordinates msg
 allScrollCursor =
-    Attributes.Cursor Attributes.AllScrollCursor
+    Attributes.Cursor Cursor.allScroll
 
 
 {-| -}
 colResizeCursor : Attribute units coordinates msg
 colResizeCursor =
-    Attributes.Cursor Attributes.ColResizeCursor
+    Attributes.Cursor Cursor.colResize
 
 
 {-| -}
 rowResizeCursor : Attribute units coordinates msg
 rowResizeCursor =
-    Attributes.Cursor Attributes.RowResizeCursor
+    Attributes.Cursor Cursor.rowResize
 
 
 {-| -}
 nResizeCursor : Attribute units coordinates msg
 nResizeCursor =
-    Attributes.Cursor Attributes.NResizeCursor
+    Attributes.Cursor Cursor.nResize
 
 
 {-| -}
 eResizeCursor : Attribute units coordinates msg
 eResizeCursor =
-    Attributes.Cursor Attributes.EResizeCursor
+    Attributes.Cursor Cursor.eResize
 
 
 {-| -}
 sResizeCursor : Attribute units coordinates msg
 sResizeCursor =
-    Attributes.Cursor Attributes.SResizeCursor
+    Attributes.Cursor Cursor.sResize
 
 
 {-| -}
 wResizeCursor : Attribute units coordinates msg
 wResizeCursor =
-    Attributes.Cursor Attributes.WResizeCursor
+    Attributes.Cursor Cursor.wResize
 
 
 {-| -}
 neResizeCursor : Attribute units coordinates msg
 neResizeCursor =
-    Attributes.Cursor Attributes.NeResizeCursor
+    Attributes.Cursor Cursor.neResize
 
 
 {-| -}
 nwResizeCursor : Attribute units coordinates msg
 nwResizeCursor =
-    Attributes.Cursor Attributes.NwResizeCursor
+    Attributes.Cursor Cursor.nwResize
 
 
 {-| -}
 seResizeCursor : Attribute units coordinates msg
 seResizeCursor =
-    Attributes.Cursor Attributes.SeResizeCursor
+    Attributes.Cursor Cursor.seResize
 
 
 {-| -}
 swResizeCursor : Attribute units coordinates msg
 swResizeCursor =
-    Attributes.Cursor Attributes.SwResizeCursor
+    Attributes.Cursor Cursor.swResize
 
 
 {-| -}
 ewResizeCursor : Attribute units coordinates msg
 ewResizeCursor =
-    Attributes.Cursor Attributes.EwResizeCursor
+    Attributes.Cursor Cursor.ewResize
 
 
 {-| -}
 nsResizeCursor : Attribute units coordinates msg
 nsResizeCursor =
-    Attributes.Cursor Attributes.NsResizeCursor
+    Attributes.Cursor Cursor.nsResize
 
 
 {-| -}
 neswResizeCursor : Attribute units coordinates msg
 neswResizeCursor =
-    Attributes.Cursor Attributes.NeswResizeCursor
+    Attributes.Cursor Cursor.neswResize
 
 
 {-| -}
 nwseResizeCursor : Attribute units coordinates msg
 nwseResizeCursor =
-    Attributes.Cursor Attributes.NwseResizeCursor
+    Attributes.Cursor Cursor.nwseResize
 
 
 {-| -}
 zoomInCursor : Attribute units coordinates msg
 zoomInCursor =
-    Attributes.Cursor Attributes.ZoomInCursor
+    Attributes.Cursor Cursor.zoomIn
 
 
 {-| -}
 zoomOutCursor : Attribute units coordinates msg
 zoomOutCursor =
-    Attributes.Cursor Attributes.ZoomOutCursor
+    Attributes.Cursor Cursor.zoomOut
 
 
 cursor : Cursor -> Attribute units coordinates msg
@@ -1605,10 +1398,8 @@ cursor givenCursor =
     Attributes.Cursor givenCursor
 
 
-{-| The best cursor ever.
--}
-bestCursorEver : Attribute units coordinates msg
-bestCursorEver =
+dinosaurCursor : Attribute units coordinates msg
+dinosaurCursor =
     cursor <|
         Cursor.image
             { url = "https://ianmackenzie.github.io/elm-2d-drawing/cursors/cursor-dino.png"
@@ -1623,9 +1414,9 @@ with context callback =
         (Context access) =
             context
     in
-    Entity
+    Entity.contextual
         (\renderContext ->
-            render renderContext <|
+            Entity.render renderContext <|
                 callback (access renderContext)
         )
 
@@ -1785,11 +1576,6 @@ decodeTouchStart decoder =
     Attributes.EventHandlers [ ( "touchstart", touchStartDecoder decoder ) ]
 
 
-wrapMessage : msg -> Event units coordinates msg
-wrapMessage message =
-    Event (always message)
-
-
 filterByButton : Int -> Decoder a -> Decoder a
 filterByButton whichButton decoder =
     Decode.button
@@ -1810,14 +1596,12 @@ clickDecoder givenDecoder =
 
 handleClick : MouseStartEvent -> (Point2d units coordinates -> msg) -> Event units coordinates msg
 handleClick mouseStartEvent userCallback =
-    Event
-        (\viewBox ->
-            let
-                drawingPoint =
-                    InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
-            in
-            userCallback (topLevelPoint drawingPoint)
-        )
+    \viewBox ->
+        let
+            drawingPoint =
+                InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
+        in
+        userCallback drawingPoint
 
 
 mouseDownDecoder :
@@ -1833,22 +1617,20 @@ handleMouseDown :
     -> (Point2d units coordinates -> MouseInteraction units coordinates -> msg)
     -> Event units coordinates msg
 handleMouseDown mouseStartEvent userCallback =
-    Event
-        (\viewBox ->
-            let
-                drawingPoint =
-                    InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
+    \viewBox ->
+        let
+            drawingPoint =
+                InteractionPoint.position mouseStartEvent viewBox mouseStartEvent.container
 
-                mouseInteraction =
-                    MouseInteraction.start mouseStartEvent (topLevelRectangle viewBox)
-            in
-            userCallback (topLevelPoint drawingPoint) mouseInteraction
-        )
+            mouseInteraction =
+                MouseInteraction.start mouseStartEvent viewBox
+        in
+        userCallback drawingPoint mouseInteraction
 
 
 mouseUpDecoder : Int -> Decoder msg -> Decoder (Event units coordinates msg)
 mouseUpDecoder givenButton givenDecoder =
-    filterByButton givenButton (Decode.map wrapMessage givenDecoder)
+    filterByButton givenButton (Decode.map always givenDecoder)
 
 
 touchStartDecoder :
@@ -1863,14 +1645,12 @@ handleTouchStart :
     -> (Dict Int (Point2d units coordinates) -> TouchInteraction units coordinates -> msg)
     -> Event units coordinates msg
 handleTouchStart touchStartEvent userCallback =
-    Event
-        (\viewBox ->
-            let
-                ( touchInteraction, initialPoints ) =
-                    TouchInteraction.start touchStartEvent viewBox
-            in
-            userCallback initialPoints touchInteraction
-        )
+    \viewBox ->
+        let
+            ( touchInteraction, initialPoints ) =
+                TouchInteraction.start touchStartEvent viewBox
+        in
+        userCallback initialPoints touchInteraction
 
 
 gradientFrom :

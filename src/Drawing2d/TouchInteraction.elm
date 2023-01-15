@@ -8,7 +8,8 @@ module Drawing2d.TouchInteraction exposing
 
 import BoundingBox2d exposing (BoundingBox2d)
 import Dict exposing (Dict)
-import Drawing2d.Attributes as Attributes exposing (Attribute, Event(..))
+import Drawing2d.Attributes exposing (Attribute(..))
+import Drawing2d.Event exposing (Event)
 import Drawing2d.InteractionPoint as InteractionPoint exposing (ReferencePoint)
 import Drawing2d.TouchChangeEvent as TouchChangeEvent exposing (TouchChangeEvent)
 import Drawing2d.TouchEndEvent as TouchEndEvent exposing (TouchEndEvent)
@@ -33,7 +34,7 @@ decodeChange decoder touchInteraction =
         touchChangeDecoder =
             decodeTouchChange decoder touchInteraction
     in
-    Attributes.EventHandlers
+    EventHandlers
         [ ( "touchstart", touchChangeDecoder )
         , ( "touchmove", touchChangeDecoder )
         , ( "touchend", touchChangeDecoder )
@@ -55,16 +56,14 @@ handleTouchChange :
     -> (Dict Int (Point2d units coordinates) -> msg)
     -> Event units coordinates msg
 handleTouchChange touchInteraction touchChangeEvent userCallback =
-    Event
-        (\viewBox ->
-            let
-                updatedPoints =
-                    touchChangeEvent.targetTouches
-                        |> List.map (updatedPoint touchInteraction)
-                        |> Dict.fromList
-            in
-            userCallback updatedPoints
-        )
+    \viewBox ->
+        let
+            updatedPoints =
+                touchChangeEvent.targetTouches
+                    |> List.map (updatedPoint touchInteraction)
+                    |> Dict.fromList
+        in
+        userCallback updatedPoints
 
 
 decodeEnd :
@@ -76,7 +75,7 @@ decodeEnd decoder touchInteraction =
         touchEndDecoder =
             decodeTouchEnd decoder touchInteraction
     in
-    Attributes.EventHandlers
+    EventHandlers
         [ ( "touchend", touchEndDecoder )
         , ( "touchcancel", touchEndDecoder )
         ]
@@ -96,7 +95,7 @@ handleTouchEnd :
     -> (Duration -> msg)
     -> Event units coordinates msg
 handleTouchEnd touchInteraction touchEndEvent userCallback =
-    Event (always (userCallback (duration touchInteraction touchEndEvent)))
+    always (userCallback (duration touchInteraction touchEndEvent))
 
 
 onChange :

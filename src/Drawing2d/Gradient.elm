@@ -4,21 +4,18 @@ module Drawing2d.Gradient exposing
     , at
     , at_
     , circular
-    , decode
-    , decoder
-    , encode
     , from
     , placeIn
-    , reference
     , relativeTo
     , render
     , scaleAbout
-    , transformEncoded
     )
 
 import Axis2d exposing (Axis2d)
 import Circle2d exposing (Circle2d)
 import Color exposing (Color)
+import Drawing2d.Event exposing (Event)
+import Drawing2d.RenderedSvg as RenderedSvg exposing (RenderedSvg)
 import Drawing2d.Stops as Stops exposing (Stops)
 import Frame2d exposing (Frame2d)
 import Json.Decode as Decode exposing (Decoder)
@@ -345,8 +342,8 @@ decode string =
         Decode.decodeString decoder string |> Result.withDefault Nothing
 
 
-render : Gradient units coordinates -> List (Svg msg) -> List (Svg msg)
-render gradient svgElements =
+defs : Gradient units coordinates -> List (Svg msg)
+defs gradient =
     case gradient of
         LinearGradient linearGradient ->
             let
@@ -371,7 +368,7 @@ render gradient svgElements =
                         ]
                         []
             in
-            Stops.render Svg.linearGradient linearGradient.stops (gradientElement :: svgElements)
+            Stops.render Svg.linearGradient linearGradient.stops [ gradientElement ]
 
         RadialGradient radialGradient ->
             let
@@ -400,7 +397,7 @@ render gradient svgElements =
                         ]
                         []
             in
-            Stops.render Svg.radialGradient radialGradient.stops (gradientElement :: svgElements)
+            Stops.render Svg.radialGradient radialGradient.stops [ gradientElement ]
 
 
 reference : Gradient units coordinates -> String
@@ -417,15 +414,9 @@ reference gradient =
     "url(#" ++ gradientId ++ ")"
 
 
-transformEncoded : String -> (Gradient units coordinates1 -> Gradient units coordinates2) -> String
-transformEncoded gradient function =
-    if gradient == "" then
-        gradient
-
-    else
-        case decode gradient of
-            Just decoded ->
-                encode (function decoded)
-
-            Nothing ->
-                ""
+render : (String -> Svg.Attribute (Event units coordinates msg)) -> Gradient units coordinates -> RenderedSvg units coordinates msg
+render strokeOrFill gradient =
+    RenderedSvg.with
+        { attributes = [ strokeOrFill (reference gradient) ]
+        , elements = defs gradient
+        }

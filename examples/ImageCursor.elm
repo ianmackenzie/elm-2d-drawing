@@ -30,7 +30,7 @@ main =
                     [ Drawing2d.rectangle [ Drawing2d.fillColor Color.red ] rect1
                     , Drawing2d.text [] (Rectangle2d.centerPoint rect1) "BORING"
                     ]
-                , Drawing2d.group [ Drawing2d.bestCursorEver ]
+                , Drawing2d.group [ Drawing2d.dinosaurCursor ]
                     [ Drawing2d.rectangle [ Drawing2d.fillColor Color.green ] rect2
                     , Drawing2d.text [] (Rectangle2d.centerPoint rect2) "AWESOME"
                     ]

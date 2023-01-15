@@ -1,6 +1,11 @@
-module Drawing2d.Shadow exposing (Shadow, element, id, reference, with)
+module Drawing2d.Shadow exposing
+    ( Shadow
+    , render
+    , with
+    )
 
 import Color exposing (Color)
+import Drawing2d.RenderedSvg as RenderedSvg exposing (RenderedSvg)
 import Quantity exposing (Quantity(..))
 import Svg exposing (Svg)
 import Svg.Attributes
@@ -64,26 +69,21 @@ with { radius, offset, color } =
         }
 
 
-id : Shadow units coordinates -> String
-id (Shadow shadow) =
-    shadow.id
-
-
-reference : Shadow units coordinates -> String
-reference (Shadow shadow) =
-    "url(#" ++ shadow.id ++ ")"
-
-
-element : Shadow units coordinates -> Svg event
-element (Shadow shadow) =
-    Svg.filter [ Svg.Attributes.id shadow.id ]
-        [ VirtualDom.nodeNS "http://www.w3.org/2000/svg"
-            "feDropShadow"
-            [ Svg.Attributes.dx shadow.dx
-            , Svg.Attributes.dy shadow.dy
-            , Svg.Attributes.stdDeviation shadow.stdDeviation
-            , Svg.Attributes.floodColor shadow.floodColor
-            , Svg.Attributes.floodOpacity shadow.floodOpacity
+render : Shadow units coordinates -> RenderedSvg units coordinates msg
+render (Shadow shadow) =
+    RenderedSvg.with
+        { attributes = [ Svg.Attributes.filter ("url(#" ++ shadow.id ++ ")") ]
+        , elements =
+            [ Svg.filter [ Svg.Attributes.id shadow.id ]
+                [ VirtualDom.nodeNS "http://www.w3.org/2000/svg"
+                    "feDropShadow"
+                    [ Svg.Attributes.dx shadow.dx
+                    , Svg.Attributes.dy shadow.dy
+                    , Svg.Attributes.stdDeviation shadow.stdDeviation
+                    , Svg.Attributes.floodColor shadow.floodColor
+                    , Svg.Attributes.floodOpacity shadow.floodOpacity
+                    ]
+                    []
+                ]
             ]
-            []
-        ]
+        }
