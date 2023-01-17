@@ -2,7 +2,7 @@ module Drawing2d exposing
     ( Entity, Attribute
     , draw, custom
     , Size, fixed, scale, width, height
-    , nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+    , nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image, arrow
     , noFill, transparentFill, blackFill, whiteFill, fillColor, fillGradient, hatchFill
     , Gradient, gradientFrom, gradientAlong, circularGradient
     , strokeWidth, blackStroke, whiteStroke, strokeColor, strokeGradient, dashedStroke, solidStroke
@@ -51,7 +51,7 @@ module Drawing2d exposing
 
 # Drawing
 
-@docs nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image
+@docs nothing, group, lineSegment, polyline, triangle, rectangle, boundingBox, polygon, arc, circle, ellipticalArc, ellipse, quadraticSpline, cubicSpline, text, image, arrow
 
 
 ## Fill
@@ -551,6 +551,49 @@ triangle :
     -> Entity units coordinates msg
 triangle attributes givenTriangle =
     drawRegion attributes Svg.triangle2d givenTriangle
+
+
+arrow :
+    List (Attribute units coordinates msg)
+    ->
+        { base : Point2d units coordinates
+        , tip : Point2d units coordinates
+        , headLength : Quantity Float units
+        , headWidth : Quantity Float units
+        }
+    -> Entity units coordinates msg
+arrow attributes { base, tip, headLength, headWidth } =
+    case Vector2d.direction (Vector2d.from base tip) of
+        Just direction ->
+            let
+                length =
+                    Point2d.distanceFrom base tip
+
+                axis =
+                    Axis2d.through base direction
+
+                frame =
+                    Frame2d.fromXAxis axis
+
+                stemLength =
+                    length |> Quantity.minus headLength
+
+                stemEndPoint =
+                    Point2d.along axis stemLength
+
+                leftPoint =
+                    Point2d.xyIn frame stemLength (Quantity.half headWidth)
+
+                rightPoint =
+                    Point2d.mirrorAcross axis leftPoint
+            in
+            group attributes
+                [ lineSegment [] (LineSegment2d.from base stemEndPoint)
+                , triangle [] (Triangle2d.from leftPoint rightPoint tip)
+                ]
+
+        Nothing ->
+            nothing
 
 
 group :
