@@ -111,11 +111,8 @@ view model =
                 , Element.height Element.shrink
                 ]
                 (Element.html <|
-                    Drawing2d.custom
+                    Drawing2d.draw
                         { viewBox = viewBox
-                        , size = Drawing2d.fixed
-                        , strokeWidth = Pixels.float 5
-                        , fontSize = Pixels.float 16
                         , entities =
                             [ Drawing2d.group
                                 [ Drawing2d.onLeftMouseDown (StartDrawing Blue)
@@ -123,6 +120,7 @@ view model =
                                 , Drawing2d.onRightClick (always DrawingRightClick)
                                 , Drawing2d.roundStrokeJoins
                                 , Drawing2d.roundStrokeCaps
+                                , Drawing2d.strokeWidth (Pixels.float 5)
                                 ]
                                 [ background
                                 , Drawing2d.group [] existingLines
