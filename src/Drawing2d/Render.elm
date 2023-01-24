@@ -3,6 +3,7 @@ module Drawing2d.Render exposing
     , dominantBaseline
     , eventHandlers
     , fontSize
+    , fontWeight
     , opacity
     , strokeWidth
     , textAnchor
@@ -42,6 +43,11 @@ fontSize size =
 textColor : Color -> RenderedSvg units coordinates msg
 textColor color =
     RenderedSvg.attributes [ Svg.Attributes.color (Color.toCssString color) ]
+
+
+fontWeight : Int -> RenderedSvg units coordinates msg
+fontWeight weight =
+    RenderedSvg.attributes [ Svg.Attributes.fontWeight (String.fromInt weight) ]
 
 
 cursor : Cursor -> RenderedSvg units coordinates msg

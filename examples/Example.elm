@@ -67,7 +67,7 @@ main =
                     , text [ Drawing2d.anchorAtMiddle, Drawing2d.hangingBaseline ] (Point2d.pixels 500 200) "top center"
                     , text [ Drawing2d.anchorAtEnd, Drawing2d.hangingBaseline ] (Point2d.pixels 700 200) "top right"
                     , text [ Drawing2d.anchorAtStart, Drawing2d.middleBaseline ] (Point2d.pixels 300 150) "center left"
-                    , text [ Drawing2d.anchorAtMiddle, Drawing2d.middleBaseline ] (Point2d.pixels 500 150) "center"
+                    , text [ Drawing2d.anchorAtMiddle, Drawing2d.middleBaseline, Drawing2d.boldFont ] (Point2d.pixels 500 150) "center"
                     , text [ Drawing2d.anchorAtEnd, Drawing2d.middleBaseline ] (Point2d.pixels 700 150) "center right"
                     , text [ Drawing2d.anchorAtStart, Drawing2d.alphabeticBaseline ] (Point2d.pixels 300 100) "bottom left"
                     , text [ Drawing2d.anchorAtMiddle, Drawing2d.alphabeticBaseline ] (Point2d.pixels 500 100) "bottom center"

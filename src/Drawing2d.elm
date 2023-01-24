@@ -11,7 +11,7 @@ module Drawing2d exposing
     , opacity
     , dropShadow
     , noBorder, strokedBorder
-    , fontSize, fontFamily, blackText, whiteText, textColor
+    , fontSize, fontFamily, blackText, whiteText, textColor, normalFont, boldFont, fontWeight
     , anchorAtStart, anchorAtMiddle, anchorAtEnd
     , alphabeticBaseline, centralBaseline, hangingBaseline, ideographicBaseline, mathematicalBaseline, middleBaseline, textAfterEdgeBaseline, textBeforeEdgeBaseline
     , autoCursor, defaultCursor, noCursor
@@ -96,7 +96,7 @@ module Drawing2d exposing
 
 ## Text
 
-@docs fontSize, fontFamily, blackText, whiteText, textColor
+@docs fontSize, fontFamily, blackText, whiteText, textColor, normalFont, boldFont, fontWeight
 
 
 ### Alignment
@@ -1206,6 +1206,21 @@ whiteText =
 textColor : Color -> Attribute units coordinates msg
 textColor color =
     Attributes.TextColor color
+
+
+normalFont : Attribute units coordinates msg
+normalFont =
+    fontWeight 400
+
+
+boldFont : Attribute units coordinates msg
+boldFont =
+    fontWeight 700
+
+
+fontWeight : Int -> Attribute units coordinates msg
+fontWeight weight =
+    Attributes.FontWeight weight
 
 
 fontSize : Quantity Float units -> Attribute units coordinates msg

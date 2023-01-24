@@ -54,6 +54,7 @@ type Attribute units coordinates msg
     | BorderVisibility Bool
     | DropShadow (Shadow units coordinates)
     | TextColor Color -- Svg.Attributes.color
+    | FontWeight Int -- Svg.Attributes.fontWeight
     | FontFamily FontFamily -- Svg.Attributes.fontFamily
     | TextAnchor String -- Svg.Attributes.textAnchor
     | DominantBaseline String -- Svg.Attributes.dominantBaseline
@@ -73,6 +74,7 @@ type alias AttributeValues units coordinates msg =
     , borderVisibility : Maybe Bool
     , dropShadow : Maybe (Shadow units coordinates)
     , textColor : Maybe Color
+    , fontWeight : Maybe Int
     , fontFamily : Maybe FontFamily
     , textAnchor : Maybe String
     , dominantBaseline : Maybe String
@@ -94,6 +96,7 @@ emptyAttributeValues =
     , borderVisibility = Nothing
     , dropShadow = Nothing
     , textColor = Nothing
+    , fontWeight = Nothing
     , fontFamily = Nothing
     , textAnchor = Nothing
     , dominantBaseline = Nothing
@@ -140,6 +143,9 @@ setAttribute attribute attributeValues =
 
         TextColor string ->
             { attributeValues | textColor = Just string }
+
+        FontWeight weight ->
+            { attributeValues | fontWeight = Just weight }
 
         FontFamily fontFamily ->
             { attributeValues | fontFamily = Just fontFamily }
@@ -297,6 +303,7 @@ addTextAttributes attributeValues renderedSvg =
         |> RenderedSvg.add Render.textAnchor attributeValues.textAnchor
         |> RenderedSvg.add Render.dominantBaseline attributeValues.dominantBaseline
         |> RenderedSvg.add Render.textColor attributeValues.textColor
+        |> RenderedSvg.add Render.fontWeight attributeValues.fontWeight
 
 
 genericTextAttributes : RenderedSvg units coordinates msg
