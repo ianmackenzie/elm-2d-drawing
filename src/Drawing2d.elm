@@ -28,6 +28,7 @@ module Drawing2d exposing
     , onLeftClick, onRightClick
     , onLeftMouseDown, onLeftMouseUp, onMiddleMouseDown, onMiddleMouseUp, onRightMouseDown, onRightMouseUp
     , onTouchStart
+    , onWheel
     , scaleAbout, rotateAround, translateBy, translateIn, mirrorAcross
     , at, at_
     , relativeTo, placeIn
@@ -35,6 +36,7 @@ module Drawing2d exposing
     , decodeLeftClick, decodeRightClick
     , decodeLeftMouseDown, decodeLeftMouseUp, decodeMiddleMouseDown, decodeMiddleMouseUp, decodeRightMouseDown, decodeRightMouseUp
     , decodeTouchStart
+    , decodeWheel
     )
 
 {-|
@@ -203,6 +205,11 @@ containing a `Main` module:
 @docs onTouchStart
 
 
+## Wheel
+
+@docs onWheel
+
+
 # Transformations
 
 @docs scaleAbout, rotateAround, translateBy, translateIn, mirrorAcross
@@ -265,6 +272,8 @@ straightforward to use.
 
 @docs decodeTouchStart
 
+@docs decodeWheel
+
 -}
 
 import Angle exposing (Angle)
@@ -300,6 +309,8 @@ import Drawing2d.Svg as Svg
 import Drawing2d.TouchInteraction as TouchInteraction exposing (TouchInteraction)
 import Drawing2d.TouchInteraction.Protected as TouchInteraction
 import Drawing2d.TouchStartEvent as TouchStartEvent exposing (TouchStartEvent)
+import Drawing2d.Wheel as Wheel
+import Drawing2d.WheelEvent as WheelEvent exposing (WheelEvent)
 import Ellipse2d exposing (Ellipse2d)
 import EllipticalArc2d exposing (EllipticalArc2d)
 import Frame2d exposing (Frame2d)
@@ -1581,6 +1592,11 @@ onTouchStart callback =
     decodeTouchStart (Decode.succeed callback)
 
 
+onWheel : (Point2d units coordinates -> Wheel.Delta -> msg) -> Attribute units coordinates msg
+onWheel callback =
+    decodeWheel (Decode.succeed callback)
+
+
 decodeLeftClick : Decoder (Point2d units coordinates -> msg) -> Attribute units coordinates msg
 decodeLeftClick decoder =
     Attributes.EventHandlers [ ( "click", clickDecoder decoder ) ]
@@ -1632,6 +1648,11 @@ decodeTouchStart :
     -> Attribute units coordinates msg
 decodeTouchStart decoder =
     Attributes.EventHandlers [ ( "touchstart", touchStartDecoder decoder ) ]
+
+
+decodeWheel : Decoder (Point2d units coordinates -> Wheel.Delta -> msg) -> Attribute units coordinates msg
+decodeWheel decoder =
+    Attributes.EventHandlers [ ( "wheel", wheelDecoder decoder ) ]
 
 
 filterByButton : Int -> Decoder a -> Decoder a
@@ -1709,6 +1730,21 @@ handleTouchStart touchStartEvent userCallback =
                 TouchInteraction.start touchStartEvent viewBox
         in
         userCallback initialPoints touchInteraction
+
+
+wheelDecoder : Decoder (Point2d units coordinates -> Wheel.Delta -> msg) -> Decoder (Event units coordinates msg)
+wheelDecoder givenDecoder =
+    Decode.map2 handleWheel WheelEvent.decoder givenDecoder
+
+
+handleWheel : WheelEvent -> (Point2d units coordinates -> Wheel.Delta -> msg) -> Event units coordinates msg
+handleWheel wheelEvent userCallback =
+    \viewBox ->
+        let
+            mousePosition =
+                InteractionPoint.position wheelEvent viewBox wheelEvent.container
+        in
+        userCallback mousePosition wheelEvent.delta
 
 
 gradientFrom :
