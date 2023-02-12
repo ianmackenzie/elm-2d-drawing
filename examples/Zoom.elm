@@ -1,13 +1,13 @@
 module Zoom exposing (main)
 
 import Browser
+import Browser.Events
 import Circle2d exposing (Circle2d)
 import Color
 import Drawing2d
 import Drawing2d.Wheel as Wheel
 import Html exposing (Html)
-import Keyboard exposing (Key)
-import List.Extra exposing (subsequences)
+import Json.Decode as Decode
 import Pixels exposing (Pixels)
 import Point2d exposing (Point2d)
 import Rectangle2d exposing (Rectangle2d)
@@ -21,7 +21,6 @@ type DrawingCoordinates
 type alias Model =
     { center : Point2d Pixels DrawingCoordinates
     , scale : Float
-    , pressedKeys : List Key
     }
 
 
@@ -32,14 +31,13 @@ viewBox =
 
 type Msg
     = WheelEvent (Point2d Pixels DrawingCoordinates) Wheel.Delta
-    | KeyMsg Keyboard.Msg
+    | KeyDown String
 
 
 init : () -> ( Model, Cmd Msg )
 init () =
     ( { center = Rectangle2d.centerPoint viewBox
       , scale = 1
-      , pressedKeys = []
       }
     , Cmd.none
     )
@@ -63,26 +61,11 @@ update msg model =
             , Cmd.none
             )
 
-        KeyMsg keyMsg ->
-            let
-                ( updatedKeys, maybeKeyChange ) =
-                    Keyboard.updateWithKeyChange Keyboard.anyKeyUpper keyMsg model.pressedKeys
+        KeyDown "f" ->
+            ( { model | center = Rectangle2d.centerPoint viewBox, scale = 1 }, Cmd.none )
 
-                ( center, scale ) =
-                    case maybeKeyChange of
-                        Just (Keyboard.KeyDown (Keyboard.Character "F")) ->
-                            ( Rectangle2d.centerPoint viewBox, 1 )
-
-                        _ ->
-                            ( model.center, model.scale )
-            in
-            ( { model
-                | center = center
-                , scale = scale
-                , pressedKeys = Keyboard.update keyMsg model.pressedKeys
-              }
-            , Cmd.none
-            )
+        KeyDown _ ->
+            ( model, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -114,7 +97,7 @@ view { center, scale } =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.map KeyMsg Keyboard.subscriptions
+    Browser.Events.onKeyDown (Decode.map KeyDown (Decode.field "key" Decode.string))
 
 
 main : Program () Model Msg
