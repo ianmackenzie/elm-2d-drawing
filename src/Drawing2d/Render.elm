@@ -75,7 +75,11 @@ addEventHandler eventName decoders svgAttributes =
 
 on : String -> Decoder (Event units coordinates msg) -> Svg.Attribute (Event units coordinates msg)
 on eventName decoder =
-    Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
+    if eventName == "wheel" then
+        Svg.Events.custom eventName (preventDefaultAndStopPropagation decoder)
+
+    else
+        Svg.Events.on eventName decoder
 
 
 preventDefaultAndStopPropagation :
@@ -90,11 +94,7 @@ suppressTouchActions :
     -> List (Svg.Attribute (Event units coordinates msg))
     -> List (Svg.Attribute (Event units coordinates msg))
 suppressTouchActions handlerDict svgAttributes =
-    if
-        Dict.member "touchstart" handlerDict
-            || Dict.member "touchmove" handlerDict
-            || Dict.member "touchend" handlerDict
-    then
+    if Dict.member "touchmove" handlerDict then
         Html.Attributes.style "touch-action" "none" :: svgAttributes
 
     else
